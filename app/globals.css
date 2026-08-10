@@ -1,0 +1,333 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   StashTab — "Obsidian & Ultraviolet" design tokens (dark-mode only)
+   Pure Black / Deep Zinc surfaces + Ultraviolet accent + Violet data accent
+   Premium B2B fintech vibe (Linear / Vercel / Stripe dark mode)
+   ============================================================ */
+
+:root,
+.dark {
+  --radius: 0.5rem;
+
+  /* Core palette — Obsidian & Ultraviolet */
+  --bg-obsidian: #000000;      /* pure black app background (OLED-friendly) */
+  --bg-gunmetal: #09090b;      /* deep zinc cards/surfaces (zinc-950) */
+  --bg-surface: #18181b;       /* zinc-900 — inputs, hover, inner panels */
+  --accent-cyan: #8b5cf6;      /* ultraviolet primary accent (violet-500) — name kept for compatibility */
+  --accent-violet: #a855f7;    /* bright violet — data accent (graphs, active metrics) */
+  --holo-pink: #a855f7;        /* remapped to bright violet (tonal scheme) */
+  --holo-gold: #7c3aed;        /* remapped to deep violet (violet-600) */
+  --text-primary: #ffffff;
+  --text-secondary: #b4b4bd;   /* muted zinc (brightened for improved contrast) */
+  --border-subtle: #27272a;    /* subtle dark grey border (zinc-800) */
+  --row-alt: #0c0c0e;          /* alternating table row */
+  --ember: #ff7a2f;            /* semantic warning (Paperweight flag) */
+
+  /* shadcn / tailwind mapping */
+  --background: var(--bg-obsidian);
+  --foreground: var(--text-primary);
+  --card: var(--bg-gunmetal);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-gunmetal);
+  --popover-foreground: var(--text-primary);
+  --primary: #7c3aed;                     /* solid ultraviolet CTA (violet-600) */
+  --primary-foreground: #ffffff;          /* white text on primary buttons */
+  --secondary: var(--bg-surface);
+  --secondary-foreground: #e4e4e7;
+  --muted: var(--bg-surface);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--bg-surface);
+  --accent-foreground: var(--text-primary);
+  --destructive: #ef4444;
+  --border: var(--border-subtle);
+  --input: #27272a;
+  --ring: var(--accent-cyan);             /* ultraviolet focus ring */
+
+  --chart-1: #8b5cf6;   /* ultraviolet */
+  --chart-2: #a855f7;   /* bright violet */
+  --chart-3: #c4b5fd;   /* light violet */
+  --chart-4: #7c3aed;   /* deep violet */
+  --chart-5: #10b981;   /* emerald (profit) */
+
+  --sidebar: var(--bg-obsidian);
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: var(--accent-cyan);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--bg-gunmetal);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--accent-cyan);
+
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgb(0 0 0 / 0.35);
+  --shadow-xs: 0 1px 3px 0px rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 2px 6px 0px rgb(0 0 0 / 0.45);
+  --shadow: 0 2px 6px 0px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 4px 12px 0px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 8px 24px 0px rgb(0 0 0 / 0.55);
+  --shadow-xl: 0 16px 40px 0px rgb(0 0 0 / 0.6);
+  --shadow-2xl: 0 24px 60px 0px rgb(0 0 0 / 0.65);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Obsidian & Ultraviolet extended palette */
+  --color-obsidian: var(--bg-obsidian);
+  --color-gunmetal: var(--bg-gunmetal);
+  --color-surface: var(--bg-surface);
+  --color-neon: var(--accent-cyan);          /* ultraviolet primary accent */
+  --color-data: var(--accent-violet);        /* bright violet data/graph accent */
+  --color-holo-pink: var(--holo-pink);
+  --color-holo-gold: var(--holo-gold);
+  --color-steel: var(--text-secondary);
+  --color-row-alt: var(--row-alt);
+  --color-ember: var(--ember);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  /* Motion */
+  --animate-scanline: scanline 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-holo-sheen: holo-sheen 6s linear infinite;
+  --animate-pulse-glow: pulse-glow 2.4s ease-in-out infinite;
+  --animate-float-slow: float-slow 7s ease-in-out infinite;
+  --animate-float-slower: float-slow 10s ease-in-out infinite reverse;
+  --animate-blink: blink 1.6s ease-in-out infinite;
+  --animate-ticker: ticker 30s linear infinite;
+  --animate-ember-pulse: ember-pulse 1.4s ease-in-out infinite;
+  --animate-grid-drift: grid-drift 24s linear infinite;
+
+  @keyframes scanline {
+    0% { top: -8%; opacity: 0; }
+    8% { opacity: 1; }
+    46% { top: 104%; opacity: 1; }
+    54% { opacity: 0; }
+    100% { top: -8%; opacity: 0; }
+  }
+  @keyframes holo-sheen {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 18px 0 rgb(139 92 246 / 0.35), 0 0 2px 0 rgb(139 92 246 / 0.6); }
+    50% { box-shadow: 0 0 34px 4px rgb(139 92 246 / 0.55), 0 0 6px 1px rgb(139 92 246 / 0.8); }
+  }
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes ember-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px 0 rgb(255 122 47 / 0.7); }
+    50% { opacity: 0.55; box-shadow: 0 0 14px 2px rgb(255 122 47 / 0.9); }
+  }
+  @keyframes grid-drift {
+    0% { background-position: 0 0; }
+    100% { background-position: 48px 48px; }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  ::selection {
+    background: rgb(139 92 246 / 0.3);
+    color: #ffffff;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-obsidian);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 8px;
+    border: 2px solid var(--bg-obsidian);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(139 92 246 / 0.45);
+  }
+}
+
+/* Respect reduced motion: halt continuous animations, transitions and smooth scroll */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  /* Keep the hero marquee scrolling even under reduced motion */
+  .animate-marquee {
+    animation: marquee 28s linear infinite !important;
+  }
+}
+
+/* Seamless marquee for the hero ticker strip */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+@layer utilities {
+  /* Dot-grid texture for hero / section backgrounds */
+  .dot-grid {
+    background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dot-grid-drift {
+    animation: var(--animate-grid-drift);
+  }
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+  .mask-fade-edges {
+    mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+
+  /* Violet gradient border (premium / rare indicator) */
+  .holo-border {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--bg-gunmetal), var(--bg-gunmetal)) padding-box,
+      linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c4b5fd 100%) border-box;
+  }
+  .holo-border-obsidian {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--bg-obsidian), var(--bg-obsidian)) padding-box,
+      linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c4b5fd 100%) border-box;
+  }
+
+  /* Animated violet shimmer text */
+  .holo-text {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c4b5fd 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-holo-sheen);
+  }
+
+  /* Ultraviolet glow helpers */
+  .glow-accent {
+    box-shadow: 0 0 24px 0 rgb(139 92 246 / 0.35);
+  }
+  .glow-accent-sm {
+    box-shadow: 0 0 12px 0 rgb(139 92 246 / 0.25);
+  }
+  .text-glow-accent {
+    text-shadow: 0 0 14px rgb(139 92 246 / 0.55);
+  }
+
+  /* Dark glassmorphism for modals / drawers */
+  .glass-panel {
+    background: rgb(9 9 11 / 0.9);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  /* Card scan laser line */
+  .scan-beam {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan) 20%, var(--accent-cyan) 80%, transparent);
+    box-shadow: 0 0 12px 2px rgb(139 92 246 / 0.75), 0 0 32px 6px rgb(139 92 246 / 0.35);
+    animation: var(--animate-scanline);
+  }
+
+  /* Interactive card lift with ultraviolet edge */
+  .card-lift {
+    transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgb(139 92 246 / 0.45);
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.8), 0 0 20px -4px rgb(139 92 246 / 0.3);
+  }
+
+  /* Slim scrollbars inside panels */
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+}

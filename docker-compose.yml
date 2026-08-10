@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mimir-postgres
+    environment:
+      POSTGRES_USER: mimir
+      POSTGRES_PASSWORD: mimir
+      POSTGRES_DB: mimir
+    ports:
+      - "5432:5432"
+    volumes:
+      - mimir_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mimir -d mimir"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mimir-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - mimir_redis_data:/data
+
+volumes:
+  mimir_pg_data:
+  mimir_redis_data:
