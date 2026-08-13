@@ -27,6 +27,12 @@ class SystemSettings(Base, ShopScopedMixin, TimestampMixin):
     one_piece_icon_url: Mapped[str] = mapped_column(String(512), default="")
     auto_sync_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     omit_graded_from_recon: Mapped[bool] = mapped_column(Boolean, default=False)
+    graded_wizard_sales_count: Mapped[int] = mapped_column(Integer, default=5)
+    graded_wizard_omit_diff: Mapped[float] = mapped_column(Float, default=20.0)
+    gmail_monitor_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    gmail_address: Mapped[str] = mapped_column(String(100), default="")
+    gmail_app_password: Mapped[str] = mapped_column(String(100), default="")
+    gmail_folder: Mapped[str] = mapped_column(String(100), default="INBOX")
 
 
 class StoreSettings(Base, ShopScopedMixin, TimestampMixin):

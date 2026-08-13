@@ -52,3 +52,9 @@ services/api/**/*.pyc
 .tmp-mattpocock-skills/
 .cursor/
 *.db
+
+# partner card image dumps if ever copied
+vendor/**/card_images/
+vendor/**/scraped_thumbnails/
+vendor/**/*.db
+

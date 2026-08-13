@@ -26,6 +26,8 @@ export default function AdminSettingsPage() {
   const [priceFluctuation, setPriceFluctuation] = useState("0.10");
   const [paperweightDays, setPaperweightDays] = useState("60");
   const [autoSync, setAutoSync] = useState(false);
+  const [omitGraded, setOmitGraded] = useState(false);
+  const [fetchingImages, setFetchingImages] = useState(false);
 
   const [storeUrl, setStoreUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -55,6 +57,7 @@ export default function AdminSettingsPage() {
         setPriceFluctuation(String(s.price_fluctuation_threshold ?? 0.1));
         setPaperweightDays(String(s.paperweight_days ?? 60));
         setAutoSync(Boolean(s.auto_sync_enabled));
+        setOmitGraded(Boolean(s.omit_graded_from_recon));
       })
       .catch(() => setSettings(null));
 
@@ -84,6 +87,7 @@ export default function AdminSettingsPage() {
         price_fluctuation_threshold: parseFloat(priceFluctuation) || 0.1,
         paperweight_days: parseInt(paperweightDays, 10) || 60,
         auto_sync_enabled: autoSync,
+        omit_graded_from_recon: omitGraded,
       });
       toast.success("Pricing engine saved");
     } catch (e) {
@@ -295,9 +299,45 @@ export default function AdminSettingsPage() {
             />
             <Label htmlFor="auto-sync">Auto-sync worker enabled</Label>
           </div>
+          <div className="flex items-end gap-2 pb-1">
+            <input
+              id="omit-graded"
+              type="checkbox"
+              checked={omitGraded}
+              onChange={(e) => setOmitGraded(e.target.checked)}
+            />
+            <Label htmlFor="omit-graded">Omit graded cards from Collectr price sync</Label>
+          </div>
         </div>
         <Button onClick={saveSettings} disabled={saving}>
           Save pricing engine
+        </Button>
+      </section>
+
+      <section className="space-y-4 rounded-lg border p-4">
+        <h2 className="font-semibold">Inventory images</h2>
+        <p className="text-sm text-muted-foreground">
+          Match inventory cards against the Pokemon TCG API and download missing
+          high-res thumbnails (partner Validate &amp; Fetch Images).
+        </p>
+        <Button
+          variant="outline"
+          disabled={fetchingImages}
+          onClick={async () => {
+            setFetchingImages(true);
+            try {
+              const res = await adminApi.validateFetchImages();
+              toast.success(
+                `Checked ${res.checked}: updated ${res.updated}, skipped ${res.skipped}, failed ${res.failed}`
+              );
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Image fetch failed");
+            } finally {
+              setFetchingImages(false);
+            }
+          }}
+        >
+          {fetchingImages ? "Fetching…" : "Validate & fetch images"}
         </Button>
       </section>
 

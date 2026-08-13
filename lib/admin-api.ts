@@ -62,6 +62,13 @@ export type ShopSettings = {
   pokemon_icon_url?: string;
   one_piece_icon_url?: string;
   auto_sync_enabled?: boolean;
+  omit_graded_from_recon?: boolean;
+  graded_wizard_sales_count?: number;
+  graded_wizard_omit_diff?: boolean;
+  gmail_monitor_enabled?: boolean;
+  gmail_address?: string;
+  gmail_app_password?: string;
+  gmail_folder?: string;
 };
 
 export type ShippingRule = {
@@ -150,6 +157,75 @@ export const adminApi = {
     const res = await adminFetch("/admin/staging/commit-all", { method: "POST" }, auth);
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  deleteStaging: async (id: number, auth?: AdminAuth) => {
+    const res = await adminFetch(`/admin/staging/${id}`, { method: "DELETE" }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  refetchStaging: async (
+    id: number,
+    payload?: { name?: string; set_name?: string; sequence_number?: string },
+    auth?: AdminAuth
+  ) => {
+    const res = await adminFetch(`/admin/staging/${id}/refetch`, {
+      method: "POST",
+      body: JSON.stringify(payload ?? {}),
+    }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  rejectPriceUpdate: async (id: number, auth?: AdminAuth) => {
+    const res = await adminFetch(`/admin/inventory/${id}/reject-update`, {
+      method: "POST",
+    }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  validateFetchImages: async (auth?: AdminAuth) => {
+    const res = await adminFetch("/admin/inventory/validate-fetch-images", {
+      method: "POST",
+    }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{
+      success: boolean;
+      checked: number;
+      updated: number;
+      skipped: number;
+      failed: number;
+    }>;
+  },
+
+  clearPendingSync: async (auth?: AdminAuth) => {
+    const res = await adminFetch("/sync/clear-pending", { method: "POST" }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{ success: boolean; cleared: number }>;
+  },
+
+  clearSyncedSync: async (auth?: AdminAuth) => {
+    const res = await adminFetch("/sync/clear-synced", { method: "POST" }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{ success: boolean; cleared: number }>;
+  },
+
+  patchConditionsFromCsv: async (file: File, auth?: AdminAuth) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await adminFetch("/admin/import/patch-conditions", {
+      method: "POST",
+      body: form,
+    }, auth);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{
+      success: boolean;
+      updated: number;
+      not_found: number;
+      total_rows: number;
+    }>;
   },
 
   getSettings: async (auth?: AdminAuth) => {

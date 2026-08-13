@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import ShopContext, get_shop_context
-from app.logic.intake import add_to_staging, commit_all_staging, commit_staging_item
+from app.logic.images import validate_and_fetch_images
+from app.logic.intake import (
+    add_to_staging,
+    commit_all_staging,
+    commit_staging_item,
+    delete_staging_item,
+    manual_api_refetch,
+)
 from app.logic.inventory_reports import count_paperweight_units, list_paperweight_items
 from app.logic.labels import barcode_public_url, generate_item_barcode
 from app.logic.trades import (
@@ -20,7 +27,11 @@ from app.logic.import_engine import patch_conditions_from_csv, process_csv_impor
 from app.logic.pokemon_api import PokemonAPI
 from app.logic.shopify_client import ShopifyClient
 from app.logic.shopify_consistency import verify_shopify_consistency
-from app.logic.pricing import calculate_shop_price
+from app.logic.pricing import (
+    calculate_shop_listing_price,
+    calculate_shop_price,
+    calculate_suggested_price,
+)
 from app.models import (
     InventoryItem,
     Sale,
@@ -69,6 +80,12 @@ class SettingsUpdateIn(BaseModel):
     one_piece_icon_url: str | None = None
     auto_sync_enabled: bool | None = None
     omit_graded_from_recon: bool | None = None
+    graded_wizard_sales_count: int | None = None
+    graded_wizard_omit_diff: float | None = None
+    gmail_monitor_enabled: bool | None = None
+    gmail_address: str | None = None
+    gmail_app_password: str | None = None
+    gmail_folder: str | None = None
 
 
 class ShippingRuleIn(BaseModel):
@@ -92,6 +109,12 @@ class InventoryUpdateIn(BaseModel):
     price: float | None = None
     sticker_price: float | None = None
     sync_status: str | None = None
+
+
+class StagingRefetchIn(BaseModel):
+    name: str | None = None
+    set_name: str | None = None
+    sequence_number: str | None = None
 
 
 @router.post("/intake/lookup")
@@ -310,6 +333,12 @@ def get_settings(
             "one_piece_icon_url": "",
             "auto_sync_enabled": True,
             "omit_graded_from_recon": False,
+            "graded_wizard_sales_count": 5,
+            "graded_wizard_omit_diff": 20.0,
+            "gmail_monitor_enabled": False,
+            "gmail_address": "",
+            "gmail_app_password": "",
+            "gmail_folder": "INBOX",
         }
     return {
         "buy_percentage": settings.buy_percentage,
@@ -325,6 +354,18 @@ def get_settings(
         "one_piece_icon_url": settings.one_piece_icon_url or "",
         "auto_sync_enabled": settings.auto_sync_enabled,
         "omit_graded_from_recon": bool(settings.omit_graded_from_recon),
+        "graded_wizard_sales_count": int(
+            getattr(settings, "graded_wizard_sales_count", 5) or 5
+        ),
+        "graded_wizard_omit_diff": float(
+            getattr(settings, "graded_wizard_omit_diff", 20.0) or 20.0
+        ),
+        "gmail_monitor_enabled": bool(
+            getattr(settings, "gmail_monitor_enabled", False)
+        ),
+        "gmail_address": getattr(settings, "gmail_address", "") or "",
+        "gmail_app_password": getattr(settings, "gmail_app_password", "") or "",
+        "gmail_folder": getattr(settings, "gmail_folder", "INBOX") or "INBOX",
     }
 
 
@@ -356,6 +397,12 @@ def update_settings(
         "one_piece_icon_url",
         "auto_sync_enabled",
         "omit_graded_from_recon",
+        "graded_wizard_sales_count",
+        "graded_wizard_omit_diff",
+        "gmail_monitor_enabled",
+        "gmail_address",
+        "gmail_app_password",
+        "gmail_folder",
     ):
         value = getattr(payload, field)
         if value is not None:
@@ -492,6 +539,68 @@ def approve_single_price_update(
     return {"success": True, "sku": item.sku, "shop_listing_price": shop_price}
 
 
+@router.post("/inventory/{item_id}/reject-update")
+def reject_single_price_update(
+    item_id: int,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Partner review flow — revert to old_price, clear needs_update, enqueue price_update."""
+    item = (
+        db.query(InventoryItem)
+        .filter(InventoryItem.shop_id == ctx.shop_id, InventoryItem.id == item_id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    shop_price = item.shop_listing_price
+    if item.old_price is not None:
+        item.price = float(item.old_price)
+        settings = (
+            db.query(SystemSettings)
+            .filter(SystemSettings.shop_id == ctx.shop_id)
+            .first()
+        )
+        rounding_rule = (
+            settings.rounding_strategy if settings else "Keep Raw TCG Decimal Payouts"
+        )
+        item.sticker_price = calculate_suggested_price(item.price, rule=rounding_rule)
+        shop_price = calculate_shop_listing_price(
+            db, ctx.shop_id, item.price, item.card_type or "Single"
+        )
+        item.shop_listing_price = shop_price
+        db.add(
+            SyncOutbox(
+                shop_id=ctx.shop_id,
+                action_type="price_update",
+                sku=item.sku,
+                quantity_change=0,
+                new_price=shop_price,
+                sync_status="pending",
+            )
+        )
+
+    item.needs_update = False
+    db.commit()
+    return {
+        "success": True,
+        "sku": item.sku,
+        "price": item.price,
+        "shop_listing_price": shop_price,
+    }
+
+
+@router.post("/inventory/validate-fetch-images")
+def validate_fetch_images(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Partner Settings Validate & Fetch Images — fuzz match >= 65, persist thumbnails."""
+    result = validate_and_fetch_images(db, ctx.shop_id)
+    return {"success": True, **result}
+
+
 @router.post("/inventory/approve-under-5")
 def approve_price_updates_under_5(
     ctx: ShopContext = Depends(get_shop_context),
@@ -566,16 +675,131 @@ def update_inventory_item(
     )
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    old_stock = int(item.stock or 0)
+    old_price = float(item.price or 0.0)
+
     if payload.stock is not None:
         item.stock = payload.stock
     if payload.price is not None:
         item.price = payload.price
+        shop_price = calculate_shop_listing_price(
+            db, ctx.shop_id, float(item.price), item.card_type or "Single"
+        )
+        item.shop_listing_price = shop_price
+        if payload.sticker_price is None:
+            settings = (
+                db.query(SystemSettings)
+                .filter(SystemSettings.shop_id == ctx.shop_id)
+                .first()
+            )
+            rounding_rule = (
+                settings.rounding_strategy
+                if settings
+                else "Keep Raw TCG Decimal Payouts"
+            )
+            item.sticker_price = calculate_suggested_price(
+                float(item.price), rule=rounding_rule
+            )
     if payload.sticker_price is not None:
         item.sticker_price = payload.sticker_price
     if payload.sync_status is not None:
         item.sync_status = payload.sync_status
+
+    new_stock = int(item.stock or 0)
+    new_price = float(item.price or 0.0)
+    listing = float(
+        item.shop_listing_price
+        or calculate_shop_listing_price(
+            db, ctx.shop_id, new_price, item.card_type or "Single"
+        )
+    )
+
+    if new_stock != old_stock:
+        db.add(
+            SyncOutbox(
+                shop_id=ctx.shop_id,
+                action_type="stock_update",
+                sku=item.sku,
+                quantity_change=new_stock - old_stock,
+                new_price=listing,
+                sync_status="pending",
+            )
+        )
+    if abs(new_price - old_price) > 0.001:
+        db.add(
+            SyncOutbox(
+                shop_id=ctx.shop_id,
+                action_type="price_update",
+                sku=item.sku,
+                quantity_change=0,
+                new_price=listing,
+                sync_status="pending",
+            )
+        )
+
     db.commit()
-    return {"success": True, "id": item.id, "sku": item.sku}
+    return {
+        "success": True,
+        "id": item.id,
+        "sku": item.sku,
+        "stock": item.stock,
+        "price": item.price,
+        "shop_listing_price": item.shop_listing_price,
+    }
+
+
+@router.delete("/staging/{staging_id}")
+def delete_staging(
+    staging_id: int,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    if not delete_staging_item(db, ctx.shop_id, staging_id):
+        raise HTTPException(status_code=404, detail="Staging item not found")
+    db.commit()
+    return {"success": True}
+
+
+@router.post("/staging/{staging_id}/refetch")
+def refetch_staging(
+    staging_id: int,
+    payload: StagingRefetchIn,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    existing = (
+        db.query(StagingItem)
+        .filter(StagingItem.shop_id == ctx.shop_id, StagingItem.id == staging_id)
+        .first()
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Staging item not found")
+    ok = manual_api_refetch(
+        db,
+        ctx.shop_id,
+        staging_id,
+        payload.name or existing.name or "",
+        payload.set_name or existing.set_name or "",
+        payload.sequence_number or existing.sequence_number or "",
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="Staging item not found or refetch failed")
+    db.commit()
+    item = (
+        db.query(StagingItem)
+        .filter(StagingItem.shop_id == ctx.shop_id, StagingItem.id == staging_id)
+        .first()
+    )
+    return {
+        "success": True,
+        "id": staging_id,
+        "name": item.name if item else payload.name,
+        "set_name": item.set_name if item else payload.set_name,
+        "sequence_number": item.sequence_number if item else payload.sequence_number,
+        "image_url": item.image_path if item else None,
+        "market_price": item.market_price if item else None,
+    }
 
 
 @router.post("/shopify/verify")

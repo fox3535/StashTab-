@@ -136,6 +136,11 @@ def pull_shopify_orders(db: Session, shop_id: str) -> dict[str, int | list[dict]
             else:
                 inv_item.stock = 0
 
+            # Partner core.py — auto-pause when available stock hits 0
+            available_qty = inv_item.stock - (inv_item.paused_stock or 0)
+            if available_qty <= 0 and inv_item.sync_status == "active":
+                inv_item.sync_status = "paused"
+
             cost = float(inv_item.cost or 0.0)
             profit = price - cost
 

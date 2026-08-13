@@ -1,0 +1,13 @@
+customtkinter
+Pillow
+SQLAlchemy
+pyperclip
+python-barcode
+pywin32; sys_platform == 'win32'
+requests
+rapidfuzz
+pandas
+flask
+qrcode
+python-dotenv
+openpyxl

@@ -15,6 +15,9 @@ API_VERSION = "2026-04"
 
 
 class ShopifyClient:
+    # Partner shared title cache — class-level so fetch_all_variants fills once
+    _shared_title_cache: dict[str, dict[str, Any]] | None = None
+
     def __init__(self, credentials: ShopifyCredentials) -> None:
         self.store_url = credentials.store_url.rstrip("/")
         if not self.store_url.startswith("http"):
@@ -127,13 +130,21 @@ class ShopifyClient:
 
     def fetch_all_variants(self) -> dict[str, dict[str, Any]]:
         variants_map: dict[str, dict[str, Any]] = {}
-        url = f"{self.base_url}/products.json?limit=250"
+        ShopifyClient._shared_title_cache = {}
+        url = f"{self.base_url}/products.json?limit=250&status=active,draft,archived"
         try:
             while url:
                 response = requests.get(url, headers=self._headers(), timeout=20)
                 response.raise_for_status()
                 products = response.json().get("products", [])
                 for prod in products:
+                    prod_title = prod.get("title")
+                    if (
+                        prod_title
+                        and ShopifyClient._shared_title_cache is not None
+                        and prod_title not in ShopifyClient._shared_title_cache
+                    ):
+                        ShopifyClient._shared_title_cache[prod_title] = prod
                     for var in prod.get("variants", []):
                         sku = var.get("sku")
                         if not sku:
@@ -165,6 +176,12 @@ class ShopifyClient:
         if self._sku_cache is None:
             self._sku_cache = self.fetch_all_variants()
         return self._sku_cache.get(sku)
+
+    def _get_cached_title(self, title: str) -> dict[str, Any] | None:
+        if ShopifyClient._shared_title_cache is None:
+            self._sku_cache = self.fetch_all_variants()
+        cache = ShopifyClient._shared_title_cache or {}
+        return cache.get(title)
 
     def create_or_update_product(self, item_data: dict[str, Any]) -> tuple[bool, str]:
         """Push or update a product on Shopify. Returns (success, message)."""
@@ -255,13 +272,17 @@ class ShopifyClient:
                     target_product = prod_response["product"]
 
         if not target_product:
-            search_results = self._get(
-                "products.json", params={"title": formatted_title, "status": "any"}
-            )
-            for prod in search_results.get("products", []):
-                if prod.get("title") == formatted_title:
-                    target_product = prod
-                    break
+            cached_prod = self._get_cached_title(formatted_title)
+            if cached_prod:
+                target_product = cached_prod
+            else:
+                search_results = self._get(
+                    "products.json", params={"title": formatted_title, "status": "any"}
+                )
+                for prod in search_results.get("products", []):
+                    if prod.get("title") == formatted_title:
+                        target_product = prod
+                        break
 
         if target_product:
             variants = target_product.get("variants", [])
@@ -343,6 +364,24 @@ class ShopifyClient:
                 pass
 
         result = self._post("products.json", new_product_data)
+        if ShopifyClient._shared_title_cache is not None:
+            new_prod = result.get("product", {})
+            if new_prod:
+                ShopifyClient._shared_title_cache[
+                    new_prod.get("title", formatted_title)
+                ] = new_prod
+        if self._sku_cache is not None:
+            new_prod = result.get("product", {})
+            new_var = (new_prod.get("variants") or [{}])[0]
+            if sku and new_var.get("id"):
+                self._sku_cache[sku] = {
+                    "id": new_var.get("id"),
+                    "product_id": new_prod.get("id"),
+                    "price": float(price),
+                    "inventory_quantity": quantity,
+                    "title": new_prod.get("title", formatted_title),
+                    "has_images": bool(img_url),
+                }
         return {"status": "created_product", "data": result}
 
     def adjust_inventory(self, sku: str, adjustment_quantity: int) -> tuple[bool, str]:

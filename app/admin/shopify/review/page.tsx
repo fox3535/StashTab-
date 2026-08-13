@@ -52,6 +52,23 @@ export default function ShopifyReviewPage() {
     }
   }
 
+  async function rejectOne(id: number) {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API}/api/v1/admin/inventory/${id}/reject-update`,
+        { method: "POST", headers: { "X-Shop-Id": SHOP_ID } }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Reverted price update");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reject failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function approveUnder5() {
     setLoading(true);
     try {
@@ -105,13 +122,23 @@ export default function ShopifyReviewPage() {
                 {item.price.toFixed(2)} (shop ${item.shop_listing_price?.toFixed(2) ?? "?"})
               </p>
             </div>
-            <Button
-              size="sm"
-              disabled={loading}
-              onClick={() => approveOne(item.id)}
-            >
-              Approve & sync
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={loading}
+                onClick={() => rejectOne(item.id)}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                disabled={loading}
+                onClick={() => approveOne(item.id)}
+              >
+                Approve & sync
+              </Button>
+            </div>
           </li>
         ))}
       </ul>

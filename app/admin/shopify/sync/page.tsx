@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { adminApi } from "@/lib/admin-api";
 import { mimirApi } from "@/lib/mimir-api";
 
 const SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
@@ -86,6 +87,34 @@ export default function ShopifySyncPage() {
         </Button>
         <Button variant="ghost" onClick={loadStatus}>
           Refresh status
+        </Button>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const res = await adminApi.clearPendingSync(apiOpts);
+              toast.success(`Cleared ${res.cleared} pending items`);
+              await loadStatus();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Clear failed");
+            }
+          }}
+        >
+          Clear pending
+        </Button>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const res = await adminApi.clearSyncedSync(apiOpts);
+              toast.success(`Cleared ${res.cleared} synced items`);
+              await loadStatus();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Clear failed");
+            }
+          }}
+        >
+          Clear synced
         </Button>
       </div>
       <p className="mt-4 max-w-lg text-sm text-muted-foreground">

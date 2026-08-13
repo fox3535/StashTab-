@@ -2,10 +2,11 @@
 
 > **How to use this file:** Cursor agents should read this before implementing. Chat is for decisions; this file is the source of truth for what to build next.
 >
-> **Last updated:** Phase 1–6 complete (StashTab launch-ready). Docs cleaned for repo.
+> **Last updated:** 2026-08-13 — full partner brain consolidate (b798bf0) into StashTab.
 >
-> **Partner repo (reference only, do not push here):** `https://github.com/OdinFury-D/Mimir.git`  
-> **Local brain snapshot (Python only, no images):** `D:\Users\Desktop\Cursor Projects\Mimir-brain`
+> **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
+> **Local sparse checkout (code, no ~20GB card images):** `D:\Users\Desktop\Cursor Projects\Mimir`  
+> **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
 
 ---
 

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import secrets
 
+from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
-from app.logic.images import persist_card_image
+from app.logic.images import clear_thumbnail, persist_card_image
 from app.logic.labels import generate_item_barcode
+from app.logic.pokemon_api import PokemonAPI
 from app.logic.pricing import calculate_shop_listing_price, suggested_price_for_shop
 from app.models import InventoryItem, StagingItem, SyncOutbox, SystemSettings
 
@@ -260,3 +262,71 @@ def commit_all_staging(db: Session, shop_id: str) -> list[str]:
         inv = commit_staging_item(db, shop_id, staging_id)
         skus.append(inv.sku)
     return skus
+
+
+def delete_staging_item(db: Session, shop_id: str, staging_id: int) -> bool:
+    item = (
+        db.query(StagingItem)
+        .filter(StagingItem.shop_id == shop_id, StagingItem.id == staging_id)
+        .first()
+    )
+    if not item:
+        return False
+    if item.sku:
+        clear_thumbnail(item.sku)
+    db.delete(item)
+    return True
+
+
+def manual_api_refetch(
+    db: Session,
+    shop_id: str,
+    staging_id: int,
+    updated_name: str,
+    updated_set: str,
+    updated_number: str,
+) -> bool:
+    """
+    Partner logic.manual_api_refetch — re-query Pokemon API for a staging item
+    using corrected name/set/number; update image only if fuzz score >= 80.
+    """
+    staging_item = (
+        db.query(StagingItem)
+        .filter(StagingItem.shop_id == shop_id, StagingItem.id == staging_id)
+        .first()
+    )
+    if not staging_item:
+        return False
+
+    api = PokemonAPI()
+    local_name = updated_name.strip()
+    local_seq = api._sanitize_sequence_number(updated_number)
+
+    staging_item.name = local_name
+    staging_item.set_name = updated_set.strip().title()
+    staging_item.sequence_number = local_seq
+
+    try:
+        api_result = api.fetch_card_data(
+            updated_set, updated_number, card_name=local_name
+        )
+        if api_result:
+            api_name = api_result.get("clean_name", "")
+            name_score = fuzz.WRatio(local_name.lower(), api_name.lower())
+            hires_url = api_result.get("high_res_image")
+            if name_score >= 80 and hires_url:
+                public = persist_card_image(staging_item.sku, hires_url)
+                if public:
+                    staging_item.image_path = public
+                elif hires_url:
+                    staging_item.image_path = hires_url
+                market = api_result.get("market_price")
+                if market is not None:
+                    staging_item.market_price = float(market)
+                    staging_item.suggested_price = suggested_price_for_shop(
+                        db, shop_id, float(market)
+                    )
+        return True
+    except Exception:
+        db.rollback()
+        return False

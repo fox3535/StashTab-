@@ -13,6 +13,11 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
 
+    # Pokemon TCG API (optional key raises rate limits)
+    pokemon_tcg_api_key: str = ""
+    # Partner config.USD_TO_CAD_RATE — API market prices are USD
+    usd_to_cad_rate: float = 1.43
+
     # Clerk JWT verification (wire up in Phase 1)
     clerk_secret_key: str = ""
     clerk_jwt_issuer: str = ""

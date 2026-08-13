@@ -11,6 +11,7 @@ from app.logic.sync_worker import (
     pull_shopify_orders,
     run_full_sync,
 )
+from app.models import SyncOutbox
 from app.schemas import SyncStatusOut
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -69,3 +70,37 @@ def verify_consistency(
     if not ok:
         return {"success": False, "message": message}
     return {"success": True, "message": message}
+
+
+@router.post("/clear-pending")
+def clear_pending_outbox(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    deleted = (
+        db.query(SyncOutbox)
+        .filter(
+            SyncOutbox.shop_id == ctx.shop_id,
+            SyncOutbox.sync_status == "pending",
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return {"success": True, "deleted": deleted}
+
+
+@router.post("/clear-synced")
+def clear_synced_outbox(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    deleted = (
+        db.query(SyncOutbox)
+        .filter(
+            SyncOutbox.shop_id == ctx.shop_id,
+            SyncOutbox.sync_status == "synced",
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return {"success": True, "deleted": deleted}

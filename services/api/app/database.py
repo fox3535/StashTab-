@@ -22,6 +22,12 @@ def _ensure_columns() -> None:
     alters = [
         "ALTER TABLE sale ADD COLUMN IF NOT EXISTS is_reconciled BOOLEAN DEFAULT FALSE",
         "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS omit_graded_from_recon BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS graded_wizard_sales_count INTEGER DEFAULT 5",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS graded_wizard_omit_diff DOUBLE PRECISION DEFAULT 20.0",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS gmail_monitor_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS gmail_address VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS gmail_app_password VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS gmail_folder VARCHAR(100) DEFAULT 'INBOX'",
     ]
     with engine.begin() as conn:
         for stmt in alters:

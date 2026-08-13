@@ -47,6 +47,30 @@ export default function AdminStagingPage() {
     }
   }
 
+  async function refetchOne(item: StagingItem) {
+    try {
+      await adminApi.refetchStaging(item.id, {
+        name: item.name,
+        set_name: item.set_name ?? undefined,
+        sequence_number: item.sequence_number ?? undefined,
+      });
+      toast.success(`Re-fetched ${item.name}`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Refetch failed");
+    }
+  }
+
+  async function deleteOne(id: number) {
+    try {
+      await adminApi.deleteStaging(id);
+      toast.success("Removed from staging");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
   async function commitAll() {
     try {
       const res = await adminApi.commitAllStaging();
@@ -159,9 +183,17 @@ export default function AdminStagingPage() {
                   {item.suggested_price.toFixed(2)} · Qty {item.quantity}
                 </p>
               </div>
-              <Button size="sm" onClick={() => commitOne(item.id)}>
-                Commit
-              </Button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => refetchOne(item)}>
+                  Re-fetch
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => deleteOne(item.id)}>
+                  Delete
+                </Button>
+                <Button size="sm" onClick={() => commitOne(item.id)}>
+                  Commit
+                </Button>
+              </div>
             </div>
           ))}
         </div>
