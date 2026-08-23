@@ -82,6 +82,16 @@ def pull_shopify_orders(db: Session, shop_id: str) -> dict[str, int | list[dict]
     Port of Mimir core._pull_shopify_orders — scoped by shop_id.
     Creates OnlinePullQueue entries, decrements stock, records online sales.
     """
+    from app.inventory_truth import core as truth
+
+    status = truth.cutover_status(db, shop_id)
+    if status != "complete":
+        return {
+            "new_pulls": 0,
+            "notifications": [],
+            "message": f"Shopify stock pull frozen during inventory-truth cutover (status: {status})",
+        }
+
     creds = (
         db.query(ShopifyCredentials)
         .filter(ShopifyCredentials.shop_id == shop_id)

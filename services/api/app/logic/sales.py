@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.inventory_truth.core import ReceiveFrozenError
 from app.logic.pricing import (
     calculate_net_profit,
     calculate_net_revenue,
@@ -106,6 +107,14 @@ def finalize_sale(
     Decrement stock, write Sale rows and SyncOutbox entries.
     Returns created sale IDs.
     """
+    from app.inventory_truth import core as truth
+
+    status = truth.cutover_status(db, shop_id)
+    if status != "complete":
+        raise ReceiveFrozenError(
+            f"POS finalize frozen during inventory-truth cutover (status: {status})"
+        )
+
     distribution = calculate_lot_sale_distribution(lines, final_sale_price)
     sale_ids: list[int] = []
 

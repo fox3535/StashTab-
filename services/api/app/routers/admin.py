@@ -647,6 +647,7 @@ async def import_csv(
     ctx: ShopContext = Depends(get_shop_context),
     db: Session = Depends(get_db),
 ) -> dict:
+    _reject_if_truth_frozen(db, ctx.shop_id)  # CSV stock overwrite stays frozen
     content = (await file.read()).decode("utf-8", errors="replace")
     return process_csv_import(db, ctx.shop_id, content)
 
@@ -680,6 +681,7 @@ def update_inventory_item(
     old_price = float(item.price or 0.0)
 
     if payload.stock is not None:
+        _reject_if_truth_frozen(db=db, shop_id=ctx.shop_id)
         item.stock = payload.stock
     if payload.price is not None:
         item.price = payload.price
@@ -1034,3 +1036,66 @@ def delete_shipping_rule(
     db.delete(rule)
     db.commit()
     return {"success": True}
+
+
+def _reject_if_truth_frozen(db: Session, shop_id: str) -> None:
+    """MIGRATION.md §Order steps 3/5: direct stock overwrites (PATCH, CSV)
+    stay frozen through this whole slice — they unlock only with the later
+    adjust slice. 503 signals the freeze state."""
+    from app.inventory_truth import core as truth_core
+
+    if truth_core.cutover_status(db, shop_id) != "locking":
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "inventory-truth stock overwrite frozen until the adjust "
+                f"slice (cutover status: {truth_core.cutover_status(db, shop_id)})"
+            ),
+        )
+
+
+class InventoryTruthCutoverIn(BaseModel):
+    generation: int = Field(default=1, ge=1, le=1)
+
+
+def _require_owner(ctx: ShopContext) -> None:
+    if getattr(ctx, "role", None) != "owner":
+        raise HTTPException(status_code=403, detail="Owner role required")
+
+
+@router.get("/inventory-truth/status")
+def inventory_truth_status(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    return {
+        "shop_id": ctx.shop_id,
+        "cutover_status": truth_core.cutover_status(db, ctx.shop_id),
+        "unaccounted": truth_core.reconcile_shop(db, ctx.shop_id),
+    }
+
+
+@router.post("/inventory-truth/cutover")
+def inventory_truth_run_cutover(
+    payload: InventoryTruthCutoverIn,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    _require_owner(ctx)  # sponsor-gated operation; generation pinned to 1
+    result = truth_core.run_cutover(db, ctx.shop_id, generation=payload.generation)
+    return {"success": result["status"] == "complete", **result}
+
+
+@router.get("/inventory-truth/reconcile")
+def inventory_truth_reconcile(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    mismatches = truth_core.reconcile_shop(db, ctx.shop_id)
+    return {"shop_id": ctx.shop_id, "unaccounted_qty": len(mismatches), "mismatches": mismatches}

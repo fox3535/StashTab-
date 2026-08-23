@@ -6,6 +6,7 @@ import math
 
 from sqlalchemy.orm import Session
 
+from app.inventory_truth.core import PermanentPairError, ReceiveFrozenError
 from app.logic.pricing import calculate_shop_listing_price
 from app.models import (
     InventoryItem,
@@ -15,6 +16,40 @@ from app.models import (
     SyncOutbox,
     SystemSettings,
 )
+
+
+def _truth_dual_write_purchase_receive(
+    db: Session,
+    *,
+    shop_id: str,
+    sku: str,
+    purchase_record: PurchaseRecord,
+    inventory_item_id: int | None,
+    quantity: int,
+    cost_per_unit: float,
+) -> None:
+    """Receive-first dual-write for the frozen trade-receive path.
+
+    Fail-closed per MIGRATION.md order step 3/4: frozen shops reject live
+    receives. Uses ONLY the purchase_record key.
+    """
+    from decimal import Decimal
+
+    from app.inventory_truth import core as truth
+
+    truth.require_receive_open(db, shop_id)
+    try:
+        truth.record_purchase_receive(
+            db,
+            shop_id=shop_id,
+            sku=sku,
+            purchase_record_id=purchase_record.id,
+            inventory_item_id=inventory_item_id,
+            quantity=quantity,
+            unit_cost=Decimal(str(round(float(cost_per_unit), 2))),
+        )
+    except truth.PermanentPairError:
+        raise
 
 
 def get_trade_rates(db: Session, shop_id: str) -> tuple[float, float]:
@@ -192,13 +227,22 @@ def apply_trade_values_to_staging(
                         sync_status="pending",
                     )
                 )
-                db.add(
-                    PurchaseRecord(
-                        shop_id=shop_id,
-                        sku=existing_item.sku,
-                        quantity=qty,
-                        cost_per_unit=cost_per_unit,
-                    )
+                purchase = PurchaseRecord(
+                    shop_id=shop_id,
+                    sku=existing_item.sku,
+                    quantity=qty,
+                    cost_per_unit=cost_per_unit,
+                )
+                db.add(purchase)
+                db.flush()
+                _truth_dual_write_purchase_receive(
+                    db,
+                    shop_id=shop_id,
+                    sku=existing_item.sku,
+                    purchase_record=purchase,
+                    inventory_item_id=existing_item.id,
+                    quantity=qty,
+                    cost_per_unit=cost_per_unit,
                 )
             else:
                 new_inv = InventoryItem(
@@ -220,17 +264,32 @@ def apply_trade_values_to_staging(
                     sync_status="approved",
                 )
                 db.add(new_inv)
-                db.add(
-                    PurchaseRecord(
-                        shop_id=shop_id,
-                        sku=new_inv.sku,
-                        quantity=new_inv.stock,
-                        cost_per_unit=cost_per_unit,
-                    )
+                db.flush()
+                purchase = PurchaseRecord(
+                    shop_id=shop_id,
+                    sku=new_inv.sku,
+                    quantity=new_inv.stock,
+                    cost_per_unit=cost_per_unit,
+                )
+                db.add(purchase)
+                db.flush()
+                _truth_dual_write_purchase_receive(
+                    db,
+                    shop_id=shop_id,
+                    sku=new_inv.sku,
+                    purchase_record=purchase,
+                    inventory_item_id=new_inv.id,
+                    quantity=new_inv.stock,
+                    cost_per_unit=cost_per_unit,
                 )
 
             db.delete(staging_item)
             success_count += 1
+        except (ReceiveFrozenError, PermanentPairError):
+            # Freeze violations and failed-permanent pairs must reject the
+            # whole apply — never degrade to a counted per-item "error"
+            # while earlier stock bumps stay staged.
+            raise
         except Exception:
             error_count += 1
 
