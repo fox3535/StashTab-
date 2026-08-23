@@ -43,6 +43,10 @@ Convex = users + subscription tracking (from starter kit)
 | 6 | SaaS launch (billing tiers, deploy) | ✅ DONE |
 | 7 | OCR upload, native app | ⏳ Post-launch |
 
+Completed phases describe current feature foundations. They do not mean the
+optimized vendor-OS architecture or payment, accounting, and Watch products are
+implemented or production-ready.
+
 ---
 
 ## Phase 2 — Shopify Cloud Sync ✅
@@ -130,3 +134,41 @@ npm run dev -- -p 3001
 2. Port Python logic from Mimir repo — don't rewrite in TypeScript.
 3. Multi-tenant: every query must filter by `shop_id`.
 4. Do not push to git unless user explicitly asks.
+
+### Frozen card-resolution contract
+
+Any work involving card identification, OCR-assisted intake, catalog matching,
+JustTCG fallback, pricing enrichment, review queues, or promotion to inventory
+must comply with
+[`docs/card-resolution-workflow/CONTRACT.md`](./docs/card-resolution-workflow/CONTRACT.md).
+The contract is frozen at version `1.0.0`; changes require its documented
+amendment and approval process.
+
+Marketplace consumer checkout is **out of product scope**. StashTab is a
+vendor-only SaaS OS. POS payments, cash reconciliation, and Stripe/PayPal
+**planning** live in
+[`docs/security-assurance-v1/`](./docs/security-assurance-v1/). Do not
+integrate Stripe/PayPal, create payment or Watch tables, or treat Phase 6
+“SaaS launch DONE” as card-present or analytics go-live.
+
+### Vendor OS product strategy
+
+The approved positioning, existing-feature reconciliation, inventory
+optimization target, USPs, and dependency-ordered roadmap live in
+[`docs/product-strategy/VENDOR-OS-USP-ROADMAP.md`](./docs/product-strategy/VENDOR-OS-USP-ROADMAP.md).
+
+Agents must inspect the current implementation before planning a roadmap slice.
+Extend the existing Python inventory, staging, purchase, sales, show, pricing,
+reconciliation, resticker, reporting, and Shopify systems when they provide the
+stronger foundation. Do not build parallel replacements.
+
+Roadmap approval is product direction, not implementation authority. Inventory
+events/lots/locations, cash sessions, exact-money migrations, Watch data,
+models, jobs, and advisory agents remain blocked until their named gates pass.
+
+### Agent context and gated backlog
+
+Fresh agents must use [`docs/agent-context/INDEX.md`](./docs/agent-context/INDEX.md)
+instead of raw conversation history. Current gates and the next queued build phase
+are maintained in that directory. A backlog entry authorizes planning only unless
+its entry gate explicitly marks implementation ready.

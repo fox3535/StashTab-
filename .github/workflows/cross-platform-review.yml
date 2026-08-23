@@ -1,0 +1,168 @@
+name: Cross-platform contract review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: cross-platform-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cursor_reviews:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - role: data-integrity
+            prompt: .github/review-prompts/data-integrity.md
+          - role: adversarial
+            prompt: .github/review-prompts/adversarial.md
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Run independent Cursor review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: node scripts/run_cursor_review.mjs "${{ matrix.prompt }}" "cursor-${{ matrix.role }}.md"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cursor-${{ matrix.role }}
+          path: cursor-${{ matrix.role }}.md
+          retention-days: 14
+
+  codex_reviews:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - role: architecture
+            prompt: .github/review-prompts/architecture.md
+          - role: security
+            prompt: .github/review-prompts/security.md
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run independent Codex review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ matrix.prompt }}
+          output-file: codex-${{ matrix.role }}.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-${{ matrix.role }}
+          path: codex-${{ matrix.role }}.md
+          retention-days: 14
+
+  synthesize:
+    needs: [cursor_reviews, codex_reviews]
+    runs-on: ubuntu-latest
+    outputs:
+      report: ${{ steps.synthesis.outputs.final-message }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: review-artifacts
+          merge-multiple: true
+      - name: Synthesize independent reviews
+        id: synthesis
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/review-prompts/synthesis.md
+          output-file: synthesized-review.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthesized-review
+          path: synthesized-review.md
+          retention-days: 30
+
+  context_handoff:
+    needs: synthesize
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: synthesized-review
+          path: review-artifacts
+      - name: Propose compact context handoff
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/review-prompts/context-curator.md
+          output-file: proposed-context-handoff.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proposed-context-handoff
+          path: proposed-context-handoff.md
+          retention-days: 30
+
+  post_review:
+    if: github.event_name == 'pull_request'
+    needs: synthesize
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          REVIEW_BODY: ${{ needs.synthesize.outputs.report }}
+        with:
+          script: |
+            const marker = '<!-- stashtab-cross-platform-review -->';
+            const body = `${marker}\n## Cross-platform contract review\n\n${process.env.REVIEW_BODY}`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }

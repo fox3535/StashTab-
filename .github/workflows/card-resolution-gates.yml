@@ -1,0 +1,51 @@
+name: Card resolution contract gates
+
+on:
+  pull_request:
+    paths:
+      - "services/api/**"
+      - "app/admin/**"
+      - "components/notification-settings.tsx"
+      - "lib/**"
+      - "public/sw.js"
+      - "docs/card-resolution-workflow/**"
+      - "docs/agent-context/**"
+      - "PLAN.md"
+      - "AGENTS.md"
+      - ".cursor/rules/card-resolution.mdc"
+      - ".github/workflows/card-resolution-gates.yml"
+      - "scripts/**"
+      - ".env.example"
+      - "services/api/.env.example"
+
+permissions:
+  contents: read
+
+jobs:
+  contract-and-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - run: pip install -r requirements.txt pytest
+      - run: python ../../scripts/validate_card_resolution_contract.py
+      - run: python ../../scripts/validate_agent_context.py
+      - run: pytest tests -q
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
