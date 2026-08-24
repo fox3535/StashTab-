@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import ShopContext, get_shop_context
 from app.inventory_truth.core import ReceiveFrozenError
-from app.logic.sales import build_cart_lines, finalize_sale
+from app.inventory_truth.core_outbound import OutboundFrozenError
+from app.logic.sales import (
+    InsufficientStockError,
+    build_cart_lines,
+    finalize_sale,
+)
 from app.logic.trades import clear_pending_trades
 from app.models import Sale
 from app.schemas import (
@@ -69,6 +74,22 @@ def checkout(
         )
     except ReceiveFrozenError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except OutboundFrozenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except InsufficientStockError as exc:
+        # 409 Conflict with a stable machine-readable code; the transaction
+        # rolls back with zero partial Sale/snapshot/event/observation state.
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": exc.code,
+                "sku": exc.sku,
+                "requested": exc.requested,
+                "available": exc.available,
+                "message": str(exc),
+            },
+        ) from exc
 
     if payload.clear_placeholder_trades and payload.payment_method == "trade":
         clear_pending_trades(db, ctx.shop_id)

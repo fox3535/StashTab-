@@ -15,12 +15,6 @@ from app.models.settings import (
 )
 from app.models.shop import Shop, ShopMember
 from app.models.sync import OnlinePullQueue, PrintQueue, SyncOutbox
-from app.models.notification import (
-    NotificationDelivery,
-    NotificationEvent,
-    NotificationPreference,
-    PushSubscription,
-)
 
 __all__ = [
     "Base",
@@ -41,8 +35,4 @@ __all__ = [
     "StoreSettings",
     "ShippingRule",
     "ShopifyCredentials",
-    "PushSubscription",
-    "NotificationPreference",
-    "NotificationEvent",
-    "NotificationDelivery",
 ]
