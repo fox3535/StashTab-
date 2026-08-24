@@ -9,8 +9,9 @@
 
 - `STASHTAB-CARD-RESOLUTION-001` v1.0.0. Amendment 1.1.0 proposed; Web
   Push disabled.
-- `STASHTAB-INVENTORY-TRUTH-001` **v1.1.0** — FROZEN 2026-08-23
-  (AMENDMENT-1.1.0 applied). Slice-02 implementation accepted 2026-08-24;
+- `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — FROZEN 2026-08-24
+  (AMENDMENT-1.2.0 applied; hashes in `freezes/FREEZE-1.2.0.json`).
+  Slice-03 plan frozen; implementation blocked. Slice-02 accepted 2026-08-24;
   not merged, not deployed.
 
 ## Current phase
@@ -19,7 +20,7 @@
 — NOT DEPLOYED** (human acceptance 2026-08-24; see
 `docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`). Slice-01 remains
 completed and not deployed. Next queued planning packet:
-`slice-03-adjustments` (planning only until named approval). Notification
+`slice-03-adjustments` (plan frozen against v1.2.0; implementation blocked). Notification
 work stays in the main working tree behind **NOTIFICATION-INTEGRATION-GATE**.
 
 Deployment gates standing: production schema apply needs human approval;
@@ -43,8 +44,8 @@ required.
 3. `slice-02-outbound-events` **accepted 2026-08-24** (not merged, not
    deployed). **NOTIFICATION-INTEGRATION-GATE** and
    **MIGRATOR-ROLE-PROVISIONING-GATE** block merge/schema-apply/deploy.
-4. `slice-03-adjustments` planning prepared; implementation blocked until
-   named planning approval.
+4. `slice-03-adjustments` plan **FROZEN** against v1.2.0; implementation
+   blocked until a named unlock.
 5. `card-resolution-core-v1` build blocked.
 6. `security-assurance-v1` implementation blocked.
 7. Production schema apply (inventory truth + identity index) blocked on
@@ -52,7 +53,7 @@ required.
 
 ## Next queued phases
 
-1. Human planning-approval decision for `slice-03-adjustments`.
+1. Named implementation unlock for `slice-03-adjustments`.
 2. Notification integration with slice-02 overlapping files before any
    merge.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

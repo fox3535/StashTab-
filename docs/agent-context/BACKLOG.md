@@ -142,8 +142,8 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 
 ## inventory-truth-v1 / slice-03-adjustments
 
-**Status:** `QUEUED — PLANNING ALLOWED, IMPLEMENTATION BLOCKED`
-**Entry gate:** named human planning approval of `DIRECTIVE-SLICE-03.md`.
+**Status:** `PLAN FROZEN against v1.2.0 — IMPLEMENTATION BLOCKED`
+**Entry gate:** named human implementation unlock of `DIRECTIVE-SLICE-03-IMPLEMENTATION.md`.
 
 Must cover every remaining absolute or manual inventory mutation path
 (admin PATCH, CSV import, corrections, shrinkage/loss, cycle-count

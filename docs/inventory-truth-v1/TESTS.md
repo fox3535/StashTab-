@@ -90,3 +90,8 @@ Twelve tests per `DIRECTIVE-SLICE-02.md` §8:
     overlap, over-sale retry-after-restock, create_all prevention for all
     four new tables; grep-gate proves no un-inventoried stock mutation
     outside the inventoried path list.
+
+## Slice-03 adjustment acceptance tests (AMENDMENT-1.2.0)
+
+The 31 tests listed in `amendments/AMENDMENT-1.2.0.md` §13. PostgreSQL
+concurrency/freeze/CSV/append-only twice on disposable databases.

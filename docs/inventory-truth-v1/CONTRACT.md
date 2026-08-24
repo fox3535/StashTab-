@@ -1,7 +1,7 @@
 # StashTab Inventory Truth Foundation Contract
 
 **Contract ID:** `STASHTAB-INVENTORY-TRUTH-001`  
-**Version:** `1.0.0` → `1.1.0` (AMENDMENT-1.1.0 approved and applied 2026-08-23; §8 freeze record)  
+**Version:** `1.0.0` → `1.1.0` → `1.2.0` (AMENDMENT-1.2.0 approved; hashes in freezes/FREEZE-1.2.0.json)  
 **Status:** `FROZEN`  
 **Frozen on:** `2026-08-20`  
 **Slice id:** `inventory-truth-foundation`  
@@ -128,8 +128,9 @@ safety action. Re-enablement needs verification and an audit entry.
 
 ## 7. Current gate state
 
-`inventory-truth-v1 — FROZEN v1.1.0; SLICE-01 COMPLETED (NOT DEPLOYED);
-SLICE-02 PLAN FROZEN, AWAITING IMPLEMENTATION APPROVAL`
+`inventory-truth-v1 — FROZEN v1.2.0; SLICE-01 COMPLETED (NOT DEPLOYED);
+SLICE-02 COMPLETED (NOT MERGED, NOT DEPLOYED); AMENDMENT-1.2.0 APPROVED;
+SLICE-03 PLAN FROZEN, IMPLEMENTATION STILL BLOCKED`
 
 ## 8. Amendment 1.1.0 freeze record (2026-08-23)
 
@@ -150,3 +151,12 @@ The §2 v1.0.0 freeze record above remains historical evidence for the
 prior version and is preserved unchanged. Seven binding owner
 interpretations are recorded in `amendments/AMENDMENT-1.1.0.md` §17.
 Independent review evidence: `reviews/SLICE-02-PLANNING-REVIEWS.md`.
+
+## 9. Amendment 1.2.0 freeze record
+
+Resulting contract version: **1.2.0**.
+Approved amendment: `AMENDMENT-1.2.0`.
+Freeze manifest: `docs/inventory-truth-v1/freezes/FREEZE-1.2.0.json`.
+Byte hashes, algorithm, freeze timestamp, and file list live only in
+that manifest. This file does not store its own SHA-256.
+The §2 v1.0.0 and §8 v1.1.0 records remain unchanged.

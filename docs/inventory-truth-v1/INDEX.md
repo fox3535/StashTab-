@@ -1,9 +1,9 @@
 # inventory-truth-v1
 
 **Package ID:** `STASHTAB-INVENTORY-TRUTH-001`
-**Version:** `1.0.0`
+**Version:** `1.2.0`
 **Slice id:** `slice-01-receive-foundation`
-**Status:** `SLICE-01 COMPLETED (ACCEPTED, NOT DEPLOYED) — SLICE-02 COMPLETED (ACCEPTED 2026-08-24, NOT MERGED, NOT DEPLOYED)`
+**Status:** `CONTRACT v1.2.0 FROZEN — SLICE-03 PLAN FROZEN — IMPLEMENTATION BLOCKED`
 **Frozen on:** `2026-08-20`
 **System of record:** `CONTRACT.md`
 
@@ -13,9 +13,9 @@ unlock after identity acceptance, then **accepted by the human owner the
 same day**: see `ACCEPTANCE-SLICE-01.md`. `slice-02-outbound-events` was
 implemented in an isolated worktree from checkpoint `132f0f5` and
 **accepted by the human owner 2026-08-24**: see `ACCEPTANCE-SLICE-02.md`.
-It is **not merged and not deployed**. The next planning packet is
-`slice-03-adjustments`, which requires a named planning approval before
-implementation.
+It is **not merged and not deployed**. AMENDMENT-1.2.0 is approved;
+contract v1.2.0 and the slice-03 adjustment plan are frozen. Implementation
+of slice-03 is blocked until a named unlock.
 
 ## Holds (must stay true)
 
@@ -49,3 +49,5 @@ Amendments require a separately versioned proposal. See `CONTRACT.md` §6.
 10. `DIRECTIVE-SLICE-02.md` (v3 outbound plan — frozen against v1.1.0)
 11. `reviews/SLICE-02-PLANNING-REVIEWS.md` (5 review verdicts + corrections)
 12. `ACCEPTANCE-SLICE-02.md` (human acceptance record, 2026-08-24)
+13. `amendments/AMENDMENT-1.2.0.md` and `freezes/FREEZE-1.2.0.json`
+14. `DIRECTIVE-SLICE-03.md` (adjustment plan frozen against v1.2.0)

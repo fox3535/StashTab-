@@ -56,6 +56,8 @@ that for live tables.
 5. Enable receive dual-write (staging commit + trade) **and** lift freeze
    for intake/trade/POS/Shopify in the same release step. PATCH/CSV stock
    overwrite stay frozen until a later `adjust` slice.
+   While frozen, price-only PATCH remains allowed and MUST NOT write
+   quantity or cost. Mixed price-plus-quantity PATCH fails atomically.
 6. Recon must be 0. Timeout is **not** green.
 7. Sell/Shopify dual-write is a later PR gated on AMENDMENT-1.1.0;
    shipping order: outbound slice → adjust slice → production cutover.
@@ -72,6 +74,18 @@ Same locked discipline as above, extended:
   `inventory_channel_observation`.
 - All parent references are composite `(shop_id, id)` FKs
   `ON DELETE RESTRICT`.
+
+## Slice-03 additive envelope (AMENDMENT-1.2.0)
+
+Same locked discipline. `inventory_adjustment` joins `TRUTH_TABLE_NAMES`.
+Uniques: `(shop_id, id)`; `(shop_id, inventory_event_id)`;
+`(shop_id, client_idempotency_key)` WHERE `client_idempotency_key IS NOT NULL`;
+`(shop_id, csv_upload_id, csv_row_identity)` WHERE `csv_upload_id IS NOT NULL`;
+`(shop_id, reverses_event_id)` WHERE `reverses_event_id IS NOT NULL`.
+Checks: after=before+delta; after>=0; delta<>0; reason/source/input_mode
+enums; loss-class delta<0. Append-only + TRUNCATE deny. `create_all` MUST NOT
+create it. CSV new-item rows are a file-level validation failure.
+`inventory_exception.kind` also allows `adjust_anomaly`.
 
 ## Backfill (same keys as live dual-write)
 

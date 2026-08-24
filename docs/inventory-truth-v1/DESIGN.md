@@ -21,6 +21,11 @@ OVERLAY            = reserve | release | move | channel_commit | quarantine
                     | reverse  (only if the reversed event is OVERLAY)
 ```
 
+Live staff/owner quantity changes MAY insert event_type=adjust with
+lot_id NULL. They MUST NOT insert event_type=loss (backfill loss stays
+lot-required). Adjustments MUST NOT write Sale, lot cost, PurchaseRecord
+cost, or weighted-average cost.
+
 **Overlay events MUST set `quantity_delta = 0`.** They MAY set
 `overlay_quantity` (int) for later availability math. They **never**
 enter remaining or recon.
@@ -100,6 +105,17 @@ return_refund         return_refund:{shop_id}:{return_record_id}
 return_sale           return_sale:{shop_id}:{return_record_id}
 reverse               reverse_{orig_source}:{shop_id}:{orig_pk}[:seq]
 ```
+
+Adjust-side (AMENDMENT-1.2.0):
+
+```text
+admin_adjust   admin_adjust:{shop_id}:{idempotency_uuid}
+csv_adjust     csv_adjust:{shop_id}:{upload_uuid}:{row_identity}
+count_adjust   count_adjust:{shop_id}:{idempotency_uuid}
+```
+
+Reverse of those uses `reverse_{orig_source}:{shop_id}:{orig_pk}`
+with no `:seq`; at most one reverse per original adjustment event.
 
 Permitted characters `[A-Za-z0-9_.:-]`; max length 255. The ONLY
 generation suffix remains `:gen:{n}`. Over-sale short sells reuse

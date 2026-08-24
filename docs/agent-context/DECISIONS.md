@@ -196,5 +196,16 @@ Binding follow-up gates:
   UPDATE/DELETE/TRUNCATE still fail.
 
 Admin PATCH and CSV absolute quantity overwrites remain frozen until
-`slice-03-adjustments` is separately planned and approved.
+`slice-03-adjustments` is separately implemented under a named unlock.
+
+## D-015 — AMENDMENT-1.2.0 approved; contract and slice-03 plan frozen (approved)
+
+Approved by named human vote 2026-08-24. `STASHTAB-INVENTORY-TRUTH-001`
+is **v1.2.0**. Hashes live in
+`docs/inventory-truth-v1/freezes/FREEZE-1.2.0.json` (CONTRACT §9 pointer
+only; CONTRACT does not store its own hash). v1.0.0 §2 and v1.1.0 §8
+remain. The reviewed `DIRECTIVE-SLICE-03.md` is frozen against v1.2.0.
+Implementation of slice-03 is **not** authorized. Future contract changes
+require a new versioned amendment and a new freeze manifest; do not
+overwrite `FREEZE-1.2.0.json`.
 
