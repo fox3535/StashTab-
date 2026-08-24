@@ -140,6 +140,17 @@ remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
 deployment gates. Adjustment, production cutover, refund payments,
 manual-resolution UI, payments, and Watch remain outside this slice.
 
+## backend-notification-integration-v1
+
+**Status:** `FROZEN — IMPLEMENTATION AWAITING NAMED UNLOCK`
+**Source:** `docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md`;
+`DIRECTIVE.md`; `DIRECTIVE-IMPLEMENTATION.md` (prepared, not executed);
+manifest `freezes/FREEZE-1.1.1.json`
+
+AMENDMENT-1.1.1 frozen 2026-08-24. AMENDMENT-1.1.0 unchanged. Do not copy
+implementation files, enable Web Push, migrate, commit, or deploy until
+named unlock. **NOTIFICATION-INTEGRATION-GATE** still blocks merge.
+
 ## inventory-truth-v1 / slice-03-adjustments
 
 **Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED (ACCEPTED 2026-08-24)`

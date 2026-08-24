@@ -28,7 +28,9 @@ task points to it.
 
 ## Frozen planning contracts
 
-- Card resolution: `docs/card-resolution-workflow/CONTRACT.md`
-- Inventory truth: `docs/inventory-truth-v1/CONTRACT.md`
-  (`FROZEN, IMPLEMENTATION BLOCKED BY FAIL-CLOSED IDENTITY`)
+- Card resolution: `docs/card-resolution-workflow/CONTRACT.md` v1.0.0;
+  AMENDMENT-1.1.0 (product policy, file unchanged);
+  AMENDMENT-1.1.1 frozen (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json`)
+- Inventory truth: `docs/inventory-truth-v1/CONTRACT.md` v1.2.0
+  (`FROZEN; slices accepted, not merged, not deployed`)
 

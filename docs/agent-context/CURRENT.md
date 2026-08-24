@@ -7,8 +7,10 @@
 
 ## Frozen contracts
 
-- `STASHTAB-CARD-RESOLUTION-001` v1.0.0. Amendment 1.1.0 proposed; Web
-  Push disabled.
+- `STASHTAB-CARD-RESOLUTION-001` v1.0.0. AMENDMENT-1.1.0 unchanged
+  product-policy record. AMENDMENT-1.1.1 **FROZEN** 2026-08-24
+  (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json`).
+  Web Push disabled. Backend implementation awaiting named unlock.
 - `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — FROZEN 2026-08-24
   (AMENDMENT-1.2.0 applied; hashes in `freezes/FREEZE-1.2.0.json`).
   Slice-03 accepted 2026-08-24; not merged, not deployed. Slice-02 accepted;
@@ -40,7 +42,8 @@ required.
 ## Active gates
 
 1. ~~Human acceptance of the identity slice.~~ **Completed 2026-08-23.**
-2. Human freeze before amendment 1.1.0 or Web Push.
+2. AMENDMENT-1.1.1 frozen. Named `implementation_unlock` required before
+   backend notification code. Web Push remains disabled.
 3. `slice-02-outbound-events` **accepted 2026-08-24** (not merged, not
    deployed). **NOTIFICATION-INTEGRATION-GATE** and
    **MIGRATOR-ROLE-PROVISIONING-GATE** block merge/schema-apply/deploy.
@@ -53,7 +56,8 @@ required.
 
 ## Next queued phases
 
-1. Notification integration planning and named merge unlock.
+1. Named implementation unlock for frozen backend-notification 1.1.1
+   (do not start from this freeze).
 2. Notification integration with slice-02 overlapping files before any
    merge.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

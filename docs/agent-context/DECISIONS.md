@@ -220,3 +220,21 @@ blocks production CSV adjust use until the API/import result and eventual
 interface explicitly report ignored cost fields and point to a separately
 approved cost-correction workflow.
 
+## D-017 — Notification AMENDMENT-1.1.1 approved and frozen (approved)
+
+Approved by named human vote 2026-08-24. `STASHTAB-CARD-RESOLUTION-001 /
+AMENDMENT-1.1.1` is **FROZEN**. AMENDMENT-1.1.0 remains the unchanged
+product-policy record. Hashes live in
+`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json`.
+
+Binding transport interpretation (D-N5): Web Push is at-least-once where
+provider acknowledgement cannot be atomic with local `sent`. A crash
+after provider success may cause a safe duplicate. Payloads and click
+actions must be idempotent and non-mutating. Duplicate delivery cannot
+alter inventory, adjustment, card-resolution, or security events.
+Exactly-once is not claimed. Retry and transport outcome are audited.
+
+Backend implementation is **not** authorized until a named unlock of
+`DIRECTIVE-IMPLEMENTATION.md`. Frontend, production VAPID, live push,
+migrations, merge, and deploy remain blocked.
+
