@@ -205,7 +205,18 @@ is **v1.2.0**. Hashes live in
 `docs/inventory-truth-v1/freezes/FREEZE-1.2.0.json` (CONTRACT §9 pointer
 only; CONTRACT does not store its own hash). v1.0.0 §2 and v1.1.0 §8
 remain. The reviewed `DIRECTIVE-SLICE-03.md` is frozen against v1.2.0.
-Implementation of slice-03 is **not** authorized. Future contract changes
+Implementation of slice-03 was later unlocked and accepted (D-016). Future contract changes
 require a new versioned amendment and a new freeze manifest; do not
 overwrite `FREEZE-1.2.0.json`.
+
+## D-016 — Slice-03 adjustments accepted, not merged (approved)
+
+Approved by named human vote 2026-08-24. `inventory-truth-v1 /
+slice-03-adjustments` is **COMPLETED, NOT MERGED, NOT DEPLOYED**.
+Evidence: `docs/inventory-truth-v1/ACCEPTANCE-SLICE-03.md`.
+
+CSV cost fields on existing items remain unapplied. **CSV-COST-FEEDBACK-GATE**
+blocks production CSV adjust use until the API/import result and eventual
+interface explicitly report ignored cost fields and point to a separately
+approved cost-correction workflow.
 

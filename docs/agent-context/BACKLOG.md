@@ -142,7 +142,7 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 
 ## inventory-truth-v1 / slice-03-adjustments
 
-**Status:** `PLAN FROZEN against v1.2.0 — IMPLEMENTATION BLOCKED`
+**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED (ACCEPTED 2026-08-24)`
 **Entry gate:** named human implementation unlock of `DIRECTIVE-SLICE-03-IMPLEMENTATION.md`.
 
 Must cover every remaining absolute or manual inventory mutation path

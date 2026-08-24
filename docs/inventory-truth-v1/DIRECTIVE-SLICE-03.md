@@ -2,7 +2,7 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` v1.2.0 (frozen)
 **Slice:** `slice-03-adjustments`
-**Status:** `PLAN FROZEN against contract v1.2.0 — IMPLEMENTATION BLOCKED`
+**Status:** `IMPLEMENTED AND ACCEPTED — NOT MERGED — NOT DEPLOYED`
 **Predecessor:** `slice-02-outbound-events` (`COMPLETED — NOT MERGED — NOT DEPLOYED`)
 **Pinned review commit:** `1a54722` on `feature/inventory-truth-slice-02` (base `132f0f5`)
 **Owner decisions recorded:** 2026-08-24 (seven approved planning decisions)

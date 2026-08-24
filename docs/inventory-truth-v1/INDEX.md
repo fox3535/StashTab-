@@ -3,7 +3,7 @@
 **Package ID:** `STASHTAB-INVENTORY-TRUTH-001`
 **Version:** `1.2.0`
 **Slice id:** `slice-01-receive-foundation`
-**Status:** `CONTRACT v1.2.0 FROZEN — SLICE-03 PLAN FROZEN — IMPLEMENTATION BLOCKED`
+**Status:** `CONTRACT v1.2.0 FROZEN — SLICE-03 ACCEPTED — NOT MERGED — NOT DEPLOYED`
 **Frozen on:** `2026-08-20`
 **System of record:** `CONTRACT.md`
 
@@ -15,7 +15,7 @@ implemented in an isolated worktree from checkpoint `132f0f5` and
 **accepted by the human owner 2026-08-24**: see `ACCEPTANCE-SLICE-02.md`.
 It is **not merged and not deployed**. AMENDMENT-1.2.0 is approved;
 contract v1.2.0 and the slice-03 adjustment plan are frozen. Implementation
-of slice-03 is blocked until a named unlock.
+of slice-03 is accepted and not merged. See `ACCEPTANCE-SLICE-03.md`.
 
 ## Holds (must stay true)
 
@@ -51,3 +51,4 @@ Amendments require a separately versioned proposal. See `CONTRACT.md` §6.
 12. `ACCEPTANCE-SLICE-02.md` (human acceptance record, 2026-08-24)
 13. `amendments/AMENDMENT-1.2.0.md` and `freezes/FREEZE-1.2.0.json`
 14. `DIRECTIVE-SLICE-03.md` (adjustment plan frozen against v1.2.0)
+15. `ACCEPTANCE-SLICE-03.md` (human acceptance record, 2026-08-24)
