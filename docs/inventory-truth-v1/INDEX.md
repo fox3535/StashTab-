@@ -1,20 +1,21 @@
 # inventory-truth-v1
 
-**Package ID:** `STASHTAB-INVENTORY-TRUTH-001`  
-**Version:** `1.0.0`  
-**Slice id:** `slice-01-receive-foundation`  
-**Status:** `SLICE-01 COMPLETED (ACCEPTED) — SLICE-02 AWAITING PLANNING APPROVAL`  
-**Frozen on:** `2026-08-20`  
+**Package ID:** `STASHTAB-INVENTORY-TRUTH-001`
+**Version:** `1.0.0`
+**Slice id:** `slice-01-receive-foundation`
+**Status:** `SLICE-01 COMPLETED (ACCEPTED, NOT DEPLOYED) — SLICE-02 COMPLETED (ACCEPTED 2026-08-24, NOT MERGED, NOT DEPLOYED)`
+**Frozen on:** `2026-08-20`
 **System of record:** `CONTRACT.md`
 
 Planning contract frozen; contract bodies unchanged. Slice
 `slice-01-receive-foundation` implemented 2026-08-23 under a named human
 unlock after identity acceptance, then **accepted by the human owner the
-same day**: see `ACCEPTANCE-SLICE-01.md`, with PostgreSQL acceptance
-evidence in `reviews/SLICE-01-PG-ACCEPTANCE.md` (14/14 criteria pass;
-blocking CI job added). The proposed directive for
-`slice-02-outbound-events` is prepared but not implemented:
-`DIRECTIVE-SLICE-02.md`.
+same day**: see `ACCEPTANCE-SLICE-01.md`. `slice-02-outbound-events` was
+implemented in an isolated worktree from checkpoint `132f0f5` and
+**accepted by the human owner 2026-08-24**: see `ACCEPTANCE-SLICE-02.md`.
+It is **not merged and not deployed**. The next planning packet is
+`slice-03-adjustments`, which requires a named planning approval before
+implementation.
 
 ## Holds (must stay true)
 
@@ -45,5 +46,6 @@ Amendments require a separately versioned proposal. See `CONTRACT.md` §6.
 7. `reviews/SLICE-01-IMPLEMENTATION.md` (implementation record)
 8. `reviews/SLICE-01-PG-ACCEPTANCE.md` (PostgreSQL acceptance evidence)
 9. `ACCEPTANCE-SLICE-01.md` (human acceptance record, 2026-08-23)
-10. `DIRECTIVE-SLICE-02.md` (v3 outbound plan — ready for freeze decision)
+10. `DIRECTIVE-SLICE-02.md` (v3 outbound plan — frozen against v1.1.0)
 11. `reviews/SLICE-02-PLANNING-REVIEWS.md` (5 review verdicts + corrections)
+12. `ACCEPTANCE-SLICE-02.md` (human acceptance record, 2026-08-24)

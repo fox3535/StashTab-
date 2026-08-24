@@ -1,6 +1,6 @@
 # Gates (closed path)
 
-**Packet status:** `FROZEN v1.1.0 — SLICE-01 COMPLETED (ACCEPTED 2026-08-23, NOT DEPLOYED); SLICE-02 PLAN FROZEN, AWAITING IMPLEMENTATION APPROVAL`
+**Packet status:** `FROZEN v1.1.0 — SLICE-01 COMPLETED (ACCEPTED 2026-08-23, NOT DEPLOYED); SLICE-02 COMPLETED (ACCEPTED 2026-08-24, NOT MERGED, NOT DEPLOYED)`
 
 This packet does **not** implement fail-closed identity.
 
@@ -40,8 +40,11 @@ review loop; it names the failed criterion and owner and **stops**.
 | Independent planning reviews (5) | Reviewers ≠ planner | Architecture, Data-integrity, Database-security, Adversarial/concurrency, Workflow-liveness — `reviews/SLICE-02-PLANNING-REVIEWS.md` | **Complete; one bounded correction pass applied → v3** |
 | CONTRACT §6 amendment vote (outbound keys + migration envelope) | Executive sponsor | `amendments/AMENDMENT-1.1.0.md` — **APPROVED 2026-08-23**, applied as exact diff; contract v1.1.0 (CONTRACT §8 hashes); integrity check 5/5 `reviews/AMENDMENT-1.1.0-INTEGRITY-CHECK.md` | Closed |
 | Freeze decision for slice-02 plan | Human owner | v3 directive + reviews + amendment + integrity check | **`FROZEN` 2026-08-23 against contract v1.1.0** |
-| `implementation_unlock` slice-02-outbound-events | Executive sponsor | Directive prepared, NOT executed: `DIRECTIVE-SLICE-02-IMPLEMENTATION.md` | Pending named human approval |
+| `implementation_unlock` slice-02-outbound-events | Executive sponsor | Named unlock executed; implementation accepted 2026-08-24 | **COMPLETED — NOT MERGED — NOT DEPLOYED** (`ACCEPTANCE-SLICE-02.md`) |
+| Human acceptance of `slice-02-outbound-events` | Human owner | PostgreSQL append-only + worker-isolation evidence; 24/24 focused PG twice; 98 PG-enabled; 74 SQLite + 24 skipped; 57 corrected-criteria; validators | **COMPLETED — ACCEPTED 2026-08-24** |
 | Manual-resolution workflow (duplicate suspicions) | Separate named unlock | Required BEFORE production outbound cutover; no automated similarity compensation until it exists | Open gate |
+| **NOTIFICATION-INTEGRATION-GATE** (clean-worktree integration) | Human owner + integration reviewer | The slice-02 worktree was cut from checkpoint `132f0f5`, which never contained the reviewed notification implementation (`app/logic/notifications.py`, `app/logic/push_endpoints.py`, `app/models/notification.py`, `app/routers/notifications.py`, `services/api/tests/test_notifications.py`, `public/sw.js`, `components/notification-settings.tsx`, `hooks/use-api-auth.ts` — preserved untracked in the main tree). Slice-02 removed the dangling imports of these modules from `main.py` and `worker.py`. Before ANY merge or deployment, the slice-02 versions of `main.py`, `worker.py`, and any overlapping files MUST be reconciled with the preserved notification implementation; both outbound processing and notifications must pass their full suites together post-integration. Import removals are NOT accepted as deletion of the notification work. | Open gate — **BLOCKS merge and deployment** |
+| **MIGRATOR-ROLE-PROVISIONING-GATE** | Human owner + database owner | Before production schema application, prove: the migrator role is deliberately provisioned and reviewed; production does not silently create an unexpected privileged role; the runtime/application role cannot assume, inherit, grant, or authenticate as the migrator; no migrator credentials are stored in application configuration or runtime containers; migrator access is time-bounded and audited; the runtime role still fails UPDATE/DELETE/TRUNCATE. Isolated implementation acceptance does not satisfy this gate. | Open gate — **BLOCKS production schema application and deployment** |
 | Adjust-slice completion | Separate named unlock | Required BEFORE production inventory-truth cutover (owner decision 5) | Open gate |
 | Critical-exception retention policy | Operations/policy follow-up | No auto-delete of unresolved exceptions or audit history until a policy exists | Open follow-up |
 

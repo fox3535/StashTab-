@@ -1,27 +1,26 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-08-20  
-**Branch:** `feature/card-resolution-notifications`  
-**Commit:** none; working tree is uncommitted  
-**Last Git object:** `e5ed96b43234b0816d3320a69ae6fd0ddc2ded22`
+**Last verified:** 2026-08-24
+**Branch:** `feature/inventory-truth-slice-02` (isolated worktree; not merged)
+**Commit:** local slice-02 checkpoint on this branch; base `132f0f5`
 
 ## Frozen contracts
 
 - `STASHTAB-CARD-RESOLUTION-001` v1.0.0. Amendment 1.1.0 proposed; Web
   Push disabled.
 - `STASHTAB-INVENTORY-TRUTH-001` **v1.1.0** — FROZEN 2026-08-23
-  (AMENDMENT-1.1.0 applied; slice-02 plan frozen, implementation
-  awaiting named approval).
+  (AMENDMENT-1.1.0 applied). Slice-02 implementation accepted 2026-08-24;
+  not merged, not deployed.
 
 ## Current phase
 
-`inventory-truth-v1 / slice-01-receive-foundation` **COMPLETED — NOT
-DEPLOYED** (human acceptance 2026-08-23; see
-`docs/inventory-truth-v1/ACCEPTANCE-SLICE-01.md`). Proposed directive for
-`slice-02-outbound-events` is prepared and awaiting planning approval —
-no implementation. Notification P1 leftovers remain unfixed and out of
-scope.
+`inventory-truth-v1 / slice-02-outbound-events` **COMPLETED — NOT MERGED
+— NOT DEPLOYED** (human acceptance 2026-08-24; see
+`docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`). Slice-01 remains
+completed and not deployed. Next queued planning packet:
+`slice-03-adjustments` (planning only until named approval). Notification
+work stays in the main working tree behind **NOTIFICATION-INTEGRATION-GATE**.
 
 Deployment gates standing: production schema apply needs human approval;
 production membership unique index required first; cutover reconciliation
@@ -41,19 +40,19 @@ required.
 
 1. ~~Human acceptance of the identity slice.~~ **Completed 2026-08-23.**
 2. Human freeze before amendment 1.1.0 or Web Push.
-3. `slice-02-outbound-events`: AMENDMENT-1.1.0 **approved and applied**
-   (contract v1.1.0, hashes in CONTRACT §8); seven binding owner
-   interpretations recorded; integrity check 5/5; slice-02 plan
-   **FROZEN**; implementation directive prepared and awaiting named
-   approval (`DIRECTIVE-SLICE-02-IMPLEMENTATION.md`).
-4. `card-resolution-core-v1` build blocked.
-5. `security-assurance-v1` implementation blocked.
-6. Production schema apply (inventory truth + identity index) blocked on
+3. `slice-02-outbound-events` **accepted 2026-08-24** (not merged, not
+   deployed). **NOTIFICATION-INTEGRATION-GATE** and
+   **MIGRATOR-ROLE-PROVISIONING-GATE** block merge/schema-apply/deploy.
+4. `slice-03-adjustments` planning prepared; implementation blocked until
+   named planning approval.
+5. `card-resolution-core-v1` build blocked.
+6. `security-assurance-v1` implementation blocked.
+7. Production schema apply (inventory truth + identity index) blocked on
    human approval plus standing deployment gates.
 
 ## Next queued phases
 
-1. Human planning-approval decision for `DIRECTIVE-SLICE-02.md`.
-2. Later inventory-truth slices (adjust/stock-overwrite unlock) need new
-   unlocks.
+1. Human planning-approval decision for `slice-03-adjustments`.
+2. Notification integration with slice-02 overlapping files before any
+   merge.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

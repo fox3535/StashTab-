@@ -2,7 +2,7 @@
 
 ## card-resolution-core-v1
 
-**Status:** QUEUED — PLANNING ALLOWED, BUILD BLOCKED  
+**Status:** QUEUED — PLANNING ALLOWED, BUILD BLOCKED
 **Entry gate:** current notification/checkpoint PR passes automated tests,
 independent reviews are resolved, and a human approves build start.
 
@@ -28,7 +28,7 @@ may never enable production external calls or inventory writes without approval.
 
 ## security-assurance-v1
 
-**Status:** QUEUED — RESEARCH AND PLANNING ALLOWED, IMPLEMENTATION BLOCKED  
+**Status:** QUEUED — RESEARCH AND PLANNING ALLOWED, IMPLEMENTATION BLOCKED
 **Entry gate:** named human approves a listed implementation slice in
 `docs/security-assurance-v1/PHASED-IMPLEMENTATION.md`. Planning docs may be
 edited without that gate.
@@ -61,7 +61,7 @@ security contract, while the status contains `IMPLEMENTATION BLOCKED`.
 
 ## vendor-os-usp-roadmap
 
-**Status:** APPROVED DIRECTION — PLANNING ALLOWED, IMPLEMENTATION BLOCKED  
+**Status:** APPROVED DIRECTION — PLANNING ALLOWED, IMPLEMENTATION BLOCKED
 **Source:** `docs/product-strategy/VENDOR-OS-USP-ROADMAP.md`
 
 ### Dependency order
@@ -91,8 +91,8 @@ human unlock.
 
 ## fail-closed-shop-identity-v1
 
-**Status:** `COMPLETED — ACCEPTED 2026-08-23`  
-**Source:** `docs/fail-closed-shop-identity-v1/ACCEPTANCE.md`  
+**Status:** `COMPLETED — ACCEPTED 2026-08-23`
+**Source:** `docs/fail-closed-shop-identity-v1/ACCEPTANCE.md`
 **Unlock:** D-010. Accepted by human owner; evidence recorded in
 `ACCEPTANCE.md`.
 
@@ -104,9 +104,9 @@ preparation. That index is not an inventory-truth migration.
 
 ## inventory-truth-v1 / slice-01-receive-foundation
 
-**Status:** `COMPLETED — NOT DEPLOYED (ACCEPTED 2026-08-23)`  
-**Source:** `docs/inventory-truth-v1/ACCEPTANCE-SLICE-01.md`;  
-`docs/inventory-truth-v1/reviews/SLICE-01-PG-ACCEPTANCE.md`  
+**Status:** `COMPLETED — NOT DEPLOYED (ACCEPTED 2026-08-23)`
+**Source:** `docs/inventory-truth-v1/ACCEPTANCE-SLICE-01.md`;
+`docs/inventory-truth-v1/reviews/SLICE-01-PG-ACCEPTANCE.md`
 **Slice id:** `slice-01-receive-foundation`
 
 Frozen planning contract for immutable lots and inventory events under
@@ -129,17 +129,24 @@ and break-glass procedure.
 
 ## inventory-truth-v1 / slice-02-outbound-events
 
-**Status:** `PLAN FROZEN (CONTRACT v1.1.0) — AWAITING IMPLEMENTATION APPROVAL`  
-**Source:** `docs/inventory-truth-v1/DIRECTIVE-SLICE-02.md` (v3, frozen);  
-`docs/inventory-truth-v1/amendments/AMENDMENT-1.1.0.md` (APPROVED);  
-`docs/inventory-truth-v1/reviews/SLICE-02-PLANNING-REVIEWS.md`;  
-`docs/inventory-truth-v1/reviews/AMENDMENT-1.1.0-INTEGRITY-CHECK.md` (5/5);  
-`docs/inventory-truth-v1/DIRECTIVE-SLICE-02-IMPLEMENTATION.md` (prepared, not executed)
+**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED (ACCEPTED 2026-08-24)`
+**Source:** `docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`;
+`docs/inventory-truth-v1/DIRECTIVE-SLICE-02.md` (v3, frozen);
+`docs/inventory-truth-v1/amendments/AMENDMENT-1.1.0.md` (APPROVED)
 
-AMENDMENT-1.1.0 approved by human vote 2026-08-23 with seven binding
-interpretations (oversale exception reuse-not-stack, observation ledger
-retained, alert routing, POS 409, manual-resolution workflow as a
-pre-cutover gate, vendor-owned resalable decisions with full audit
-capture, no auto-delete of exceptions). Implementation blocked until a
-named human unlock; adjustment, production cutover, refund payments,
-manual-resolution UI, payments, and Watch remain outside the unlock.
+Isolated implementation accepted 2026-08-24. Merge and deployment remain
+blocked by **NOTIFICATION-INTEGRATION-GATE**. Production schema application
+remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
+deployment gates. Adjustment, production cutover, refund payments,
+manual-resolution UI, payments, and Watch remain outside this slice.
+
+## inventory-truth-v1 / slice-03-adjustments
+
+**Status:** `QUEUED — PLANNING ALLOWED, IMPLEMENTATION BLOCKED`
+**Entry gate:** named human planning approval of `DIRECTIVE-SLICE-03.md`.
+
+Must cover every remaining absolute or manual inventory mutation path
+(admin PATCH, CSV import, corrections, shrinkage/loss, cycle-count
+variance if introduced, recovery from mistaken adjustments) and replace
+silent absolute overwrites with append-only, auditable quantity changes
+while preserving the existing inventory snapshot.

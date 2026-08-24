@@ -175,7 +175,26 @@ follow-up with no auto-delete default.
 
 Bounded integrity check passed 5/5
 (`reviews/AMENDMENT-1.1.0-INTEGRITY-CHECK.md`). Slice-02 plan frozen
-against v1.1.0. Implementation directive prepared but NOT executed
-(`DIRECTIVE-SLICE-02-IMPLEMENTATION.md`); implementation still requires a
-named human unlock.
+against v1.1.0. Implementation was later unlocked, completed, and
+accepted 2026-08-24 (see D-014).
+
+## D-014 — Slice-02 outbound events accepted, not merged (approved)
+
+Approved by named human vote 2026-08-24. `inventory-truth-v1 /
+slice-02-outbound-events` is **COMPLETED, NOT MERGED, NOT DEPLOYED**.
+Evidence: `docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`.
+
+Binding follow-up gates:
+
+- **NOTIFICATION-INTEGRATION-GATE** blocks merge and deployment until
+  slice-02 `main.py` / `worker.py` and overlapping files are reconciled with
+  the preserved notification implementation and both suites pass together.
+- **MIGRATOR-ROLE-PROVISIONING-GATE** blocks production schema application
+  and deployment until the migrator role is deliberately provisioned,
+  reviewed, non-assumable by the runtime role, credential-free in app
+  config/containers, time-bounded, and audited, and runtime
+  UPDATE/DELETE/TRUNCATE still fail.
+
+Admin PATCH and CSV absolute quantity overwrites remain frozen until
+`slice-03-adjustments` is separately planned and approved.
 
