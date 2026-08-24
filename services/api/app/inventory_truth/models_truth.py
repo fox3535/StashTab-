@@ -32,6 +32,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -241,7 +242,7 @@ class InventoryException(TruthBase):
             name="uq_exception_shop_kind_ref",
         ),
         CheckConstraint(
-            "kind IN ('over_sale_short','duplicate_suspicion')",
+            "kind IN ('over_sale_short','duplicate_suspicion','adjust_anomaly')",
             name="ck_exception_kind",
         ),
         CheckConstraint("status IN ('open','resolved')", name="ck_exception_status"),
@@ -261,6 +262,98 @@ class InventoryException(TruthBase):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class InventoryAdjustment(TruthBase):
+    """Slice-03 evidence row: before/delta/after for one adjust/reverse."""
+
+    __tablename__ = "inventory_adjustment"
+    __table_args__ = (
+        UniqueConstraint("shop_id", "id", name="uq_adj_shop_id"),
+        UniqueConstraint("shop_id", "inventory_event_id", name="uq_adj_shop_event"),
+        Index(
+            "uq_adj_shop_client_key",
+            "shop_id",
+            "client_idempotency_key",
+            unique=True,
+            sqlite_where=text("client_idempotency_key IS NOT NULL"),
+            postgresql_where=text("client_idempotency_key IS NOT NULL"),
+        ),
+        Index(
+            "uq_adj_shop_csv_row",
+            "shop_id",
+            "csv_upload_id",
+            "csv_row_identity",
+            unique=True,
+            sqlite_where=text("csv_upload_id IS NOT NULL"),
+            postgresql_where=text("csv_upload_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_adj_shop_reverse_once",
+            "shop_id",
+            "reverses_event_id",
+            unique=True,
+            sqlite_where=text("reverses_event_id IS NOT NULL"),
+            postgresql_where=text("reverses_event_id IS NOT NULL"),
+        ),
+        Index("ix_adj_shop_sku_created", "shop_id", "sku", "created_at"),
+        Index("ix_adj_shop_actor_created", "shop_id", "actor_clerk_user_id", "created_at"),
+        CheckConstraint("qty_after = qty_before + qty_delta", name="ck_adj_after"),
+        CheckConstraint("qty_after >= 0", name="ck_adj_after_nonneg"),
+        CheckConstraint("qty_delta <> 0", name="ck_adj_delta_nonzero"),
+        CheckConstraint("input_mode IN ('absolute','signed')", name="ck_adj_input_mode"),
+        CheckConstraint(
+            "source IN ('admin_patch','csv','cycle_count_variance','reverse')",
+            name="ck_adj_source",
+        ),
+        CheckConstraint(
+            "reason_code IN ('count_correction','data_entry_error','shrinkage',"
+            "'damage','theft','found','cycle_count_variance','csv_correction',"
+            "'reverse_of')",
+            name="ck_adj_reason",
+        ),
+        CheckConstraint(
+            "(reason_code NOT IN ('shrinkage','damage','theft')) OR (qty_delta < 0)",
+            name="ck_adj_loss_class_negative",
+        ),
+        CheckConstraint(
+            "(reason_code <> 'found') OR (qty_delta > 0)",
+            name="ck_adj_found_positive",
+        ),
+        CheckConstraint(
+            "(reason_code <> 'reverse_of') OR ("
+            "source = 'reverse' AND reverses_event_id IS NOT NULL "
+            "AND original_actor_clerk_user_id IS NOT NULL)",
+            name="ck_adj_reverse_of",
+        ),
+        CheckConstraint(
+            "(source <> 'reverse') OR (reason_code = 'reverse_of')",
+            name="ck_adj_reverse_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    shop_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    inventory_event_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    inventory_item_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    sku: Mapped[str] = mapped_column(String(50), nullable=False)
+    qty_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    qty_delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    qty_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    input_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason_note: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_clerk_user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    original_actor_clerk_user_id: Mapped[str | None] = mapped_column(String(64))
+    client_idempotency_key: Mapped[str | None] = mapped_column(String(36))
+    csv_upload_id: Mapped[str | None] = mapped_column(String(36))
+    csv_row_identity: Mapped[str | None] = mapped_column(String(120))
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    reverses_event_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
 TRUTH_TABLE_NAMES = (
     "acquisition_lot",
     "inventory_event",
@@ -269,6 +362,7 @@ TRUTH_TABLE_NAMES = (
     "refund_record",
     "return_record",
     "inventory_exception",
+    "inventory_adjustment",
 )
 
 
@@ -297,12 +391,16 @@ _COMPOSITE_FKS = (
     ("refund_record", ["shop_id", "outbound_event_id"], "inventory_event.shop_id", "inventory_event.id", "fk_refund_shop_event"),
     ("return_record", ["shop_id", "refund_record_id"], "refund_record.shop_id", "refund_record.id", "fk_return_shop_refund"),
     ("return_record", ["shop_id", "outbound_event_id"], "inventory_event.shop_id", "inventory_event.id", "fk_return_shop_event"),
+    ("inventory_adjustment", ["shop_id", "inventory_event_id"], "inventory_event.shop_id", "inventory_event.id", "fk_adj_shop_event"),
+    ("inventory_adjustment", ["shop_id", "inventory_item_id"], "inventory_item.shop_id", "inventory_item.id", "fk_adj_shop_item"),
+    ("inventory_adjustment", ["shop_id", "reverses_event_id"], "inventory_event.shop_id", "inventory_event.id", "fk_adj_shop_reverses"),
 )
 
 _SLICE02_FK_TABLES = {
     "inventory_channel_observation": InventoryChannelObservation.__table__,
     "refund_record": RefundRecord.__table__,
     "return_record": ReturnRecord.__table__,
+    "inventory_adjustment": InventoryAdjustment.__table__,
 }
 
 

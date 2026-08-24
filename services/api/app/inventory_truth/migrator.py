@@ -31,13 +31,14 @@ TRUTH_TABLE_NAMES = (
     "refund_record",
     "return_record",
     "inventory_exception",
+    "inventory_adjustment",
 )
 LIVE_TABLES = ("inventory_item", "purchase_record", "sale")
 
 # Append-only enforcement (DIRECTIVE-SLICE-02 §5): BEFORE triggers reject
 # UPDATE/DELETE at the DB level. SQLite has no role grants; triggers work
 # on both backends and are created inside the same atomic migration.
-_APPEND_ONLY_TABLES = ("refund_record", "return_record")
+_APPEND_ONLY_TABLES = ("refund_record", "return_record", "inventory_adjustment")
 
 
 def apply(target_engine=engine, *, fail_after: str | None = None) -> dict[str, list[str]]:
@@ -84,6 +85,19 @@ def apply(target_engine=engine, *, fail_after: str | None = None) -> dict[str, l
 
         if fail_after == "tables":
             raise RuntimeError("injected migration failure after tables")
+
+        if target_engine.dialect.name != "sqlite":
+            conn.execute(
+                text(
+                    "ALTER TABLE inventory_exception DROP CONSTRAINT IF EXISTS ck_exception_kind"
+                )
+            )
+            conn.execute(
+                text(
+                    "ALTER TABLE inventory_exception ADD CONSTRAINT ck_exception_kind "
+                    "CHECK (kind IN ('over_sale_short','duplicate_suspicion','adjust_anomaly'))"
+                )
+            )
 
         # Step 4b — slice-02 forward migration: outbound events are lotless
         # (AMENDMENT-1.1.0), so a database created under slice-01 with the
