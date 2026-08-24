@@ -84,10 +84,15 @@ class TestMigratorOnlyCreation:
         insp = inspect(engine)
         for table in ("acquisition_lot", "inventory_event", "inventory_truth_cutover"):
             assert insp.has_table(table)
+        # AMENDMENT-1.1.0: migrator creates the four slice-02 tables too.
         assert set(result["tables"]) == {
             "acquisition_lot",
             "inventory_event",
             "inventory_truth_cutover",
+            "inventory_channel_observation",
+            "refund_record",
+            "return_record",
+            "inventory_exception",
         }
 
     def test_migrator_is_idempotent(self):

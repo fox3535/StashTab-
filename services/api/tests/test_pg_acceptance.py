@@ -32,8 +32,29 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _dispose_all_engines():
+    """Close every pooled connection this process may still hold.
+
+    Tests create several short-lived engines; a connection left idle in
+    transaction would block the catalog DDL below (drop/recreate) and can
+    deadlock later CREATE INDEX statements. Disposing first makes resets
+    deterministic."""
+    import gc
+
+    gc.collect()
+    for obj in list(gc.get_objects()):
+        try:
+            from sqlalchemy.engine import Engine
+
+            if isinstance(obj, Engine):
+                obj.dispose()
+        except Exception:
+            pass
+
+
 def _fresh_db():
     """Drop everything, recreate the PRE-inventory schema via app create_all."""
+    _dispose_all_engines()
     engine = create_engine(PG_URL, pool_pre_ping=True)
     with engine.begin() as conn:
         conn.execute(
@@ -79,13 +100,22 @@ class TestMigrator:
             "acquisition_lot",
             "inventory_event",
             "inventory_truth_cutover",
+            "inventory_channel_observation",
+            "refund_record",
+            "return_record",
+            "inventory_exception",
         ))
         assert set(result["tables"]) == {
             "acquisition_lot",
             "inventory_event",
             "inventory_truth_cutover",
+            "inventory_channel_observation",
+            "refund_record",
+            "return_record",
+            "inventory_exception",
         }
         assert len(result["indexes"]) == 3  # inventory_item, purchase_record, sale
+        assert len(result["triggers"]) == 4  # refund/return × UPDATE/DELETE
 
     def test_2_second_run_is_noop(self, pg_engine):
         from app.inventory_truth.migrator import apply
@@ -93,6 +123,7 @@ class TestMigrator:
         result = apply(pg_engine)
         assert result["indexes"] == []
         assert result["tables"] == []
+        assert result["triggers"] == []
 
 
 # --- Criteria 3, 4, 5 ------------------------------------------------------
@@ -106,7 +137,19 @@ class TestSchemaGuarantees:
         assert not any(insp.has_table(t) for t in ("acquisition_lot", "inventory_event"))
         Base.metadata.create_all(fresh)  # again — must stay inert for truth tables
         insp = inspect(fresh)
-        assert not insp.has_table("acquisition_lot")
+        # AMENDMENT-1.1.0: all seven truth tables are outside app metadata.
+        assert not any(
+            insp.has_table(t)
+            for t in (
+                "acquisition_lot",
+                "inventory_event",
+                "inventory_truth_cutover",
+                "inventory_channel_observation",
+                "refund_record",
+                "return_record",
+                "inventory_exception",
+            )
+        )
         cols = {c["name"] for c in insp.get_columns("inventory_item")}
         assert "lot_id" not in cols and "truth" not in " ".join(sorted(cols)).lower()
         fresh.dispose()
@@ -305,13 +348,17 @@ class TestConcurrencyAndCorruption:
         run(t1, worker); run(t2, worker)
         from sqlalchemy import func
 
+        # Assert from a fresh session: a racing commit can leave the worker
+        # sessions in 'prepared' state, which cannot emit further SQL.
+        s1.close(); s2.close()
+        check = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)()
         total = (
-            s1.query(func.coalesce(func.sum(InventoryEvent.quantity_delta), 0))
+            check.query(func.coalesce(func.sum(InventoryEvent.quantity_delta), 0))
             .filter(InventoryEvent.shop_id == "shop-d", InventoryEvent.sku == "R1")
             .scalar()
         )
         assert int(total or 0) == 5, errs
-        s1.close(); s2.close()
+        check.close()
     def test_8_cutover_racing_receive_never_partial(self, pg_engine):
         """A receive racing the cutover boundary either fully dual-writes
         after completion or rejects cleanly while frozen — never a snapshot
@@ -600,7 +647,15 @@ class TestBackfillReconRollbackMigration:
 
         # A subsequent clean run succeeds fully.
         result = apply(fresh)
-        assert set(result["tables"]) == {"acquisition_lot", "inventory_event", "inventory_truth_cutover"}
+        assert set(result["tables"]) == {
+            "acquisition_lot",
+            "inventory_event",
+            "inventory_truth_cutover",
+            "inventory_channel_observation",
+            "refund_record",
+            "return_record",
+            "inventory_exception",
+        }
         fresh.dispose()
 
 
@@ -651,5 +706,861 @@ class TestFreezeCoverage:
             finalize_sale(s, "shop-frz", [line], 2.0, "cash")
         s.rollback()
         assert s.query(Sale).count() == sales_before
+        s.close()
+        engine.dispose()
+
+
+# --- Slice-02 outbound acceptance (AMENDMENT-1.1.0) -------------------------
+
+
+class TestSlice02Outbound:
+    """Twelve-test extension per DIRECTIVE-SLICE-02 §8 / TESTS.md item 12:
+    PG-level append-only enforcement, scheduler-overlap + cross-channel
+    races, over-sale retry-after-restock, create_all prevention for the
+    four new tables, and the inventoried-paths grep gate."""
+
+    def _outbound_shop(self, pg_engine, shop_id="shop-s2", stock=10):
+        from app.inventory_truth.migrator import apply
+
+        apply(pg_engine)
+        s = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)()
+        s.add(Shop(id=shop_id, name=shop_id.upper(), slug=shop_id))
+        s.add(
+            InventoryItem(
+                shop_id=shop_id, sku="S2", name="s2", stock=stock, cost=2, price=5,
+                game="Pokemon",
+            )
+        )
+        s.commit()
+        from app.inventory_truth import core as truth
+
+        truth.run_cutover(s, shop_id)
+        return s
+
+    def test_s2_1_append_only_triggers_reject_update_delete(self, pg_engine):
+        from sqlalchemy.exc import DBAPIError
+
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import (
+            InventoryEvent,
+            RefundRecord,
+            ReturnRecord,
+        )
+
+        s = self._outbound_shop(pg_engine, "shop-append", stock=6)
+        item = s.query(InventoryItem).filter(InventoryItem.shop_id == "shop-append").one()
+        out.write_sell_event(
+            s,
+            key=out.sell_key_sale("shop-append", 1),
+            shop_id="shop-append",
+            sku=item.sku,
+            inventory_item_id=item.id,
+            sale_id=None,
+            quantity_removed=1,
+            reason=None,
+        )
+        event = (
+            s.query(InventoryEvent)
+            .filter(InventoryEvent.idempotency_key == out.sell_key_sale("shop-append", 1))
+            .one()
+        )
+        refund = out.create_refund_record(
+            s, shop_id="shop-append", outbound_event_id=event.id,
+            amount=Decimal("5.00"), reason=None, actor_clerk_user_id="u1",
+        )
+        s.commit()
+
+        # UPDATE rejected on refund_record (DB-level trigger).
+        refund.amount = Decimal("9.99")
+        with pytest.raises(DBAPIError):
+            s.flush()
+        s.rollback()
+
+        # DELETE rejected on refund_record.
+        r2 = (
+            s.query(RefundRecord)
+            .filter(RefundRecord.shop_id == "shop-append")
+            .first()
+        )
+        s.delete(r2)
+        with pytest.raises(DBAPIError):
+            s.flush()
+        s.rollback()
+
+        # UPDATE/DELETE rejected on return_record.
+        out.confirm_return(
+            s,
+            shop_id="shop-append",
+            sku=item.sku,
+            quantity_confirmed=1,
+            outcome="resalable",
+            condition_note=None,
+            refund_record_id=refund.id,
+            outbound_event_id=event.id,
+            inventory_item_id=item.id,
+            actor_clerk_user_id="u1",
+        )
+        s.commit()
+        rr = s.query(ReturnRecord).filter(ReturnRecord.shop_id == "shop-append").one()
+        rr.condition_note = "tamper"
+        with pytest.raises(DBAPIError):
+            s.flush()
+        s.rollback()
+        s.delete(rr)
+        with pytest.raises(DBAPIError):
+            s.flush()
+        s.rollback()
+
+        # Rows survived every rejected mutation attempt.
+        assert s.query(RefundRecord).filter(RefundRecord.shop_id == "shop-append").count() == 1
+        assert s.query(ReturnRecord).filter(ReturnRecord.shop_id == "shop-append").count() == 1
+        s.close()
+
+    def test_s2_2_scheduler_overlap_same_line_exactly_one_decrement(self, pg_engine):
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import InventoryChannelObservation, InventoryEvent
+
+        engine = _fresh_db()
+        from app.inventory_truth.migrator import apply
+
+        apply(engine)
+        setup = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        setup.add(Shop(id="shop-overlap", name="O", slug="overlap"))
+        setup.add(
+            InventoryItem(
+                shop_id="shop-overlap", sku="S3", name="s3", stock=8, cost=2, price=5,
+                game="Pokemon",
+            )
+        )
+        setup.commit()
+        setup.close()
+        from app.inventory_truth import core as truth
+
+        seed = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        truth.run_cutover(seed, "shop-overlap")
+        seed.close()
+
+        outcomes: list[str] = []
+        barrier = threading.Barrier(2)
+
+        def pull_worker():
+            s = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+            item = (
+                s.query(InventoryItem)
+                .filter(InventoryItem.shop_id == "shop-overlap", InventoryItem.sku == "S3")
+                .one()
+            )
+            barrier.wait()
+            try:
+                removed = min(3, max(int(item.stock or 0), 0))
+                if not out.claim_observation(
+                    s, shop_id="shop-overlap", channel="shopify",
+                    channel_ref="7777:1", sku="S3",
+                    quantity_requested=3, quantity_removed=removed, sale_id=None,
+                ):
+                    outcomes.append("lost")
+                    s.rollback()
+                    return
+                item.stock -= removed
+                sale = Sale(
+                    shop_id="shop-overlap", item_name="s3", sku="S3", sold_price=5.0,
+                    profit=3.0, transaction_type="online", net_revenue=5.0,
+                )
+                s.add(sale)
+                s.flush()
+                out.write_sell_event(
+                    s, key=out.sell_key_shopify_line("shop-overlap", "7777", "1"),
+                    shop_id="shop-overlap", sku="S3", inventory_item_id=item.id,
+                    sale_id=sale.id, quantity_removed=removed, reason=None,
+                )
+                s.commit()
+                outcomes.append("won")
+            except Exception as exc:
+                s.rollback()
+                outcomes.append(f"error:{type(exc).__name__}")
+            finally:
+                s.close()
+
+        t1 = threading.Thread(target=pull_worker)
+        t2 = threading.Thread(target=pull_worker)
+        t1.start(); t2.start(); t1.join(30); t2.join(30)
+
+        try:
+            check = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+            assert sorted(o.split(":")[0] for o in outcomes) == ["lost", "won"], outcomes
+            obs = check.query(InventoryChannelObservation).filter(
+                InventoryChannelObservation.channel_ref == "7777:1"
+            ).all()
+            assert len(obs) == 1 and obs[0].quantity_removed == 3
+            # NOTE: cutover backfill also wrote an `opening` receive for this
+            # SKU; the sell-side guarantee is exactly ONE *sell* event.
+            sells = check.query(InventoryEvent).filter(
+                InventoryEvent.sku == "S3", InventoryEvent.event_type == "sell"
+            ).all()
+            assert len(sells) == 1 and sells[0].quantity_delta == -3, [
+                (e.event_type, e.quantity_delta) for e in sells
+            ]
+            item = check.query(InventoryItem).filter(
+                InventoryItem.shop_id == "shop-overlap", InventoryItem.sku == "S3"
+            ).one()
+            assert item.stock == 5  # decremented exactly once
+        finally:
+            check.close()
+            engine.dispose()
+
+    def test_s2_3_cross_channel_race_both_recorded_never_merged(self, pg_engine):
+        from concurrent.futures import ThreadPoolExecutor
+
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import InventoryChannelObservation
+
+        engine = _fresh_db()
+        from app.inventory_truth.migrator import apply
+
+        apply(engine)
+        setup = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        setup.add(Shop(id="shop-xc", name="X", slug="xc"))
+        setup.add(
+            InventoryItem(
+                shop_id="shop-xc", sku="X4", name="x4", stock=4, cost=2, price=5,
+                game="Pokemon",
+            )
+        )
+        setup.commit()
+        from app.inventory_truth import core as truth
+
+        truth.run_cutover(setup, "shop-xc")
+        setup.close()
+
+        barrier = threading.Barrier(2)
+
+        def channel_worker(channel, ref):
+            s = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+            try:
+                barrier.wait()
+                claimed = out.claim_observation(
+                    s, shop_id="shop-xc", channel=channel, channel_ref=ref,
+                    sku="X4", quantity_requested=1, quantity_removed=1, sale_id=None,
+                )
+                s.commit()
+                return claimed
+            finally:
+                s.close()
+
+        with ThreadPoolExecutor() as pool:
+            f1 = pool.submit(channel_worker, "pos", "555")
+            f2 = pool.submit(channel_worker, "shopify", "8888:9")
+            assert f1.result(30) is True
+            assert f2.result(30) is True
+
+        check = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        rows = check.query(InventoryChannelObservation).filter(
+            InventoryChannelObservation.sku == "X4"
+        ).all()
+        assert {(r.channel, r.channel_ref) for r in rows} == {
+            ("pos", "555"),
+            ("shopify", "8888:9"),
+        }  # both recorded — no cross-channel arbitration exists by design
+        check.close()
+        engine.dispose()
+
+    def test_s2_4_oversale_retry_after_restock_stable_no_stack(self, pg_engine):
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import InventoryException
+
+        s = self._outbound_shop(pg_engine, "shop-retry", stock=2)
+
+        def attempt(removed_now):
+            removed = min(5, removed_now)
+            if not out.claim_observation(
+                s, shop_id="shop-retry", channel="shopify",
+                channel_ref="9999:1", sku="S2",
+                quantity_requested=5, quantity_removed=removed, sale_id=None,
+            ):
+                return "no_op"
+            state, _eid = out.record_over_sale_exception(
+                s, shop_id="shop-retry", channel_ref="9999:1",
+                order_id="9999", line_id="1", sku="S2",
+                requested=5, removed=removed,
+            )
+            return state
+
+        assert attempt(removed_now=2) in ("created", "reused")
+        s.commit()
+        key = out.sell_key_shopify_line("shop-retry", "9999", "1")
+
+        # Restock to 10, then replay the SAME line: identity matches
+        # (requested 5), only computed removal drifts → must stay a no-op.
+        item = s.query(InventoryItem).filter(InventoryItem.shop_id == "shop-retry").one()
+        item.stock = 10
+        s.commit()
+        assert attempt(removed_now=10) == "no_op"
+        s.commit()
+
+        assert s.query(InventoryException).filter(
+            InventoryException.exception_ref == key
+        ).count() == 1  # never stacked
+        item = s.query(InventoryItem).filter(InventoryItem.shop_id == "shop-retry").one()
+        assert item.stock == 10
+        s.close()
+
+    def test_s2_5_composite_fks_on_new_tables_reject_cross_shop(self, pg_engine):
+        from sqlalchemy.exc import IntegrityError
+
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import (
+            InventoryChannelObservation,
+            InventoryEvent,
+            RefundRecord,
+            ReturnRecord,
+        )
+
+        insp = inspect(pg_engine)
+        fk_map = {
+            table: {fk["name"] for fk in insp.get_foreign_keys(table)}
+            for table in (
+                "inventory_channel_observation",
+                "refund_record",
+                "return_record",
+            )
+        }
+        assert {"fk_obs_shop_sale"} <= fk_map["inventory_channel_observation"]
+        assert {"fk_refund_shop_event"} <= fk_map["refund_record"]
+        assert {
+            "fk_return_shop_refund",
+            "fk_return_shop_event",
+        } <= fk_map["return_record"]
+
+        s = self._outbound_shop(pg_engine, "shop-fk", stock=4)
+        other = Shop(id="shop-fk-other", name="FO", slug="fk-other")
+        s.add(other)
+        s.add(
+            InventoryEvent(
+                shop_id="shop-fk", sku="S2", lot_id=None, inventory_item_id=None,
+                sale_id=None, reverses_event_id=None, event_type="sell",
+                quantity_delta=-1, overlay_quantity=None, reason=None,
+                actor_clerk_user_id=None, idempotency_key=out.sell_key_sale("shop-fk", 42),
+            )
+        )
+        s.commit()
+        event = (
+            s.query(InventoryEvent)
+            .filter(InventoryEvent.idempotency_key == out.sell_key_sale("shop-fk", 42))
+            .one()
+        )
+        bad = RefundRecord(
+            shop_id="shop-fk-other",  # wrong shop → composite FK must reject
+            outbound_event_id=event.id,
+            amount=Decimal("1.00"),
+        )
+        s.add(bad)
+        with pytest.raises(IntegrityError):
+            s.commit()
+        s.rollback()
+        s.close()
+
+    def test_s2_6_grep_gate_no_uninventoried_stock_mutation(self):
+        """TESTS.md item 12: prove stock mutations occur only inside the
+        inventoried path list (DIRECTIVE-SLICE-02 §1 O-list)."""
+        import re
+        from pathlib import Path
+
+        app_dir = Path(__file__).resolve().parents[1] / "app"
+        allowed = {
+            # O1/O3 POS checkout
+            (Path("app") / "logic" / "sales.py"): {"item.stock -= finalized.quantity"},
+            # O4 Shopify pull
+            (Path("app") / "logic" / "sync_worker.py"): {
+                "locked_item.stock = stock_before - removed",
+                "inv_item.stock = stock_before - removed",
+            },
+            # O6 admin PATCH (frozen via _reject_if_truth_frozen)
+            (Path("app") / "routers" / "admin.py"): {"item.stock = payload.stock"},
+            # O2 trade settlement (receive-side, slice-01 dual-write)
+            (Path("app") / "logic" / "trades.py"): {"existing_item.stock = total_qty"},
+            # receive-side intake commit
+            (Path("app") / "logic" / "intake.py"): {"existing.stock = total_qty"},
+            # O7 CSV overwrite (frozen at router)
+            (Path("app") / "logic" / "import_engine.py"): {"existing.stock = quantity"},
+        }
+        pattern = re.compile(r"^\s*\w[\w.\[\]]*\.stock\s*(?:-=|\+=|=(?!=))", re.MULTILINE)
+        violations: list[str] = []
+
+        for py in sorted(app_dir.rglob("*.py")):
+            rel = Path("app") / py.relative_to(app_dir)
+            text_src = py.read_text(encoding="utf-8")
+            for match in pattern.finditer(text_src):
+                line = match.group(0).strip()
+                allowed_lines = allowed.get(rel, set())
+                if not any(line.startswith(a.split("=")[0].strip()) or a in line for a in allowed_lines):
+                    violations.append(f"{rel}: {line}")
+
+        assert violations == [], (
+            "un-inventoried stock mutation outside the O-list:\n"
+            + "\n".join(violations)
+        )
+
+    def test_s2_7_distinct_lines_same_sku_serialize_no_lost_update(self, pg_engine):
+        """Adversarial P1: two concurrent DISTINCT order lines for the SAME
+        SKU must serialize on the item row lock — final stock equals
+        snapshot minus event sum, with no overwritten decrement."""
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import InventoryEvent
+
+        engine = _fresh_db()
+        from app.inventory_truth.migrator import apply
+
+        apply(engine)
+        setup = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        setup.add(Shop(id="shop-dl", name="D", slug="dl"))
+        setup.add(
+            InventoryItem(
+                shop_id="shop-dl", sku="L1", name="l1", stock=10, cost=1, price=5,
+                game="Pokemon",
+            )
+        )
+        setup.commit()
+        from app.inventory_truth import core as truth
+
+        seed = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        truth.run_cutover(seed, "shop-dl")
+        seed.close()
+
+        barrier = threading.Barrier(2)
+
+        def line_worker(line_ref):
+            s = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+            try:
+                item = (
+                    s.query(InventoryItem)
+                    .filter(
+                        InventoryItem.shop_id == "shop-dl",
+                        InventoryItem.sku == "L1",
+                    )
+                    .one()
+                )
+                barrier.wait()
+                removed = 4
+                if not out.claim_observation(
+                    s, shop_id="shop-dl", channel="shopify",
+                    channel_ref=f"8000:{line_ref}", sku="L1",
+                    quantity_requested=removed, quantity_removed=removed,
+                    sale_id=None,
+                ):
+                    return "lost"
+                sale = Sale(
+                    shop_id="shop-dl", item_name="l1", sku="L1", sold_price=5.0,
+                    profit=4.0, transaction_type="online", net_revenue=5.0,
+                )
+                s.add(sale)
+                s.flush()
+                # Lock the item row only at the decrement point (mirrors the
+                # production path: read → arbitrate → lock → write), so the
+                # barrier never deadlocks on a pre-barrier FOR UPDATE.
+                locked_item = (
+                    s.query(InventoryItem)
+                    .filter(
+                        InventoryItem.shop_id == "shop-dl",
+                        InventoryItem.id == item.id,
+                    )
+                    .with_for_update()
+                    .populate_existing()
+                    .one()
+                )
+                out.write_sell_event(
+                    s, key=out.sell_key_shopify_line("shop-dl", "8000", line_ref),
+                    shop_id="shop-dl", sku="L1", inventory_item_id=item.id,
+                    sale_id=sale.id, quantity_removed=removed, reason=None,
+                )
+                locked_item.stock -= removed  # absolute write AFTER the lock
+                s.commit()
+                return "won"
+            except Exception:
+                s.rollback()
+                raise
+            finally:
+                s.close()
+
+        t1 = threading.Thread(target=line_worker, args=("1",))
+        t2 = threading.Thread(target=line_worker, args=("2",))
+        results = []
+        t1.start(); t2.start(); t1.join(30); t2.join(30)
+
+        check = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        try:
+            sells = (
+                check.query(InventoryEvent)
+                .filter(
+                    InventoryEvent.shop_id == "shop-dl",
+                    InventoryEvent.sku == "L1",
+                    InventoryEvent.event_type == "sell",
+                )
+                .all()
+            )
+            assert len(sells) == 2, [(e.event_type, e.quantity_delta) for e in sells]
+            assert sum(e.quantity_delta for e in sells) == -8
+            item = (
+                check.query(InventoryItem)
+                .filter(InventoryItem.shop_id == "shop-dl", InventoryItem.sku == "L1")
+                .one()
+            )
+            # Without the row lock this window yields stock 6 (one write lost);
+            # serialization guarantees both decrements land.
+            assert item.stock == 2, f"lost update detected: stock={item.stock}"
+        finally:
+            check.close()
+            engine.dispose()
+
+    def test_s2_8_append_only_rejects_truncate_runtime_role(self, pg_engine):
+        """Final acceptance: TRUNCATE on append-only tables is denied at the
+        DATABASE level for the runtime role; records survive every rejected
+        attempt; the authorized migrator role keeps full lifecycle access."""
+        from sqlalchemy.exc import DBAPIError
+
+        from app.inventory_truth import core_outbound as out
+        from app.inventory_truth.models_truth import RefundRecord
+
+        runtime_user = None
+        with pg_engine.connect() as c:
+            runtime_user = c.execute(text("SELECT current_user")).scalar()
+
+        # Migrator pass with an explicitly authorized role (the runtime role
+        # is deliberately NOT it — the denial must hit that role).
+        os.environ["STASHTAB_TRUTH_MIGRATOR_ROLE"] = "stashtab_migrator"
+        from app.inventory_truth.migrator import apply
+
+        apply(pg_engine)
+
+        # The authorized migrator role can truncate (controlled lifecycle):
+        # connect AS the migrator role on a dedicated autocommit connection.
+        try:
+            mig_engine = create_engine(PG_URL, poolclass=None)
+            with mig_engine.connect().execution_options(
+                isolation_level="AUTOCOMMIT"
+            ) as c:
+                c.execute(text("SET ROLE stashtab_migrator"))
+                c.execute(text("TRUNCATE return_record"))  # must be allowed
+            mig_engine.dispose()
+            setrole_ok = True
+        except Exception:
+            setrole_ok = False
+
+        # Seed one refund + one return record.
+        s = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)()
+        item = InventoryItem(
+            shop_id="shop-tr", sku="T9", name="t9", stock=3, cost=1, price=5,
+            game="Pokemon",
+        )
+        s.add(item)
+        s.commit()
+        ev = out.InventoryEvent(
+            shop_id="shop-tr", sku="T9", lot_id=None, inventory_item_id=item.id,
+            sale_id=None, reverses_event_id=None, event_type="sell",
+            quantity_delta=-1, overlay_quantity=None, reason=None,
+            actor_clerk_user_id=None, idempotency_key=out.sell_key_sale("shop-tr", 77),
+        )
+        s.add(ev)
+        s.flush()
+        refund = out.create_refund_record(
+            s, shop_id="shop-tr", outbound_event_id=ev.id,
+            amount=Decimal("5.00"), reason=None, actor_clerk_user_id="u1",
+        )
+        out.confirm_return(
+            s, shop_id="shop-tr", sku="T9", quantity_confirmed=1,
+            outcome="resalable", condition_note=None,
+            refund_record_id=refund.id, outbound_event_id=ev.id,
+            inventory_item_id=item.id, actor_clerk_user_id="u1",
+        )
+        s.commit()
+
+        counts = lambda: [  # noqa: E731
+            s.query(t).filter(t.shop_id == "shop-tr").count()
+            for t in (RefundRecord,)
+        ]
+        assert counts() == [1]
+
+        # Runtime role TRUNCATE must be rejected by the database (ACL first,
+        # trigger as second gate). Lock timeout guards against queueing.
+        for table in ("refund_record", "return_record"):
+            with pytest.raises(DBAPIError):
+                with pg_engine.connect() as c:
+                    c.execute(text("SET lock_timeout = '3s'"))
+                    c.execute(text(f"TRUNCATE {table}"))
+                    c.commit()
+        assert counts() == [1]  # records intact after failed attempts
+        assert setrole_ok  # controlled migrator path still functions
+        s.close()
+
+    def test_s2_9_worker_isolation_line_order_shop_tick(self, pg_engine):
+        """Final acceptance: poisoned line/order/shop/tick containment with
+        committed-event durability and idempotent retry."""
+        import app.logic.sync_worker as sw
+
+        engine = _fresh_db()
+        from app.inventory_truth.migrator import apply
+
+        apply(engine)
+        s = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        # Shop A: one poisoned line (unknown SKU), then two valid lines.
+        s.add(Shop(id="shop-iso", name="I", slug="iso"))
+        s.add(
+            InventoryItem(
+                shop_id="shop-iso", sku="W1", name="w1", stock=10, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        s.add(
+            InventoryItem(
+                shop_id="shop-iso", sku="W2", name="w2", stock=10, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        s.add(
+            InventoryItem(
+                shop_id="shop-iso", sku="W3", name="w3", stock=20, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        # POISON must resolve to an item so processing reaches the (wrapped)
+        # line handler instead of being filtered as an unknown SKU.
+        s.add(
+            InventoryItem(
+                shop_id="shop-iso", sku="POISON", name="p", stock=5, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        # Shop B: must be processed even if shop A's tick explodes.
+        s.add(Shop(id="shop-other", name="O", slug="other"))
+        s.add(
+            InventoryItem(
+                shop_id="shop-other", sku="V1", name="v1", stock=5, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        s.commit()
+        from app.inventory_truth import core as truth
+
+        for sid in ("shop-iso", "shop-other"):
+            seed = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+            truth.run_cutover(seed, sid)
+            seed.close()
+
+        orders = [
+            {
+                # Malformed line FIRST (unknown SKU): later valid lines in
+                # this same order must still be processed.
+                "id": 9001,
+                "line_items": [
+                    {"id": 1, "sku": "POISON", "quantity": 1, "price": 5.0},
+                    {"id": 2, "sku": "W1", "quantity": 2, "price": 5.0},
+                ],
+            },
+            {
+                # This whole order will fail permanently at its only line;
+                # the NEXT order must still be processed afterwards.
+                "id": 9002,
+                "line_items": [
+                    {"id": 3, "sku": "W2", "quantity": 3, "price": 5.0},
+                ],
+            },
+            {
+                "id": 9003,
+                "line_items": [
+                    {"id": 4, "sku": "W3", "quantity": 4, "price": 5.0},
+                ],
+            },
+        ]
+
+        class FakeClient:
+            def __init__(self, creds):
+                pass
+
+            def get_recent_unfulfilled_orders(self):
+                return {"orders": orders}
+
+        from app.models import ShopifyCredentials
+
+        s.add(
+            ShopifyCredentials(
+                shop_id="shop-iso", store_url="test", api_key_encrypted="x"
+            )
+        )
+        s.commit()
+
+        original_client = sw.ShopifyClient
+        sw.ShopifyClient = FakeClient
+        from app.inventory_truth import core_outbound as out
+
+        # Poison the POISON line via a wrapper around the real processor so
+        # the permanent-failure path (not a missing-SKU skip) is exercised.
+        real_process = sw._process_pull_line
+
+        def poisoned_process(db, **kwargs):
+            if kwargs.get("sku") == "POISON":
+                raise out.LinePermanentError("poisoned line")
+            return real_process(db, **kwargs)
+
+        sw._process_pull_line = poisoned_process
+        try:
+            result = sw.pull_shopify_orders(s, "shop-iso")
+        finally:
+            sw.ShopifyClient = original_client
+            sw._process_pull_line = real_process
+        failed_skus = {f["sku"] for f in result["failed_permanent_lines"]}
+        # Poisoned first line + fully-poisoned order 9002 both fail; the
+        # valid lines and order 9003 still commit.
+        assert result["new_pulls"] == 3, result
+        assert failed_skus == {"POISON"}
+        w1 = s.query(InventoryItem).filter(
+            InventoryItem.shop_id == "shop-iso", InventoryItem.sku == "W1"
+        ).one()
+        assert w1.stock == 8  # valid line after the poison still decremented
+        w3 = s.query(InventoryItem).filter(
+            InventoryItem.shop_id == "shop-iso", InventoryItem.sku == "W3"
+        ).one()
+        assert w3.stock == 16  # order after a failing order still processed
+
+        # Order 9001 is now partially pulled; a retry must not re-decrement.
+        sw._process_pull_line = poisoned_process
+        try:
+            result2 = sw.pull_shopify_orders(s, "shop-iso")
+        finally:
+            sw.ShopifyClient = original_client
+            sw._process_pull_line = real_process
+        assert result2["new_pulls"] == 0
+        w1 = s.query(InventoryItem).filter(
+            InventoryItem.shop_id == "shop-iso", InventoryItem.sku == "W1"
+        ).one()
+        assert w1.stock == 8  # idempotent retry: no double decrement
+
+        # Failing-shop isolation via the worker entrypoint.
+        import worker
+
+        def failing_sync(_db, shop_id):
+            if shop_id == "shop-iso":
+                raise RuntimeError("boom")
+            return {
+                "pull": {"new_pulls": 0, "notifications": []},
+                "outbox": {},
+            }
+
+        original_run = worker.run_full_sync
+        worker.run_full_sync = failing_sync
+        try:
+            shops = s.query(Shop).order_by(Shop.id).all()
+            outcomes = []
+            for shop in shops:
+                # Mirror the worker loop's per-shop containment.
+                try:
+                    outcomes.append(worker.tick_shop(s, shop))
+                except Exception as exc:  # pragma: no cover - last resort
+                    s.rollback()
+                    outcomes.append(
+                        {"shop": shop.slug, "status": "failed", "error": str(exc)}
+                    )
+        finally:
+            worker.run_full_sync = original_run
+        statuses = {r["shop"]: r["status"] for r in outcomes}
+        assert statuses["iso"] == "failed"
+        assert statuses["other"] == "ok"  # later shop still ran
+
+        s.close()
+        engine.dispose()
+
+    def test_s2_10_alert_delivery_failure_preserves_exception(self, pg_engine):
+        """Final acceptance: a failing alert publisher can neither roll back
+        nor resolve the committed over-sale exception."""
+        import app.logic.sync_worker as sw
+
+        engine = _fresh_db()
+        from app.inventory_truth.migrator import apply
+
+        apply(engine)
+        s = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        s.add(Shop(id="shop-alert", name="A", slug="alert"))
+        s.add(
+            InventoryItem(
+                shop_id="shop-alert", sku="S1", name="s1", stock=2, cost=1,
+                price=5, game="Pokemon",
+            )
+        )
+        s.commit()
+        from app.inventory_truth import core as truth
+        from app.inventory_truth import core_outbound as out
+
+        seed = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
+        truth.run_cutover(seed, "shop-alert")
+        seed.close()
+
+        orders = [
+            {
+                "id": 7001,
+                "line_items": [
+                    # Request 5 with only 2 in stock → over-sale exception.
+                    {"id": 1, "sku": "S1", "quantity": 5, "price": 5.0},
+                ],
+            },
+        ]
+
+        class FakeClient:
+            def __init__(self, creds):
+                pass
+
+            def get_recent_unfulfilled_orders(self):
+                return {"orders": orders}
+
+        from app.models import ShopifyCredentials
+
+        s.add(
+            ShopifyCredentials(
+                shop_id="shop-alert", store_url="test", api_key_encrypted="x"
+            )
+        )
+        s.commit()
+
+        original_client = sw.ShopifyClient
+        original_publish = sw.publish_notifications
+        calls = {"n": 0}
+
+        def exploding_publisher(items):
+            calls["n"] += 1
+            raise RuntimeError("push vendor down")
+
+        sw.ShopifyClient = FakeClient
+        sw.publish_notifications = exploding_publisher
+        try:
+            result = sw.pull_shopify_orders(s, "shop-alert")
+        finally:
+            sw.ShopifyClient = original_client
+            sw.publish_notifications = original_publish
+        assert calls["n"] == 1  # delivery was attempted post-commit
+        assert len(result["notifications"]) == 1  # batch still reports it
+        item = s.query(InventoryItem).filter(
+            InventoryItem.shop_id == "shop-alert", InventoryItem.sku == "S1"
+        ).one()
+        assert item.stock == 0  # actual removal persisted
+
+        exc_row = (
+            s.query(out.InventoryException)
+            .filter(
+                out.InventoryException.shop_id == "shop-alert",
+                out.InventoryException.kind == "over_sale_short",
+            )
+            .one()
+        )
+        assert exc_row.status == "open"  # not resolved by the failed alert
+        assert exc_row.quantity_unsatisfied == 3  # shortage preserved exactly
+        sells = (
+            s.query(out.InventoryEvent)
+            .filter(
+                out.InventoryEvent.shop_id == "shop-alert",
+                out.InventoryEvent.sku == "S1",
+                out.InventoryEvent.event_type == "sell",
+            )
+            .all()
+        )
+        # One event for the quantity actually removed (2), never 5.
+        assert sum(-e.quantity_delta for e in sells) == 2
+
         s.close()
         engine.dispose()

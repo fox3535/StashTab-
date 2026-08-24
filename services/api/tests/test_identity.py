@@ -13,7 +13,6 @@ from app.database import get_db
 from app.models import Base, InventoryItem, Shop, ShopMember
 from app.models.base import new_uuid
 from app.routers import inventory as inventory_router
-from app.routers import notifications as notifications_router
 from app.routers import shops as shops_router
 
 
@@ -80,7 +79,6 @@ def _client(db, monkeypatch, *, app_env="production", allow_bypass=False, issuer
     app = FastAPI()
     app.include_router(shops_router.router, prefix="/api/v1")
     app.include_router(inventory_router.router, prefix="/api/v1")
-    app.include_router(notifications_router.router, prefix="/api/v1")
 
     def override_db():
         yield db
@@ -267,21 +265,6 @@ def test_invite_owner_ok(monkeypatch):
     assert res.status_code == 200
 
 
-def test_notification_headers_cannot_bind_other_shop(monkeypatch):
-    db = _session()
-    client = _client(db, monkeypatch)
-    res = client.get(
-        "/api/v1/notifications/preferences",
-        headers=_headers(user="user-a", shop="shop-b"),
-    )
-    assert res.status_code == 200
-    spoof = client.get(
-        "/api/v1/notifications/preferences",
-        headers=_headers(user="user-b", shop="shop-a"),
-    )
-    assert spoof.status_code == 403
-
-
 def test_local_bypass_headers_work(monkeypatch):
     db = _session()
     client = _client(db, monkeypatch, app_env="local", allow_bypass=True, issuer="")
@@ -346,7 +329,6 @@ def test_worker_uses_persisted_shop_id(monkeypatch):
         return {}
 
     monkeypatch.setattr(worker, "run_full_sync", fake_sync)
-    monkeypatch.setattr(worker, "process_pending_notifications", lambda *_a, **_k: {"sent": 0, "failed": 0})
     monkeypatch.setattr(worker, "SessionLocal", lambda: db)
     worker.tick_shop(db, shop)
     assert seen == ["shop-a"]
