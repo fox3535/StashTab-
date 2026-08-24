@@ -564,6 +564,7 @@ class TestCreateAllPrevention:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         ):
             assert not insp.has_table(table), f"{table} leaked into app metadata"
 
@@ -582,6 +583,7 @@ class TestCreateAllPrevention:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         }
         assert set(result["tables"]) >= expected - {"acquisition_lot", "inventory_event", "inventory_truth_cutover"}
         for table in expected:

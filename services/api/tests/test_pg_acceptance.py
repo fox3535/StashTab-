@@ -104,6 +104,7 @@ class TestMigrator:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         ))
         assert set(result["tables"]) == {
             "acquisition_lot",
@@ -113,9 +114,10 @@ class TestMigrator:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         }
         assert len(result["indexes"]) == 3  # inventory_item, purchase_record, sale
-        assert len(result["triggers"]) == 4  # refund/return × UPDATE/DELETE
+        assert len(result["triggers"]) == 6  # refund/return/adjustment × UPDATE/DELETE
 
     def test_2_second_run_is_noop(self, pg_engine):
         from app.inventory_truth.migrator import apply
@@ -148,6 +150,7 @@ class TestSchemaGuarantees:
                 "refund_record",
                 "return_record",
                 "inventory_exception",
+                "inventory_adjustment",
             )
         )
         cols = {c["name"] for c in insp.get_columns("inventory_item")}
@@ -655,6 +658,7 @@ class TestBackfillReconRollbackMigration:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         }
         fresh.dispose()
 
@@ -1074,14 +1078,9 @@ class TestSlice02Outbound:
                 "locked_item.stock = stock_before - removed",
                 "inv_item.stock = stock_before - removed",
             },
-            # O6 admin PATCH (frozen via _reject_if_truth_frozen)
-            (Path("app") / "routers" / "admin.py"): {"item.stock = payload.stock"},
-            # O2 trade settlement (receive-side, slice-01 dual-write)
             (Path("app") / "logic" / "trades.py"): {"existing_item.stock = total_qty"},
-            # receive-side intake commit
             (Path("app") / "logic" / "intake.py"): {"existing.stock = total_qty"},
-            # O7 CSV overwrite (frozen at router)
-            (Path("app") / "logic" / "import_engine.py"): {"existing.stock = quantity"},
+            (Path("app") / "inventory_truth" / "core_adjust.py"): {"item.stock = qty_after"},
         }
         pattern = re.compile(r"^\s*\w[\w.\[\]]*\.stock\s*(?:-=|\+=|=(?!=))", re.MULTILINE)
         violations: list[str] = []
@@ -1564,3 +1563,46 @@ class TestSlice02Outbound:
 
         s.close()
         engine.dispose()
+
+
+class TestSlice03Adjust:
+    def test_s3_append_only_negative_and_lock(self, pg_engine):
+        import uuid
+
+        from app.inventory_truth.core_adjust import AdjustRejected, apply_adjustment
+        from app.inventory_truth.migrator import apply
+
+        apply(pg_engine)
+        s = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)()
+        s.add(Shop(id="shop-adj", name="A", slug="adj"))
+        item = InventoryItem(
+            shop_id="shop-adj", sku="A1", name="a", stock=20, cost=1, price=5,
+            game="Pokemon",
+        )
+        s.add(item)
+        s.commit()
+        from app.inventory_truth import core as truth
+
+        truth.run_cutover(s, "shop-adj")
+        apply_adjustment(
+            s, shop_id="shop-adj", item_id=item.id, input_mode="signed",
+            delta=-2, reason_code="count_correction",
+            actor_clerk_user_id="user-a", source="admin_patch",
+            client_idempotency_key=str(uuid.uuid4()),
+        )
+        with pytest.raises(Exception):
+            s.execute(text("UPDATE inventory_adjustment SET qty_delta = 0"))
+            s.commit()
+        s.rollback()
+        with pytest.raises(Exception):
+            s.execute(text("TRUNCATE inventory_adjustment"))
+            s.commit()
+        s.rollback()
+        with pytest.raises(AdjustRejected):
+            apply_adjustment(
+                s, shop_id="shop-adj", item_id=item.id, input_mode="signed",
+                delta=-999, reason_code="count_correction",
+                actor_clerk_user_id="user-a", source="admin_patch",
+                client_idempotency_key=str(uuid.uuid4()),
+            )
+        s.close()

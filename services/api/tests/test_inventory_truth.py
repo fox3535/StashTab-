@@ -93,6 +93,7 @@ class TestMigratorOnlyCreation:
             "refund_record",
             "return_record",
             "inventory_exception",
+            "inventory_adjustment",
         }
 
     def test_migrator_is_idempotent(self):
@@ -490,12 +491,22 @@ class TestRollbackDrill:
         assert reconcile_shop(s, "shop-r") == {}
 
     def test_stock_overwrite_frozen_even_after_cutover(self, db):
-        from fastapi import HTTPException
+        from app.inventory_truth.core_adjust import apply_adjustment
 
-        from app.routers.admin import _reject_if_truth_frozen
-
-        # shop-a HAS a completed cutover; PATCH/CSV overwrite still frozen
-        # until the later adjust slice (MIGRATION.md §Order step 5).
-        with pytest.raises(HTTPException) as exc:
-            _reject_if_truth_frozen(db=db, shop_id="shop-a")
-        assert exc.value.status_code == 503
+        item = InventoryItem(
+            shop_id="shop-a", sku="ADJ-1", name="n", stock=5, cost=1, price=2, game="Pokemon"
+        )
+        db.add(item)
+        db.commit()
+        result = apply_adjustment(
+            db,
+            shop_id="shop-a",
+            item_id=item.id,
+            input_mode="signed",
+            delta=-1,
+            reason_code="count_correction",
+            actor_clerk_user_id="user-a",
+            source="admin_patch",
+            client_idempotency_key="550e8400-e29b-41d4-a716-446655440000",
+        )
+        assert result["qty_delta"] == -1
