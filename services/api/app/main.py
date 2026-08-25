@@ -8,7 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import init_db
 from app.auth.identity import log_dev_identity_bypass_state
-from app.routers import admin, health, inventory, reports, sales, shops, shows, sync
+from app.routers import (
+    admin,
+    health,
+    inventory,
+    notifications,
+    reports,
+    sales,
+    shops,
+    shows,
+    sync,
+)
 
 
 @asynccontextmanager
@@ -43,6 +53,8 @@ app.include_router(sync.router, prefix=settings.api_prefix)
 app.include_router(shows.router, prefix=settings.api_prefix)
 app.include_router(reports.router, prefix=settings.api_prefix)
 app.include_router(admin.router, prefix=settings.api_prefix)
+if settings.notifications_backend_enabled:
+    app.include_router(notifications.router, prefix=settings.api_prefix)
 
 
 @app.get("/")

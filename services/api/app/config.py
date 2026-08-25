@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     web_push_allowed_host_suffixes: str = ""
     web_push_max_attempts: int = 8
     web_push_retry_backoff_seconds: int = 30
+    notifications_backend_enabled: bool = False
 
     @property
     def web_push_enabled(self) -> bool:
