@@ -29,9 +29,13 @@ export default function OnboardingPage() {
     setError("");
     try {
       const token = await getToken();
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      headers["X-Clerk-User-Id"] = user.id;
+      if (!token) {
+        throw new Error("Session expired. Sign in again.");
+      }
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
 
       const res = await fetch(`${API_BASE}/api/v1/shops/onboard`, {
         method: "POST",
@@ -59,11 +63,14 @@ export default function OnboardingPage() {
     setError("");
     try {
       const token = await getToken();
+      if (!token) {
+        throw new Error("Session expired. Sign in again.");
+      }
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
         "X-Shop-Id": shopId,
       };
-      if (token) headers.Authorization = `Bearer ${token}`;
 
       if (storeUrl.trim() && apiKey.trim()) {
         const res = await fetch(`${API_BASE}/api/v1/admin/shopify/credentials`, {

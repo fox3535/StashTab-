@@ -1,0 +1,38 @@
+{
+  "contract_id": "STASHTAB-INVENTORY-TRUTH-001",
+  "contract_version": "1.2.0",
+  "freeze_status": "FROZEN",
+  "frozen_at": "2026-08-24T13:29:00Z",
+  "approved_amendments": [
+    "AMENDMENT-1.1.0",
+    "AMENDMENT-1.2.0"
+  ],
+  "previous_freeze": {
+    "contract_version": "1.1.0",
+    "record": "docs/inventory-truth-v1/CONTRACT.md \u00a78"
+  },
+  "algorithm": "SHA-256",
+  "canonical_bytes": "exact-file-bytes-no-rewrite",
+  "files": [
+    {
+      "path": "docs/inventory-truth-v1/CONTRACT.md",
+      "sha256": "65d0be0160f962642ba0a9b5a1055b4a9177655d14ad98ee899ca403b205248f"
+    },
+    {
+      "path": "docs/inventory-truth-v1/DESIGN.md",
+      "sha256": "881aa413786204a950c320245824121283b074505ed0050ad74c8db110364bfc"
+    },
+    {
+      "path": "docs/inventory-truth-v1/MIGRATION.md",
+      "sha256": "c4fb828f0c4fa50feb185d1da9db80335beba8169a2adbec487b063b4fbe9d8e"
+    },
+    {
+      "path": "docs/inventory-truth-v1/TESTS.md",
+      "sha256": "0bf7d0288a85805baf1659daa6a997cd572c672431eb5cbbe37ad851b161005d"
+    },
+    {
+      "path": "docs/inventory-truth-v1/amendments/AMENDMENT-1.2.0.md",
+      "sha256": "a36df14f6c601cbfb67df16695d9ef32d3f499967a04a79ab6bac45b3130bdf4"
+    }
+  ]
+}

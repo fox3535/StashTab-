@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-
-const API = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
-const SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
+import { adminRequest } from "@/lib/admin-api";
 
 type UpdatedItem = {
   id: number;
@@ -21,10 +19,7 @@ export default function ShopifyReviewPage() {
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    if (!SHOP_ID) return;
-    const res = await fetch(`${API}/api/v1/admin/inventory/updated`, {
-      headers: { "X-Shop-Id": SHOP_ID },
-    });
+    const res = await adminRequest("/admin/inventory/updated");
     if (res.ok) {
       const data = await res.json();
       setItems(data.items ?? []);
@@ -38,10 +33,9 @@ export default function ShopifyReviewPage() {
   async function approveOne(id: number) {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/admin/inventory/${id}/approve-update`,
-        { method: "POST", headers: { "X-Shop-Id": SHOP_ID } }
-      );
+      const res = await adminRequest(`/admin/inventory/${id}/approve-update`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Queued for Shopify sync");
       await load();
@@ -55,10 +49,9 @@ export default function ShopifyReviewPage() {
   async function rejectOne(id: number) {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/admin/inventory/${id}/reject-update`,
-        { method: "POST", headers: { "X-Shop-Id": SHOP_ID } }
-      );
+      const res = await adminRequest(`/admin/inventory/${id}/reject-update`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Reverted price update");
       await load();
@@ -72,9 +65,8 @@ export default function ShopifyReviewPage() {
   async function approveUnder5() {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/v1/admin/inventory/approve-under-5`, {
+      const res = await adminRequest("/admin/inventory/approve-under-5", {
         method: "POST",
-        headers: { "X-Shop-Id": SHOP_ID },
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();

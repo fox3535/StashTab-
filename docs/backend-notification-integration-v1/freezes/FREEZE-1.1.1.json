@@ -1,0 +1,34 @@
+{
+  "contract_id": "STASHTAB-CARD-RESOLUTION-001",
+  "contract_version": "1.1.1",
+  "freeze_status": "FROZEN",
+  "freeze_timestamp": "2026-08-24T15:30:00Z",
+  "approved_amendments": [
+    "AMENDMENT-1.1.0",
+    "AMENDMENT-1.1.1"
+  ],
+  "previous_freeze": {
+    "contract_version": "1.0.0",
+    "record": "docs/card-resolution-workflow/CONTRACT.md and AMENDMENT-1.1.0.md"
+  },
+  "algorithm": "SHA-256",
+  "canonical_bytes": "exact-file-bytes-no-rewrite",
+  "files": [
+    {
+      "path": "docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md",
+      "sha256": "a21a4ce3ce9bdfb5fc8460d2778130cea4777d6f62301e859bd59748bd4dde1c"
+    },
+    {
+      "path": "docs/backend-notification-integration-v1/DIRECTIVE.md",
+      "sha256": "bb5c6b78089fd1b5187bb06f6e1f6a4c78c7e63ce2ab05b17136bc9aa98aa8a1"
+    },
+    {
+      "path": "docs/backend-notification-integration-v1/FREEZE-CHECK.md",
+      "sha256": "4810c532dbae96694f48ec66c3682223ea125ed83126986dc5760960a7a286cd"
+    },
+    {
+      "path": "docs/card-resolution-workflow/AMENDMENT-1.1.0.md",
+      "sha256": "92e8e0e83de4d1335562e1d454aa16365febe7bac74b2e4e2d1d22b66ab98eb1"
+    }
+  ]
+}

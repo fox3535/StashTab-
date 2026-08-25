@@ -16,8 +16,16 @@ def generate_sku() -> str:
     return f"CS-{secrets.token_hex(2).upper()}"
 
 
-def process_csv_import(db: Session, shop_id: str, csv_content: str) -> dict:
-    """Parse Collectr/vendor CSV and upsert inventory rows for a shop."""
+def process_csv_import(
+    db: Session,
+    shop_id: str,
+    csv_content: str,
+    *,
+    actor_clerk_user_id: str | None = None,
+    role: str | None = None,
+    upload_id: str | None = None,
+    reason_code: str = "csv_correction",
+) -> dict:
     try:
         df = pd.read_csv(StringIO(csv_content))
     except Exception as exc:
@@ -49,6 +57,7 @@ def process_csv_import(db: Session, shop_id: str, csv_content: str) -> dict:
     sealed_count = 0
     review_count = 0
     errors = 0
+    parsed_rows: list[dict] = []
 
     for index, row in df.iterrows():
         try:
@@ -156,50 +165,51 @@ def process_csv_import(db: Session, shop_id: str, csv_content: str) -> dict:
                 )
 
             if existing:
-                existing.stock = quantity
-                if cost_paid > 0:
-                    existing.cost = round(cost_paid, 2)
-                if price > 0:
-                    existing.price = round(price, 2)
+                parsed_rows.append({"row_identity": existing.sku, "target": quantity})
                 updated += 1
             else:
-                sku = generate_sku()
-                while (
-                    db.query(InventoryItem)
-                    .filter(InventoryItem.shop_id == shop_id, InventoryItem.sku == sku)
-                    .first()
-                    or db.query(StagingItem)
-                    .filter(StagingItem.shop_id == shop_id, StagingItem.sku == sku)
-                    .first()
-                ):
-                    sku = generate_sku()
-
-                db.add(
-                    InventoryItem(
-                        shop_id=shop_id,
-                        sku=sku,
-                        name=raw_name,
-                        set_name=raw_set,
-                        sequence_number=raw_number if not is_sealed else None,
-                        cost=round(cost_paid, 2),
-                        price=round(price, 2),
-                        stock=quantity,
-                        card_type=card_type,
-                        condition=condition,
-                        variant=variant,
-                        needs_review=not is_sealed,
-                        sync_status="paused",
-                        game=game,
-                    )
-                )
                 imported += 1
         except Exception:
             errors += 1
 
-    db.commit()
+    if imported:
+        db.rollback()
+        return {
+            "success": False,
+            "message": "csv contains a new-item quantity row",
+            "imported": 0,
+            "updated": 0,
+        }
+    if parsed_rows:
+        from app.inventory_truth.core_adjust import (
+            AdjustConflict,
+            AdjustForbidden,
+            AdjustFrozenError,
+            AdjustRejected,
+            apply_csv_adjustments,
+        )
+
+        try:
+            apply_csv_adjustments(
+                db,
+                shop_id=shop_id,
+                actor_clerk_user_id=actor_clerk_user_id or "",
+                role=role,
+                upload_id=upload_id or "",
+                rows=parsed_rows,
+                default_reason=reason_code,
+            )
+        except AdjustFrozenError as exc:
+            db.rollback()
+            return {"success": False, "message": str(exc)}
+        except (AdjustRejected, AdjustConflict, AdjustForbidden) as exc:
+            db.rollback()
+            return {"success": False, "message": str(exc)}
+    else:
+        db.commit()
     return {
         "success": True,
-        "imported": imported,
+        "imported": 0,
         "updated": updated,
         "sealed": sealed_count,
         "needs_review": review_count,

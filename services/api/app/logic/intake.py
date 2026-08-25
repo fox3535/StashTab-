@@ -14,6 +14,40 @@ from app.logic.pricing import calculate_shop_listing_price, suggested_price_for_
 from app.models import InventoryItem, StagingItem, SyncOutbox, SystemSettings
 
 
+def _truth_dual_write_staging_commit(
+    db: Session,
+    *,
+    shop_id: str,
+    staging_id: int,
+    inv: InventoryItem,
+    qty: int,
+    unit_cost: float,
+) -> None:
+    """Receive-first dual-write for the frozen staging-commit path.
+
+    Fail-closed per MIGRATION.md order step 3/4: while the shop is frozen
+    (no completed cutover), a live receive must NOT commit — raise so the
+    whole operation rejects. Idempotency and pair integrity live in core.
+    """
+    from decimal import Decimal
+
+    from app.inventory_truth import core as truth
+
+    truth.require_receive_open(db, shop_id)
+    try:
+        truth.record_staging_commit_receive(
+            db,
+            shop_id=shop_id,
+            sku=inv.sku,
+            staging_item_id=staging_id,
+            inventory_item_id=inv.id,
+            quantity=qty,
+            unit_cost=Decimal(str(round(float(unit_cost), 2))),
+        )
+    except truth.PermanentPairError:
+        raise
+
+
 def _new_sku(db: Session, shop_id: str) -> str:
     while True:
         sku = f"CS-{secrets.token_hex(2).upper()}"
@@ -195,6 +229,7 @@ def commit_staging_item(db: Session, shop_id: str, staging_id: int) -> Inventory
         )
 
     qty = staging.quantity or 1
+    staging_id_before_delete = staging.id
     if existing:
         total_qty = existing.stock + qty
         if total_qty > 0:
@@ -235,6 +270,15 @@ def commit_staging_item(db: Session, shop_id: str, staging_id: int) -> Inventory
         db.flush()
 
     generate_item_barcode(inv.sku, market_price=inv.price, format="QR")
+
+    _truth_dual_write_staging_commit(
+        db,
+        shop_id=shop_id,
+        staging_id=staging_id_before_delete,
+        inv=inv,
+        qty=qty,
+        unit_cost=staging.cost_basis,
+    )
 
     db.add(
         SyncOutbox(

@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, new_uuid, utcnow
@@ -15,6 +15,9 @@ class Shop(Base, TimestampMixin):
 
 class ShopMember(Base, TimestampMixin):
     __tablename__ = "shop_members"
+    __table_args__ = (
+        UniqueConstraint("shop_id", "clerk_user_id", name="uq_shop_members_shop_user"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     shop_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)

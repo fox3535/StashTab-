@@ -1,18 +1,34 @@
 from dataclasses import dataclass
-import os
 
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth.clerk import resolve_clerk_user_id
+from app.auth.identity import (
+    dev_identity_bypass_allowed,
+    load_shop,
+    log_dev_identity_bypass_state,
+    require_membership,
+    shop_selection_hint,
+    verified_user_id,
+)
+from app.config import settings
 from app.database import get_db
-from app.models import Shop, ShopMember
+from app.models import ShopMember
 
 
 @dataclass
 class ShopContext:
     shop_id: str
     clerk_user_id: str | None = None
+    role: str | None = None
+    identity_bypass: bool = False
+
+
+async def get_authenticated_user(
+    x_clerk_user_id: str | None = Header(default=None, alias="X-Clerk-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> str:
+    return verified_user_id(authorization, x_clerk_user_id)
 
 
 async def get_shop_context(
@@ -21,42 +37,68 @@ async def get_shop_context(
     authorization: str | None = Header(default=None, alias="Authorization"),
     db: Session = Depends(get_db),
 ) -> ShopContext:
-    """
-    Resolve shop from verified Clerk JWT, ShopMember, dev X-Shop-Id, or env fallback.
-    """
-    clerk_user_id = resolve_clerk_user_id(authorization, x_clerk_user_id)
-    shop_id: str | None = None
+    """Shop context from verified user + membership. X-Shop-Id is an untrusted hint."""
+    bypass = dev_identity_bypass_allowed()
+    if bypass:
+        log_dev_identity_bypass_state()
 
-    if clerk_user_id:
-        member = (
-            db.query(ShopMember)
-            .filter(ShopMember.clerk_user_id == clerk_user_id)
-            .first()
-        )
-        if member:
-            shop_id = member.shop_id
-        elif x_shop_id:
-            shop_id = x_shop_id
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail="No shop membership found for Clerk user",
-            )
-    elif x_shop_id:
-        shop_id = x_shop_id
-    else:
-        dev_shop = os.environ.get("DEV_SHOP_ID") or os.environ.get("NEXT_PUBLIC_DEV_SHOP_ID")
-        if dev_shop:
-            shop_id = dev_shop
-
-    if not shop_id:
+    user_id = verified_user_id(
+        authorization,
+        x_clerk_user_id,
+        allow_missing=bypass,
+    )
+    hint = shop_selection_hint(x_shop_id)
+    if not hint:
         raise HTTPException(
             status_code=401,
-            detail="Missing shop context (Authorization, X-Shop-Id, or Clerk auth)",
+            detail="Shop selection required",
         )
 
-    shop = db.query(Shop).filter(Shop.id == shop_id).first()
-    if not shop:
-        raise HTTPException(status_code=404, detail="Shop not found")
+    shop = load_shop(db, hint)
 
-    return ShopContext(shop_id=shop_id, clerk_user_id=clerk_user_id)
+    if bypass:
+        role = None
+        if user_id:
+            members = (
+                db.query(ShopMember)
+                .filter(
+                    ShopMember.shop_id == shop.id,
+                    ShopMember.clerk_user_id == user_id,
+                )
+                .all()
+            )
+            if len(members) > 1:
+                raise HTTPException(status_code=403, detail="Conflicting shop membership")
+            role = members[0].role if members else None
+        return ShopContext(
+            shop_id=shop.id,
+            clerk_user_id=user_id,
+            role=role,
+            identity_bypass=True,
+        )
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authenticated user required")
+
+    member = require_membership(db, shop.id, user_id)
+    return ShopContext(
+        shop_id=shop.id,
+        clerk_user_id=user_id,
+        role=member.role,
+        identity_bypass=bypass,
+    )
+
+
+async def get_notification_context(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    ctx: ShopContext = Depends(get_shop_context),
+) -> ShopContext:
+    """Require a real user for notification preference, subscription, and event routes."""
+    if settings.clerk_jwt_issuer:
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise HTTPException(status_code=401, detail="Bearer token required")
+        if not ctx.clerk_user_id:
+            raise HTTPException(status_code=401, detail="Invalid session")
+    elif not ctx.clerk_user_id:
+        raise HTTPException(status_code=401, detail="Authenticated user required")
+    return ctx

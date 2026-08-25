@@ -6,12 +6,30 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.inventory_truth.core import ReceiveFrozenError
 from app.logic.pricing import (
     calculate_net_profit,
     calculate_net_revenue,
     effective_sell_price,
 )
 from app.models import InventoryItem, Sale, SyncOutbox
+
+
+class InsufficientStockError(RuntimeError):
+    """POS insufficient stock: fail closed, stable machine-readable code,
+    zero partial mutation (binding interpretation §17.4)."""
+
+    def __init__(self, *, sku: str, requested: int, available: int):
+        self.sku = sku
+        self.requested = requested
+        self.available = available
+        super().__init__(
+            f"INSUFFICIENT_STOCK: {sku} requested {requested}, available {available}"
+        )
+
+    @property
+    def code(self) -> str:
+        return "INSUFFICIENT_STOCK"
 
 
 @dataclass
@@ -103,9 +121,48 @@ def finalize_sale(
     show_session_id: str | None = None,
 ) -> list[int]:
     """
-    Decrement stock, write Sale rows and SyncOutbox entries.
+    Decrement stock, write Sale rows, outbound truth pairs, and SyncOutbox
+    entries. Fail-closed on insufficient stock BEFORE any mutation.
     Returns created sale IDs.
     """
+    from app.inventory_truth import core as truth
+    from app.inventory_truth import core_outbound as out
+
+    status = truth.cutover_status(db, shop_id)
+    if status != "complete":
+        raise ReceiveFrozenError(
+            f"POS finalize frozen during inventory-truth cutover (status: {status})"
+        )
+
+    # Lock the item rows before the stock check so concurrent checkouts
+    # serialize per item: the fail-closed validation cannot race a parallel
+    # decrement (binding interpretation §17.4 holds under concurrency).
+    # with_for_update is a no-op on SQLite; populate_existing refreshes
+    # cached identity-map objects with the locked, current values.
+    item_ids = sorted({line.item.id for line in lines})
+    locked_items = {
+        row.id: row
+        for row in db.query(InventoryItem)
+        .filter(
+            InventoryItem.shop_id == shop_id,
+            InventoryItem.id.in_(item_ids),
+        )
+        .with_for_update()
+        .populate_existing()
+        .all()
+    }
+    for line in lines:
+        line.item = locked_items[line.item.id]
+
+    # Fail closed before touching anything (binding interpretation §17.4).
+    for line in lines:
+        if line.item.stock < line.quantity:
+            raise InsufficientStockError(
+                sku=line.item.sku,
+                requested=line.quantity,
+                available=int(line.item.stock or 0),
+            )
+
     distribution = calculate_lot_sale_distribution(lines, final_sale_price)
     sale_ids: list[int] = []
 
@@ -138,6 +195,31 @@ def finalize_sale(
         db.add(sale)
         db.flush()
         sale_ids.append(sale.id)
+
+        # Outbound truth: observation claim + sell event share the Sale
+        # transaction; an arbitration loss rolls back to its savepoint so
+        # the loser writes no event and no second decrement of truth state.
+        claimed = out.claim_observation(
+            db,
+            shop_id=shop_id,
+            channel="pos",
+            channel_ref=str(sale.id),
+            sku=item.sku,
+            quantity_requested=finalized.quantity,
+            quantity_removed=finalized.quantity,
+            sale_id=sale.id,
+        )
+        out.write_sell_event(
+            db,
+            key=out.sell_key_sale(shop_id, sale.id),
+            shop_id=shop_id,
+            sku=item.sku,
+            inventory_item_id=item.id,
+            sale_id=sale.id,
+            quantity_removed=finalized.quantity,
+            reason=None,
+            actor_clerk_user_id=None,
+        )
 
         db.add(
             SyncOutbox(

@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import ShopContext, get_shop_context
-from app.logic.sales import build_cart_lines, finalize_sale
+from app.inventory_truth.core import ReceiveFrozenError
+from app.inventory_truth.core_outbound import OutboundFrozenError
+from app.logic.sales import (
+    InsufficientStockError,
+    build_cart_lines,
+    finalize_sale,
+)
 from app.logic.trades import clear_pending_trades
 from app.models import Sale
 from app.schemas import (
@@ -56,15 +62,34 @@ def checkout(
 
     trade_in_value = payload.placeholder_cost if payload.payment_method == "trade" else 0.0
 
-    sale_ids = finalize_sale(
-        db,
-        ctx.shop_id,
-        lines,
-        final_total,
-        payload.payment_method,
-        trade_in_value=trade_in_value,
-        show_session_id=payload.show_session_id,
-    )
+    try:
+        sale_ids = finalize_sale(
+            db,
+            ctx.shop_id,
+            lines,
+            final_total,
+            payload.payment_method,
+            trade_in_value=trade_in_value,
+            show_session_id=payload.show_session_id,
+        )
+    except ReceiveFrozenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except OutboundFrozenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except InsufficientStockError as exc:
+        # 409 Conflict with a stable machine-readable code; the transaction
+        # rolls back with zero partial Sale/snapshot/event/observation state.
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": exc.code,
+                "sku": exc.sku,
+                "requested": exc.requested,
+                "available": exc.available,
+                "message": str(exc),
+            },
+        ) from exc
 
     if payload.clear_placeholder_trades and payload.payment_method == "trade":
         clear_pending_trades(db, ctx.shop_id)

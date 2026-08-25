@@ -1,0 +1,7 @@
+# Frozen contract and freeze-evidence text is stored as LF so Windows and
+# Linux checkouts present the same repository bytes for hash validation.
+docs/backend-notification-integration-v1/**/*.md text eol=lf
+docs/backend-notification-integration-v1/**/*.json text eol=lf
+docs/card-resolution-workflow/**/*.md text eol=lf
+docs/inventory-truth-v1/**/*.md text eol=lf
+docs/inventory-truth-v1/**/*.json text eol=lf

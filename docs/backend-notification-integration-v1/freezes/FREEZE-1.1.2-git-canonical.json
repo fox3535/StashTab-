@@ -1,0 +1,36 @@
+{
+  "contract_id": "STASHTAB-CARD-RESOLUTION-001",
+  "contract_version": "1.1.2",
+  "freeze_status": "FROZEN",
+  "freeze_timestamp": "2026-08-25T17:50:00Z",
+  "approved_amendments": [
+    "AMENDMENT-1.1.0",
+    "AMENDMENT-1.1.1",
+    "AMENDMENT-1.1.2"
+  ],
+  "previous_freeze": {
+    "contract_version": "1.1.1",
+    "record": "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json"
+  },
+  "algorithm": "SHA-256",
+  "canonical_bytes": "git-lf-text-bytes",
+  "evidence_kind": "checkout-conversion-hash-correction",
+  "historical_evidence": "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json",
+  "notes": "Byte-hash evidence only. Contract text, table inventory, and approved decisions are unchanged.",
+  "files": [
+    {
+      "path": "docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md",
+      "sha256": "cee85c2d1a0880b186cb28a5fb0beff346f7bf59baf345b3550c79da8421a3dc"
+    },
+    {
+      "path": "docs/backend-notification-integration-v1/FREEZE-CHECK-1.1.2.md",
+      "sha256": "00fe08ae6408e2d8226ccf0c02680504ca8e1ed42cfce85794812fd2c27944a1"
+    }
+  ],
+  "table_inventory": {
+    "frozen_1_1_1": 8,
+    "added_1_1_2": 4,
+    "total": 12
+  },
+  "human_vote": "APPROVE"
+}

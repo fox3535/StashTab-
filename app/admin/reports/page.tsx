@@ -2,27 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-
-const API = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8000";
-const SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
+import { adminRequest } from "@/lib/admin-api";
 
 export default function ReportsPage() {
   const [trades, setTrades] = useState<Array<Record<string, unknown>>>([]);
 
   useEffect(() => {
-    if (!SHOP_ID) return;
-    fetch(`${API}/api/v1/reports/trade-history`, {
-      headers: { "X-Shop-Id": SHOP_ID },
-    })
+    adminRequest("/reports/trade-history")
       .then((r) => r.json())
       .then((d) => setTrades(d.trades ?? []))
       .catch(() => setTrades([]));
   }, []);
 
   async function exportCsv() {
-    const res = await fetch(`${API}/api/v1/reports/trade-history/export`, {
-      headers: { "X-Shop-Id": SHOP_ID },
-    });
+    const res = await adminRequest("/reports/trade-history/export");
     const data = await res.json();
     const blob = new Blob([data.csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);

@@ -13,9 +13,11 @@ import { useAuth } from "@clerk/nextjs";
 import {
   itemSellPrice,
   mimirApi,
+  setMimirAuthProvider,
   type InventoryItem,
   type PlaceholderTrade,
 } from "@/lib/mimir-api";
+import { SessionExpiredError } from "@/lib/protected-api-headers";
 
 export type CartLine = InventoryItem & { cartQty: number };
 
@@ -23,7 +25,8 @@ type PosContextValue = {
   shopId: string;
   shopReady: boolean;
   clerkUserId?: string;
-  apiOpts: { shopId: string; clerkUserId?: string };
+  sessionError?: string;
+  apiOpts: { shopId: string; authToken?: string };
   cart: CartLine[];
   addToCart: (item: InventoryItem) => void;
   removeFromCart: (sku: string) => void;
@@ -44,16 +47,29 @@ export function PosProvider({ children }: { children: ReactNode }) {
   const [shopId, setShopId] = useState("");
   const [shopReady, setShopReady] = useState(false);
   const [authToken, setAuthToken] = useState<string | undefined>();
+  const [sessionError, setSessionError] = useState<string | undefined>();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [placeholderTrades, setPlaceholderTrades] = useState<PlaceholderTrade[]>([]);
   const [activeShowId, setActiveShowId] = useState<string | null>(null);
 
   useEffect(() => {
+    setMimirAuthProvider(async () => {
+      const token = await getToken();
+      if (!token) throw new SessionExpiredError();
+      return { authToken: token, shopId: shopId || devShopId || undefined };
+    });
+    return () => setMimirAuthProvider(null);
+  }, [getToken, shopId, devShopId]);
+
+  useEffect(() => {
     let cancelled = false;
     async function loadToken() {
-      if (!getToken) return;
       const token = await getToken();
-      if (!cancelled) setAuthToken(token ?? undefined);
+      if (!cancelled) {
+        setAuthToken(token ?? undefined);
+        if (!token) setSessionError("Sign in required. Your session expired or you are not signed in.");
+        else setSessionError(undefined);
+      }
     }
     loadToken();
     return () => {
@@ -65,15 +81,19 @@ export function PosProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function resolveShop() {
-      if (userId) {
-        try {
-          const shop = await mimirApi.getMyShop(userId);
-          if (!cancelled) setShopId(shop.id);
-        } catch {
-          if (!cancelled && devShopId) setShopId(devShopId);
+      const token = await getToken();
+      if (!token) {
+        if (!cancelled) {
+          setSessionError("Sign in required. Your session expired or you are not signed in.");
+          setShopReady(true);
         }
-      } else if (devShopId) {
-        setShopId(devShopId);
+        return;
+      }
+      try {
+        const shop = await mimirApi.getMyShop({ authToken: token });
+        if (!cancelled) setShopId(shop.id);
+      } catch {
+        if (!cancelled && devShopId) setShopId(devShopId);
       }
       if (!cancelled) setShopReady(true);
     }
@@ -82,15 +102,14 @@ export function PosProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, devShopId]);
+  }, [userId, devShopId, getToken]);
 
   const apiOpts = useMemo(
     () => ({
       shopId,
-      clerkUserId: userId ?? undefined,
       authToken,
     }),
-    [shopId, userId, authToken]
+    [shopId, authToken]
   );
 
   const cartTotal = useMemo(
@@ -140,12 +159,21 @@ export function PosProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  if (sessionError && !authToken) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center bg-obsidian p-6 font-mono text-sm text-steel">
+        {sessionError}
+      </div>
+    );
+  }
+
   return (
     <PosContext.Provider
       value={{
         shopId,
         shopReady,
         clerkUserId: userId ?? undefined,
+        sessionError,
         apiOpts,
         cart,
         addToCart,

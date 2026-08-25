@@ -7,12 +7,24 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.routers import admin, health, inventory, reports, sales, shops, shows, sync
+from app.auth.identity import log_dev_identity_bypass_state
+from app.routers import (
+    admin,
+    health,
+    inventory,
+    notifications,
+    reports,
+    sales,
+    shops,
+    shows,
+    sync,
+)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    log_dev_identity_bypass_state()
     static_root = Path(__file__).resolve().parent / "static"
     (static_root / "barcodes").mkdir(parents=True, exist_ok=True)
     (static_root / "scraped_thumbnails").mkdir(parents=True, exist_ok=True)
@@ -41,6 +53,8 @@ app.include_router(sync.router, prefix=settings.api_prefix)
 app.include_router(shows.router, prefix=settings.api_prefix)
 app.include_router(reports.router, prefix=settings.api_prefix)
 app.include_router(admin.router, prefix=settings.api_prefix)
+if settings.notifications_backend_enabled:
+    app.include_router(notifications.router, prefix=settings.api_prefix)
 
 
 @app.get("/")

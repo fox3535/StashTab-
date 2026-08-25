@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:api-auth": "node --test scripts/test_protected_api_headers.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",

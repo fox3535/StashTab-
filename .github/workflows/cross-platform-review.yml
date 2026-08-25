@@ -1,0 +1,230 @@
+name: Cross-platform contract review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: cross-platform-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  secret_probe:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      has_cursor: ${{ steps.probe.outputs.has_cursor }}
+      has_openai: ${{ steps.probe.outputs.has_openai }}
+    steps:
+      - id: probe
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$CURSOR_API_KEY" ]; then
+            echo "has_cursor=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_cursor=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Cursor external review not run"
+              echo
+              echo "CURSOR_API_KEY is not configured. Advisory Cursor review was skipped."
+              echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "has_openai=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_openai=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Codex external review not run"
+              echo
+              echo "OPENAI_API_KEY is not configured. Advisory OpenAI review was skipped."
+              echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  cursor_reviews:
+    needs: secret_probe
+    if: needs.secret_probe.outputs.has_cursor == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - role: data-integrity
+            prompt: .github/review-prompts/data-integrity.md
+          - role: adversarial
+            prompt: .github/review-prompts/adversarial.md
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Run independent Cursor review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: node scripts/run_cursor_review.mjs "${{ matrix.prompt }}" "cursor-${{ matrix.role }}.md"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cursor-${{ matrix.role }}
+          path: cursor-${{ matrix.role }}.md
+          retention-days: 14
+
+  codex_reviews:
+    needs: secret_probe
+    if: needs.secret_probe.outputs.has_openai == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - role: architecture
+            prompt: .github/review-prompts/architecture.md
+          - role: security
+            prompt: .github/review-prompts/security.md
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run independent Codex review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ matrix.prompt }}
+          output-file: codex-${{ matrix.role }}.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-${{ matrix.role }}
+          path: codex-${{ matrix.role }}.md
+          retention-days: 14
+
+  synthesize:
+    if: ${{ always() && needs.cursor_reviews.result == 'success' && needs.codex_reviews.result == 'success' }}
+    needs: [cursor_reviews, codex_reviews]
+    runs-on: ubuntu-latest
+    outputs:
+      report: ${{ steps.synthesis.outputs.final-message }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: review-artifacts
+          merge-multiple: true
+      - name: Synthesize independent reviews
+        id: synthesis
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/review-prompts/synthesis.md
+          output-file: synthesized-review.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthesized-review
+          path: synthesized-review.md
+          retention-days: 30
+
+  context_handoff:
+    if: ${{ always() && needs.synthesize.result == 'success' }}
+    needs: synthesize
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: synthesized-review
+          path: review-artifacts
+      - name: Propose compact context handoff
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/review-prompts/context-curator.md
+          output-file: proposed-context-handoff.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proposed-context-handoff
+          path: proposed-context-handoff.md
+          retention-days: 30
+
+  post_review:
+    if: ${{ github.event_name == 'pull_request' && always() && needs.synthesize.result == 'success' }}
+    needs: synthesize
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          REVIEW_BODY: ${{ needs.synthesize.outputs.report }}
+        with:
+          script: |
+            const marker = '<!-- stashtab-cross-platform-review -->';
+            const body = `${marker}\n## Cross-platform contract review\n\n${process.env.REVIEW_BODY}`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
+
+  advisory_status:
+    if: always()
+    needs: [secret_probe, cursor_reviews, codex_reviews, synthesize]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record advisory AI review status
+        run: |
+          {
+            echo "## Optional external AI reviews"
+            echo
+            echo "- Secret probe: \`${{ needs.secret_probe.result }}\`"
+            echo "- Cursor jobs: \`${{ needs.cursor_reviews.result }}\`"
+            echo "- Codex jobs: \`${{ needs.codex_reviews.result }}\`"
+            echo "- Synthesis: \`${{ needs.synthesize.result }}\`"
+            echo
+            if [ "${{ needs.synthesize.result }}" != "success" ]; then
+              echo "External AI review was **not treated as passed**."
+              echo "Synthesis and context handoff do not run unless both advisory reviews actually ran."
+              echo "Checked-in independent review files remain the inspectable evidence."
+              echo "See .github/EXTERNAL-AI-REVIEWS.md."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -38,7 +38,7 @@ function apiErrorMessage(err: unknown): string {
 }
 
 export default function AdminInventoryPage() {
-  const { getToken, userId } = useAuth();
+  const { getToken } = useAuth();
   const [q, setQ] = useState("");
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -48,8 +48,9 @@ export default function AdminInventoryPage() {
 
   const auth = useCallback(async () => {
     const token = await getToken();
-    return { authToken: token, clerkUserId: userId };
-  }, [getToken, userId]);
+    if (!token) throw new Error("Session expired. Sign in again.");
+    return { authToken: token };
+  }, [getToken]);
 
   async function load() {
     try {

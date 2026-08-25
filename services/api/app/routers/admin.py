@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 import math
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
@@ -106,6 +106,9 @@ class ShopifyCredentialsIn(BaseModel):
 
 class InventoryUpdateIn(BaseModel):
     stock: int | None = None
+    stock_delta: int | None = None
+    reason_code: str | None = None
+    reason_note: str | None = None
     price: float | None = None
     sticker_price: float | None = None
     sync_status: str | None = None
@@ -646,9 +649,29 @@ async def import_csv(
     file: UploadFile = File(...),
     ctx: ShopContext = Depends(get_shop_context),
     db: Session = Depends(get_db),
+    x_csv_upload_id: str | None = Header(default=None, alias="X-Csv-Upload-Id"),
+    reason_code: str = "csv_correction",
 ) -> dict:
     content = (await file.read()).decode("utf-8", errors="replace")
-    return process_csv_import(db, ctx.shop_id, content)
+    result = process_csv_import(
+        db,
+        ctx.shop_id,
+        content,
+        actor_clerk_user_id=ctx.clerk_user_id,
+        role=ctx.role,
+        upload_id=x_csv_upload_id,
+        reason_code=reason_code,
+    )
+    if not result.get("success"):
+        msg = str(result.get("message") or "csv adjust failed")
+        lower = msg.lower()
+        status = 400
+        if "frozen" in lower:
+            status = 503
+        elif "owner-only" in lower:
+            status = 403
+        raise HTTPException(status_code=status, detail=msg)
+    return result
 
 
 @router.post("/import/patch-conditions")
@@ -667,6 +690,7 @@ def update_inventory_item(
     payload: InventoryUpdateIn,
     ctx: ShopContext = Depends(get_shop_context),
     db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict:
     item = (
         db.query(InventoryItem)
@@ -678,9 +702,55 @@ def update_inventory_item(
 
     old_stock = int(item.stock or 0)
     old_price = float(item.price or 0.0)
+    quantity_requested = payload.stock is not None or payload.stock_delta is not None
 
-    if payload.stock is not None:
-        item.stock = payload.stock
+    if quantity_requested and payload.price is not None:
+        from app.inventory_truth.core import cutover_status
+
+        if cutover_status(db, ctx.shop_id) != "complete":
+            raise HTTPException(
+                status_code=503,
+                detail="mixed price-plus-quantity PATCH rejected while frozen",
+            )
+    if payload.stock is not None and payload.stock_delta is not None:
+        raise HTTPException(status_code=400, detail="provide stock or stock_delta, not both")
+    if quantity_requested:
+        from app.inventory_truth.core_adjust import (
+            AdjustConflict,
+            AdjustForbidden,
+            AdjustFrozenError,
+            AdjustRejected,
+            apply_adjustment,
+        )
+
+        source = (
+            "cycle_count_variance"
+            if payload.reason_code == "cycle_count_variance"
+            else "admin_patch"
+        )
+        try:
+            apply_adjustment(
+                db,
+                shop_id=ctx.shop_id,
+                item_id=item.id,
+                input_mode="absolute" if payload.stock is not None else "signed",
+                target=payload.stock,
+                delta=payload.stock_delta,
+                reason_code=payload.reason_code or "",
+                reason_note=payload.reason_note,
+                actor_clerk_user_id=ctx.clerk_user_id or "",
+                source=source,
+                client_idempotency_key=idempotency_key,
+            )
+        except AdjustFrozenError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except AdjustConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except AdjustForbidden as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except AdjustRejected as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        db.refresh(item)
     if payload.price is not None:
         item.price = payload.price
         shop_price = calculate_shop_listing_price(
@@ -747,6 +817,42 @@ def update_inventory_item(
         "price": item.price,
         "shop_listing_price": item.shop_listing_price,
     }
+
+
+class ReverseAdjustIn(BaseModel):
+    event_id: int
+
+
+@router.post("/inventory/{item_id}/reverse-adjust")
+def reverse_inventory_adjust(
+    item_id: int,
+    payload: ReverseAdjustIn,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth.core_adjust import (
+        AdjustConflict,
+        AdjustForbidden,
+        AdjustFrozenError,
+        AdjustRejected,
+        reverse_adjustment,
+    )
+
+    try:
+        return reverse_adjustment(
+            db,
+            shop_id=ctx.shop_id,
+            original_event_id=payload.event_id,
+            actor_clerk_user_id=ctx.clerk_user_id or "",
+        )
+    except AdjustFrozenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except AdjustConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except AdjustForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except AdjustRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/staging/{staging_id}")
@@ -1034,3 +1140,66 @@ def delete_shipping_rule(
     db.delete(rule)
     db.commit()
     return {"success": True}
+
+
+def _reject_if_truth_frozen(db: Session, shop_id: str) -> None:
+    """MIGRATION.md §Order steps 3/5: direct stock overwrites (PATCH, CSV)
+    stay frozen through this whole slice — they unlock only with the later
+    adjust slice. 503 signals the freeze state."""
+    from app.inventory_truth import core as truth_core
+
+    if truth_core.cutover_status(db, shop_id) != "complete":
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "inventory-truth quantity adjust frozen until cutover is "
+                f"complete (cutover status: {truth_core.cutover_status(db, shop_id)})"
+            ),
+        )
+
+
+class InventoryTruthCutoverIn(BaseModel):
+    generation: int = Field(default=1, ge=1, le=1)
+
+
+def _require_owner(ctx: ShopContext) -> None:
+    if getattr(ctx, "role", None) != "owner":
+        raise HTTPException(status_code=403, detail="Owner role required")
+
+
+@router.get("/inventory-truth/status")
+def inventory_truth_status(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    return {
+        "shop_id": ctx.shop_id,
+        "cutover_status": truth_core.cutover_status(db, ctx.shop_id),
+        "unaccounted": truth_core.reconcile_shop(db, ctx.shop_id),
+    }
+
+
+@router.post("/inventory-truth/cutover")
+def inventory_truth_run_cutover(
+    payload: InventoryTruthCutoverIn,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    _require_owner(ctx)  # sponsor-gated operation; generation pinned to 1
+    result = truth_core.run_cutover(db, ctx.shop_id, generation=payload.generation)
+    return {"success": result["status"] == "complete", **result}
+
+
+@router.get("/inventory-truth/reconcile")
+def inventory_truth_reconcile(
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.inventory_truth import core as truth_core
+
+    mismatches = truth_core.reconcile_shop(db, ctx.shop_id)
+    return {"shop_id": ctx.shop_id, "unaccounted_qty": len(mismatches), "mismatches": mismatches}
