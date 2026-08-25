@@ -256,3 +256,16 @@ Backend implementation is **not** authorized until a new named unlock of
 does not authorize 1.1.2 apply. Frontend, production VAPID, live push,
 migrations, merge, and deploy remain blocked.
 
+## D-019 — Notification 1.1.2 backend accepted locally (approved)
+
+Approved by named human owner 2026-08-25.
+`backend-notification-integration-v1 / implementation-1.1.2` is
+**COMPLETED — NOT PUSHED — NOT MERGED — NOT DEPLOYED**. Evidence is in
+`docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`.
+
+Merge and deployment now require **GITHUB-NOTIFICATION-CI-GATE**: the blocking
+PostgreSQL notification workflow must execute successfully on GitHub against
+the exact pushed commits. The unexecuted workflow definition is not execution
+evidence. Production VAPID, live Web Push, production schema apply, frontend
+settings, and service-worker install remain blocked.
+

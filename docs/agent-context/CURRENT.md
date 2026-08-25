@@ -1,9 +1,9 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-08-24
-**Branch:** `feature/inventory-truth-slice-03` (isolated worktree; not merged)
-**Commit:** local slice-03 checkpoint pending; base planning `6370060`
+**Last verified:** 2026-08-25
+**Branch:** `feature/backend-notification-v1.1.2` (isolated worktree; not pushed)
+**Commit:** local 1.1.2 implementation checkpoint pending on this branch
 
 ## Frozen contracts
 
@@ -11,8 +11,8 @@
   product-policy record. AMENDMENT-1.1.1 **FROZEN** 2026-08-24
   (`freezes/FREEZE-1.1.1.json`). AMENDMENT-1.1.2 **FROZEN** 2026-08-24
   (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`).
-  Web Push disabled. Backend implementation awaiting a new named unlock
-  covering 1.1.0+1.1.1+1.1.2. The prior 1.1.1 unlock does not apply.
+  Web Push disabled. Local 1.1.2 backend **ACCEPTED 2026-08-25**; not
+  pushed, not merged, not deployed.
 - `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — FROZEN 2026-08-24
   (AMENDMENT-1.2.0 applied; hashes in `freezes/FREEZE-1.2.0.json`).
   Slice-03 accepted 2026-08-24; not merged, not deployed. Slice-02 accepted;
@@ -20,12 +20,11 @@
 
 ## Current phase
 
-`inventory-truth-v1 / slice-02-outbound-events` **COMPLETED — NOT MERGED
-— NOT DEPLOYED** (human acceptance 2026-08-24; see
-`docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`). Slice-01 remains
-completed and not deployed. Next queued planning packet:
-`slice-03-adjustments` **COMPLETED — NOT MERGED — NOT DEPLOYED**. Notification
-work stays in the main working tree behind **NOTIFICATION-INTEGRATION-GATE**.
+`backend-notification-integration-v1 / implementation-1.1.2`
+**COMPLETED — NOT PUSHED — NOT MERGED — NOT DEPLOYED** (human acceptance
+2026-08-25; see `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`).
+Identity, receive, outbound, and adjustment backend slices are present on
+this branch. Merge waits for **GITHUB-NOTIFICATION-CI-GATE**.
 
 Deployment gates standing: production schema apply needs human approval;
 production membership unique index required first; cutover reconciliation
@@ -44,9 +43,10 @@ required.
 ## Active gates
 
 1. ~~Human acceptance of the identity slice.~~ **Completed 2026-08-23.**
-2. AMENDMENT-1.1.1 and AMENDMENT-1.1.2 frozen. Human vote APPROVE 2026-08-24.
-   Implementation awaits a new named unlock of `DIRECTIVE-IMPLEMENTATION.md`.
-   Web Push remains disabled.
+2. ~~AMENDMENT-1.1.1 and AMENDMENT-1.1.2 frozen.~~ Local 1.1.2 backend
+   **accepted 2026-08-25**. **GITHUB-NOTIFICATION-CI-GATE** blocks merge and
+   deployment until GitHub runs the blocking PostgreSQL notification
+   workflow on the exact pushed commits.
 3. `slice-02-outbound-events` **accepted 2026-08-24** (not merged, not
    deployed). **NOTIFICATION-INTEGRATION-GATE** and
    **MIGRATOR-ROLE-PROVISIONING-GATE** block merge/schema-apply/deploy.
@@ -54,12 +54,13 @@ required.
    deployed). **CSV-COST-FEEDBACK-GATE** blocks production CSV adjust use.
 5. `card-resolution-core-v1` build blocked.
 6. `security-assurance-v1` implementation blocked.
-7. Production schema apply (inventory truth + identity index) blocked on
-   human approval plus standing deployment gates.
+7. Production schema apply (inventory truth + identity index +
+   notification schema) blocked on human approval plus standing
+   deployment gates. Production VAPID / live Web Push remains disabled.
 
 ## Next queued phases
 
-1. Named implementation unlock for backend notifications 1.1.0+1.1.1+1.1.2.
-2. Notification integration with slice-02 overlapping files remains blocked
-   before any merge.
+1. Owner authorization to push `feature/backend-notification-v1.1.2` for
+   remote CI.
+2. **GITHUB-NOTIFICATION-CI-GATE** must pass on those exact commits.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

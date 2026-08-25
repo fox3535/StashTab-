@@ -3,8 +3,8 @@
 **Slice:** `backend-notification-integration-v1`
 **Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0 + AMENDMENT-1.1.0 (policy) + AMENDMENT-1.1.1 (mechanics, frozen) + AMENDMENT-1.1.2 (observation/transition/attempt/park, frozen)
 **Plan:** `DIRECTIVE.md` (frozen 1.1.1) plus AMENDMENT-1.1.2
-**Status:** `PREPARED — DO NOT EXECUTE until a new named implementation unlock for 1.1.0+1.1.1+1.1.2`
-**Does not authorize code, copy, migrations, merge, push, deploy, or Web Push**
+**Status:** `LOCALLY IMPLEMENTED AND ACCEPTED 2026-08-25 — NOT PUSHED — NOT MERGED — NOT DEPLOYED`
+**Does not authorize push, merge, production migration, live Web Push, or deploy**
 
 The 1.1.1 unlock does **not** authorize this combined slice.
 
@@ -91,8 +91,8 @@ security events. Do not claim exactly-once. Audit retry and outcome.
 Flag off; unmount router; skip tick. Tables may remain. Do not overwrite
 `FREEZE-1.1.1.json` or `FREEZE-1.1.2.json`. Inventory schema untouched.
 
-## Unlock required
+## Unlock / remaining authorization
 
-Named human `implementation_unlock` for
-`backend-notification-integration-v1` covering 1.1.0+1.1.1+1.1.2.
-Until then this file is not an execution order.
+Named human unlock was used for local 1.1.2 backend implementation. Push, merge,
+production schema apply, live Web Push, and deploy remain blocked until
+**GITHUB-NOTIFICATION-CI-GATE** and standing deployment gates close.

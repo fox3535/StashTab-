@@ -142,13 +142,17 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 
 ## backend-notification-integration-v1
 
-**Status:** `FROZEN 1.1.0+1.1.1+1.1.2 — IMPLEMENTATION AWAITING NEW NAMED UNLOCK`
-**Source:** `docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md`;
-`AMENDMENT-1.1.2.md`; `DIRECTIVE.md`; `DIRECTIVE-IMPLEMENTATION.md` (prepared,
-not executed); manifests `freezes/FREEZE-1.1.1.json` and `FREEZE-1.1.2.json`
+**Status:** `COMPLETED LOCALLY 2026-08-25 — NOT PUSHED — NOT MERGED — NOT DEPLOYED`
+**Source:** `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`;
+`AMENDMENT-1.1.1.md`; `AMENDMENT-1.1.2.md`; manifests `freezes/FREEZE-1.1.1.json`
+and `FREEZE-1.1.2.json`
 
-AMENDMENT-1.1.2 frozen 2026-08-24 after human APPROVE. Prior 1.1.1 unlock does
-not authorize 1.1.2 apply. **NOTIFICATION-INTEGRATION-GATE** still blocks merge.
+Local 1.1.2 backend accepted 2026-08-25. Merge and deployment remain blocked by
+**GITHUB-NOTIFICATION-CI-GATE** until the blocking PostgreSQL notification
+workflow runs green on the exact pushed commits. **NOTIFICATION-INTEGRATION-GATE**
+and **MIGRATOR-ROLE-PROVISIONING-GATE** still block merge/schema-apply/deploy.
+Frontend settings, service-worker install, and live Web Push remain out of
+this slice.
 
 ## inventory-truth-v1 / slice-03-adjustments
 

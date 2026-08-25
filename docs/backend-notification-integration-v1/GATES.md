@@ -1,6 +1,6 @@
 # Gates — backend-notification-integration-v1
 
-**Packet status:** `FROZEN AMENDMENTS 1.1.0 + 1.1.1 + 1.1.2 + BACKEND PLAN — IMPLEMENTATION AWAITING NEW NAMED UNLOCK`
+**Packet status:** `1.1.2 BACKEND ACCEPTED LOCALLY — NOT PUSHED — NOT MERGED — NOT DEPLOYED`
 
 | Gate | Owner | Evidence | Terminal |
 | --- | --- | --- | --- |
@@ -9,10 +9,12 @@
 | Freeze 1.1.1 | Human | `freezes/FREEZE-1.1.1.json` + validator + negative checks | **FROZEN 2026-08-24** |
 | AMENDMENT-1.1.2 vote | Human | APPROVE 2026-08-24 | **APPROVED** |
 | Freeze 1.1.2 | Human | `freezes/FREEZE-1.1.2.json` + validator + negative checks | **FROZEN 2026-08-24** |
-| `implementation_unlock` backend-notification-integration-v1 (1.1.0+1.1.1+1.1.2) | Human | Named unlock of `DIRECTIVE-IMPLEMENTATION.md` | **OPEN — BLOCKS code**. Prior 1.1.1 unlock does not apply |
-| **NOTIFICATION-INTEGRATION-GATE** | Human + integration reviewer | Hand-reconcile overlapping `main.py` / `worker.py` / identity tests with preserved original-worktree backend files after unlock; both suites green | Open — **BLOCKS merge and deployment** |
+| `implementation_unlock` backend-notification-integration-v1 (1.1.0+1.1.1+1.1.2) | Human | Named unlock of `DIRECTIVE-IMPLEMENTATION.md` | **USED** for local 1.1.2 backend; does not authorize push, merge, or deploy |
+| Local 1.1.2 backend acceptance | Human | `ACCEPTANCE-1.1.2.md`; two disposable PostgreSQL 16.14 runs 21/21; SQLite 178 passed | **APPROVED 2026-08-25 — NOT PUSHED — NOT MERGED — NOT DEPLOYED** |
+| **GITHUB-NOTIFICATION-CI-GATE** | Human + GitHub Actions | Blocking PostgreSQL notification workflow must run green on the exact pushed commits | **OPEN — BLOCKS merge and deployment**. Unexecuted workflow file is not execution evidence |
+| **NOTIFICATION-INTEGRATION-GATE** | Human + integration reviewer | Overlapping identity/inventory files remain reviewed before merge; both suites green | Open — **BLOCKS merge and deployment** |
 | Production VAPID / live Web Push | Human | Complete server-side VAPID; no Git secrets | Open — **disabled** |
 | Production notification schema apply | Human | Migrator role gate + standing deployment gates | Open |
 | Frontend settings / service worker / permission UX | Later named slice | Out of this freeze | Out of scope |
 
-Standing: no commit/push/merge/deploy/migration/production credentials from this freeze action.
+Standing: no push, merge, deploy, production migration, live Web Push, or production credentials from this acceptance.
