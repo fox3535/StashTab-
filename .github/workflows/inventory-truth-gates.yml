@@ -5,6 +5,8 @@ on:
     paths:
       - "services/api/**"
       - "docs/inventory-truth-v1/**"
+      - "scripts/validate_inventory_truth_freeze.py"
+      - ".gitattributes"
       - ".github/workflows/inventory-truth-gates.yml"
 
 permissions:

@@ -1,6 +1,8 @@
 """Validate an inventory-truth freeze manifest (non-self-referential).
 
-Hashes exact file bytes. The manifest must not list itself.
+`git-lf-text-bytes` hashes LF-normalized repository text so Windows checkouts
+and Linux CI agree. Historical `exact-file-bytes-no-rewrite` manifests are
+kept as Windows working-tree evidence and are not rewritten.
 """
 
 from __future__ import annotations
@@ -35,6 +37,8 @@ REQUIRED_PATHS_1_2_0 = (
 
 ALLOWED_PREFIX = "docs/inventory-truth-v1/"
 HEX64 = 64
+CANONICAL_GIT_LF = "git-lf-text-bytes"
+LEGACY_EXACT = "exact-file-bytes-no-rewrite"
 
 
 def repo_root() -> Path:
@@ -43,6 +47,27 @@ def repo_root() -> Path:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonicalize_bytes(data: bytes, mode: str) -> bytes:
+    if mode == CANONICAL_GIT_LF:
+        return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    if mode == LEGACY_EXACT:
+        return data
+    raise ValueError(f"unsupported canonical_bytes: {mode}")
+
+
+def hash_file(path: Path, mode: str) -> str:
+    return sha256_bytes(canonicalize_bytes(path.read_bytes(), mode))
+
+
+def canonical_mode(manifest: dict) -> str:
+    mode = manifest["canonical_bytes"]
+    if mode not in (CANONICAL_GIT_LF, LEGACY_EXACT):
+        raise ValueError(
+            "canonical_bytes must be git-lf-text-bytes or exact-file-bytes-no-rewrite"
+        )
+    return mode
 
 
 def normalize_relpath(raw: str) -> str:
@@ -77,8 +102,7 @@ def validate(root: Path, manifest_path: Path) -> None:
 
     if manifest["algorithm"] != "SHA-256":
         raise ValueError("algorithm must be SHA-256")
-    if manifest["canonical_bytes"] != "exact-file-bytes-no-rewrite":
-        raise ValueError("canonical_bytes must be exact-file-bytes-no-rewrite")
+    mode = canonical_mode(manifest)
     if manifest["contract_id"] != "STASHTAB-INVENTORY-TRUTH-001":
         raise ValueError("contract_id mismatch")
     if not isinstance(manifest["approved_amendments"], list):
@@ -125,7 +149,7 @@ def validate(root: Path, manifest_path: Path) -> None:
             raise ValueError(f"path escapes repository: {rel}") from exc
         if not target.is_file():
             raise ValueError(f"missing file: {rel}")
-        actual = sha256_bytes(target.read_bytes())
+        actual = hash_file(target, mode)
         if actual != expected:
             raise ValueError(f"hash mismatch: {rel}")
 
@@ -263,9 +287,114 @@ def self_test() -> None:
         except ValueError:
             pass
 
+        payload["files"] = payload["files"][:-1]
+        payload["previous_freeze"] = {
+            "contract_version": "9.9.9",
+            "record": "wrong-lineage",
+        }
+        _write(manifest_path, json.dumps(payload, indent=2).encode("utf-8"))
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected wrong-lineage failure")
+        except ValueError:
+            pass
+
         payload = _manifest_for(root, "1.2.0", listed)
         _write(manifest_path, json.dumps(payload, indent=2).encode("utf-8"))
         validate(root, manifest_path)
+
+        lf_payload = _manifest_for(root, "1.2.0", listed)
+        lf_payload["canonical_bytes"] = CANONICAL_GIT_LF
+        lf_payload["files"] = [
+            {
+                "path": entry["path"],
+                "sha256": hash_file(root / entry["path"], CANONICAL_GIT_LF),
+            }
+            for entry in lf_payload["files"]
+        ]
+        _write(manifest_path, json.dumps(lf_payload, indent=2).encode("utf-8"))
+        for path in listed:
+            lf = canonicalize_bytes(originals[path], CANONICAL_GIT_LF)
+            path.write_bytes(lf.replace(b"\n", b"\r\n"))
+        validate(root, manifest_path)
+        listed[0].write_bytes(
+            canonicalize_bytes(originals[listed[0]], CANONICAL_GIT_LF).replace(b"\n", b"\r\n")
+            + b"X"
+        )
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected git-lf content failure")
+        except ValueError:
+            pass
+        for path in listed:
+            path.write_bytes(originals[path])
+        validate(root, manifest_path)
+
+
+def negative_check(root: Path, manifest_path: Path) -> None:
+    validate(root, manifest_path)
+    manifest = load_manifest(manifest_path)
+    originals: dict[Path, bytes] = {}
+    backup = manifest_path.read_bytes()
+    try:
+        for entry in manifest["files"]:
+            path = root / entry["path"]
+            originals[path] = path.read_bytes()
+            path.write_bytes(originals[path] + b"X")
+            try:
+                validate(root, manifest_path)
+            except ValueError:
+                pass
+            else:
+                raise SystemExit(f"expected live hash failure for {entry['path']}")
+            path.write_bytes(originals[path])
+        validate(root, manifest_path)
+
+        if canonical_mode(manifest) == CANONICAL_GIT_LF:
+            for path, data in originals.items():
+                lf = canonicalize_bytes(data, CANONICAL_GIT_LF)
+                path.write_bytes(lf.replace(b"\n", b"\r\n"))
+            validate(root, manifest_path)
+            first = next(iter(originals))
+            lf = canonicalize_bytes(originals[first], CANONICAL_GIT_LF)
+            first.write_bytes(lf.replace(b"\n", b"\r\n") + b"X")
+            try:
+                validate(root, manifest_path)
+            except ValueError:
+                pass
+            else:
+                raise SystemExit("expected live content failure after CRLF plus extra byte")
+            for path, data in originals.items():
+                path.write_bytes(data)
+            validate(root, manifest_path)
+
+        payload = json.loads(backup)
+        payload["previous_freeze"] = {
+            "contract_version": "9.9.9",
+            "record": "wrong-lineage",
+        }
+        manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected live wrong-lineage failure")
+        except ValueError:
+            pass
+        payload = json.loads(backup)
+        payload["files"] = list(payload["files"]) + [
+            {"path": "../secret.txt", "sha256": "0" * 64}
+        ]
+        manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected live path-escape failure")
+        except ValueError:
+            pass
+        manifest_path.write_bytes(backup)
+        validate(root, manifest_path)
+    finally:
+        for path, data in originals.items():
+            path.write_bytes(data)
+        manifest_path.write_bytes(backup)
 
 
 def main(argv: list[str]) -> int:
@@ -273,6 +402,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--root", type=Path)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--negative-check", action="store_true")
     args = parser.parse_args(argv)
     if args.self_test:
         self_test()
@@ -283,6 +413,9 @@ def main(argv: list[str]) -> int:
     root = args.root or repo_root()
     validate(root, args.manifest)
     print(f"freeze manifest ok: {args.manifest}")
+    if args.negative_check:
+        negative_check(root, args.manifest)
+        print("negative checks passed; packet restored")
     return 0
 
 

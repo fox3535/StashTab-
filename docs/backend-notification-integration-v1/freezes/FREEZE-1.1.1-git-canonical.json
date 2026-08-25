@@ -1,0 +1,37 @@
+{
+  "contract_id": "STASHTAB-CARD-RESOLUTION-001",
+  "contract_version": "1.1.1",
+  "freeze_status": "FROZEN",
+  "freeze_timestamp": "2026-08-25T17:50:00Z",
+  "approved_amendments": [
+    "AMENDMENT-1.1.0",
+    "AMENDMENT-1.1.1"
+  ],
+  "previous_freeze": {
+    "contract_version": "1.0.0",
+    "record": "docs/card-resolution-workflow/CONTRACT.md and AMENDMENT-1.1.0.md"
+  },
+  "algorithm": "SHA-256",
+  "canonical_bytes": "git-lf-text-bytes",
+  "evidence_kind": "checkout-conversion-hash-correction",
+  "historical_evidence": "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json",
+  "notes": "Byte-hash evidence only. Contract text and approved decisions are unchanged.",
+  "files": [
+    {
+      "path": "docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md",
+      "sha256": "1cc7da7e2ecc8411918ae383dcb7a8efb8a012ca7ebce29e8661b84e54639d1d"
+    },
+    {
+      "path": "docs/backend-notification-integration-v1/DIRECTIVE.md",
+      "sha256": "8a6753912fdde33bca381b6923076f892fd605675a84aee934f7ad3b919ece53"
+    },
+    {
+      "path": "docs/backend-notification-integration-v1/FREEZE-CHECK.md",
+      "sha256": "852feceae9df0a39eb7f050a1bca6f3f242afa757f46f48a72f7a613660d7575"
+    },
+    {
+      "path": "docs/card-resolution-workflow/AMENDMENT-1.1.0.md",
+      "sha256": "b954a63c2be0084fa5d3eb5e3763382892dde6ecd84994f4faa14f0042c76271"
+    }
+  ]
+}

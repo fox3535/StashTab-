@@ -77,3 +77,22 @@ Validator:
 
 Negative checks also reject wrong 8-to-12 inventory and unresolved
 TODO/TBD/FIXME wording in hashed 1.1.2 files.
+
+## Checkout-conversion hash correction (byte-hash only)
+
+Historical `FREEZE-1.1.1.json` and `FREEZE-1.1.2.json` stay byte-identical.
+They captured Windows working-tree CRLF hashes. Git stores LF blobs.
+
+CI and portable validators use:
+
+- `FREEZE-1.1.1-git-canonical.json`
+- `FREEZE-1.1.2-git-canonical.json`
+
+`canonical_bytes` for those records is `git-lf-text-bytes`. This does not
+change contract text or approved decisions. See `FREEZE-EVIDENCE-CORRECTION.md`.
+
+Portable validator:
+
+`python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1-git-canonical.json --negative-check`
+
+`python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2-git-canonical.json --negative-check`

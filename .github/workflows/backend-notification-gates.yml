@@ -6,6 +6,8 @@ on:
       - "services/api/**"
       - "docs/backend-notification-integration-v1/**"
       - "scripts/validate_notification_freeze.py"
+      - "scripts/validate_inventory_truth_freeze.py"
+      - ".gitattributes"
       - ".github/workflows/backend-notification-gates.yml"
 
 permissions:
@@ -71,6 +73,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python scripts/validate_notification_freeze.py --negative-check
-      - run: python scripts/validate_inventory_truth_freeze.py --manifest docs/inventory-truth-v1/freezes/FREEZE-1.2.0.json
+      - run: python scripts/validate_notification_freeze.py --self-test
+      - run: python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1-git-canonical.json --negative-check
+      - run: python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2-git-canonical.json --negative-check
+      - run: python scripts/validate_inventory_truth_freeze.py --self-test
+      - run: python scripts/validate_inventory_truth_freeze.py --manifest docs/inventory-truth-v1/freezes/FREEZE-1.2.0-git-canonical.json --negative-check
       - run: python scripts/validate_agent_context.py

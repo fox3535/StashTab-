@@ -1,6 +1,8 @@
-"""Validate the backend-notification AMENDMENT-1.1.1 freeze manifest.
+"""Validate the backend-notification freeze manifests.
 
-Hashes exact file bytes. The manifest must not list or hash itself.
+`git-lf-text-bytes` hashes LF-normalized repository text so Windows checkouts
+and Linux CI agree. Historical `exact-file-bytes-no-rewrite` manifests are
+kept as Windows working-tree evidence and are not rewritten.
 """
 
 from __future__ import annotations
@@ -53,6 +55,8 @@ ALLOWED_PREFIXES = (
 
 MANIFEST_NAME = "FREEZE-1.1.1.json"
 HEX64 = 64
+CANONICAL_GIT_LF = "git-lf-text-bytes"
+LEGACY_EXACT = "exact-file-bytes-no-rewrite"
 
 
 def repo_root() -> Path:
@@ -61,6 +65,18 @@ def repo_root() -> Path:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonicalize_bytes(data: bytes, mode: str) -> bytes:
+    if mode == CANONICAL_GIT_LF:
+        return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    if mode == LEGACY_EXACT:
+        return data
+    raise ValueError(f"unsupported canonical_bytes: {mode}")
+
+
+def hash_file(path: Path, mode: str) -> str:
+    return sha256_bytes(canonicalize_bytes(path.read_bytes(), mode))
 
 
 def normalize_relpath(raw: str) -> str:
@@ -91,7 +107,17 @@ def load_manifest(path: Path) -> dict:
     return payload
 
 
+def canonical_mode(manifest: dict) -> str:
+    mode = manifest["canonical_bytes"]
+    if mode not in (CANONICAL_GIT_LF, LEGACY_EXACT):
+        raise ValueError(
+            "canonical_bytes must be git-lf-text-bytes or exact-file-bytes-no-rewrite"
+        )
+    return mode
+
+
 def _listed_files(root: Path, manifest: dict, manifest_rel: str) -> dict[str, str]:
+    mode = canonical_mode(manifest)
     files = manifest["files"]
     if not isinstance(files, list) or not files:
         raise ValueError("files must be a non-empty list")
@@ -118,7 +144,7 @@ def _listed_files(root: Path, manifest: dict, manifest_rel: str) -> dict[str, st
             raise ValueError(f"path escapes repository: {rel}") from exc
         if not target.is_file():
             raise ValueError(f"missing file: {rel}")
-        actual = sha256_bytes(target.read_bytes())
+        actual = hash_file(target, mode)
         if actual != expected:
             raise ValueError(f"hash mismatch: {rel}")
     return listed
@@ -128,8 +154,7 @@ def validate_v112(root: Path, manifest_path: Path, manifest: dict) -> None:
     manifest_rel = manifest_path.resolve().relative_to(root.resolve()).as_posix()
     if manifest["algorithm"] != "SHA-256":
         raise ValueError("algorithm must be SHA-256")
-    if manifest["canonical_bytes"] != "exact-file-bytes-no-rewrite":
-        raise ValueError("canonical_bytes must be exact-file-bytes-no-rewrite")
+    canonical_mode(manifest)
     if manifest["contract_id"] != "STASHTAB-CARD-RESOLUTION-001":
         raise ValueError("contract_id mismatch")
     if manifest["freeze_status"] != "FROZEN":
@@ -208,8 +233,7 @@ def validate(root: Path, manifest_path: Path) -> None:
 
     if manifest["algorithm"] != "SHA-256":
         raise ValueError("algorithm must be SHA-256")
-    if manifest["canonical_bytes"] != "exact-file-bytes-no-rewrite":
-        raise ValueError("canonical_bytes must be exact-file-bytes-no-rewrite")
+    mode = canonical_mode(manifest)
     if manifest["contract_id"] != "STASHTAB-CARD-RESOLUTION-001":
         raise ValueError("contract_id mismatch")
     if manifest["contract_version"] != "1.1.1":
@@ -261,7 +285,7 @@ def validate(root: Path, manifest_path: Path) -> None:
             raise ValueError(f"path escapes repository: {rel}") from exc
         if not target.is_file():
             raise ValueError(f"missing file: {rel}")
-        actual = sha256_bytes(target.read_bytes())
+        actual = hash_file(target, mode)
         if actual != expected:
             raise ValueError(f"hash mismatch: {rel}")
 
@@ -444,6 +468,33 @@ def self_test() -> None:
         _write(manifest_path, json.dumps(payload, indent=2).encode("utf-8") + b"\n")
         validate(root, manifest_path)
 
+        lf_payload = _manifest_for(root, listed)
+        lf_payload["canonical_bytes"] = CANONICAL_GIT_LF
+        lf_payload["files"] = [
+            {
+                "path": entry["path"],
+                "sha256": hash_file(root / entry["path"], CANONICAL_GIT_LF),
+            }
+            for entry in lf_payload["files"]
+        ]
+        _write(manifest_path, json.dumps(lf_payload, indent=2).encode("utf-8") + b"\n")
+        for path in listed:
+            lf = canonicalize_bytes(originals[path], CANONICAL_GIT_LF)
+            path.write_bytes(lf.replace(b"\n", b"\r\n"))
+        validate(root, manifest_path)
+        listed[0].write_bytes(
+            canonicalize_bytes(originals[listed[0]], CANONICAL_GIT_LF).replace(b"\n", b"\r\n")
+            + b"X"
+        )
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected git-lf content failure")
+        except ValueError:
+            pass
+        for path in listed:
+            path.write_bytes(originals[path])
+        validate(root, manifest_path)
+
 
 def negative_check(root: Path, manifest_path: Path) -> None:
     validate(root, manifest_path)
@@ -463,6 +514,24 @@ def negative_check(root: Path, manifest_path: Path) -> None:
                 raise SystemExit(f"expected live hash failure for {entry['path']}")
             path.write_bytes(originals[path])
         validate(root, manifest_path)
+
+        if canonical_mode(manifest) == CANONICAL_GIT_LF:
+            for path, data in originals.items():
+                lf = canonicalize_bytes(data, CANONICAL_GIT_LF)
+                path.write_bytes(lf.replace(b"\n", b"\r\n"))
+            validate(root, manifest_path)
+            first = next(iter(originals))
+            lf = canonicalize_bytes(originals[first], CANONICAL_GIT_LF)
+            first.write_bytes(lf.replace(b"\n", b"\r\n") + b"X")
+            try:
+                validate(root, manifest_path)
+            except ValueError:
+                pass
+            else:
+                raise SystemExit("expected live content failure after CRLF plus extra byte")
+            for path, data in originals.items():
+                path.write_bytes(data)
+            validate(root, manifest_path)
 
         backup = manifest_path.read_bytes()
         payload = json.loads(backup)
@@ -518,6 +587,17 @@ def negative_check(root: Path, manifest_path: Path) -> None:
         except ValueError:
             pass
         payload = json.loads(backup)
+        payload["previous_freeze"] = {
+            "contract_version": "9.9.9",
+            "record": "wrong-lineage",
+        }
+        manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            validate(root, manifest_path)
+            raise SystemExit("expected live wrong-lineage failure")
+        except ValueError:
+            pass
+        payload = json.loads(backup)
         if original_version == "1.1.2":
             payload["table_inventory"] = {
                 "frozen_1_1_1": 8,
@@ -534,10 +614,11 @@ def negative_check(root: Path, manifest_path: Path) -> None:
             original_amendment = originals.get(amendment_path, amendment_path.read_bytes())
             amendment_path.write_bytes(original_amendment + b"\nTODO freeze later\n")
             payload = json.loads(backup)
+            mode = canonical_mode(payload)
             payload["files"] = [
                 {
                     "path": entry["path"],
-                    "sha256": sha256_bytes((root / entry["path"]).read_bytes()),
+                    "sha256": hash_file(root / entry["path"], mode),
                 }
                 for entry in payload["files"]
             ]
@@ -601,7 +682,7 @@ def main(argv: list[str]) -> int:
         print("notification freeze-manifest self-test passed")
         return 0
     manifest_path = args.manifest or (
-        root / "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json"
+        root / "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1-git-canonical.json"
     )
     if args.write_manifest:
         write_manifest(root, manifest_path)
