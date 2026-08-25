@@ -312,18 +312,26 @@ class TestConcurrencyAndCorruption:
     def test_7_different_keys_concurrent_no_quantity_loss(self, pg_engine):
         from app.inventory_truth import core as truth
         from app.inventory_truth.models_truth import InventoryEvent
+        from sqlalchemy import func
 
         self._migrated(pg_engine)
-        s1, s2, _, pr_id = self._two_sessions(pg_engine, "shop-d")
+        setup, unused, _, pr_id = self._two_sessions(pg_engine, "shop-d")
+        unused.close()
         pr2 = PurchaseRecord(shop_id="shop-d", sku="R1", quantity=3, cost_per_unit=1)
-        s1.add(pr2)
-        s1.commit()
+        setup.add(pr2)
+        setup.commit()
+        pr2_id = pr2.id
+        setup.close()
 
-        barrier = threading.Barrier(2)
+        barrier = threading.Barrier(2, timeout=10)
+        WorkerSession = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)
+        errs: list[BaseException] = []
+        err_lock = threading.Lock()
 
-        def worker(session, pk, qty):
-            barrier.wait()
+        def worker(pk, qty):
+            session = WorkerSession()
             try:
+                barrier.wait()
                 truth.record_purchase_receive(
                     session,
                     shop_id="shop-d",
@@ -334,34 +342,39 @@ class TestConcurrencyAndCorruption:
                     unit_cost=Decimal("1.00"),
                 )
                 session.commit()
-            except Exception:
-                session.rollback()
-                raise
+            except Exception as exc:
+                with err_lock:
+                    errs.append(exc)
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
+            finally:
+                session.close()
 
-        t1 = threading.Thread(target=worker, args=(s1, pr_id, 2))
-        t2 = threading.Thread(target=worker, args=(s2, pr2.id, 3))
-        errs = []
+        t1 = threading.Thread(target=worker, args=(pr_id, 2), name="t7-key-a")
+        t2 = threading.Thread(target=worker, args=(pr2_id, 3), name="t7-key-b")
+        t1.start()
+        t2.start()
+        t1.join(30)
+        t2.join(30)
+        if t1.is_alive() or t2.is_alive():
+            pytest.fail(
+                f"worker still alive after join timeout: t1={t1.is_alive()} t2={t2.is_alive()}"
+            )
+        if errs:
+            raise errs[0]
 
-        def run(t, fn):
-            try:
-                t.start(); t.join(30)
-            except Exception as e:  # pragma: no cover
-                errs.append(e)
-
-        run(t1, worker); run(t2, worker)
-        from sqlalchemy import func
-
-        # Assert from a fresh session: a racing commit can leave the worker
-        # sessions in 'prepared' state, which cannot emit further SQL.
-        s1.close(); s2.close()
         check = sessionmaker(bind=pg_engine, autocommit=False, autoflush=False)()
-        total = (
-            check.query(func.coalesce(func.sum(InventoryEvent.quantity_delta), 0))
-            .filter(InventoryEvent.shop_id == "shop-d", InventoryEvent.sku == "R1")
-            .scalar()
-        )
-        assert int(total or 0) == 5, errs
-        check.close()
+        try:
+            total = (
+                check.query(func.coalesce(func.sum(InventoryEvent.quantity_delta), 0))
+                .filter(InventoryEvent.shop_id == "shop-d", InventoryEvent.sku == "R1")
+                .scalar()
+            )
+            assert int(total or 0) == 5, errs
+        finally:
+            check.close()
     def test_8_cutover_racing_receive_never_partial(self, pg_engine):
         """A receive racing the cutover boundary either fully dual-writes
         after completion or rejects cleanly while frozen — never a snapshot
