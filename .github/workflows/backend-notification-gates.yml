@@ -26,7 +26,9 @@ jobs:
           cache-dependency-path: services/api/requirements.txt
       - run: pip install -r requirements.txt pytest
       - name: Frozen notification acceptance and complete SQLite suite
-        run: pytest tests -q
+        # `python -m pytest` from services/api puts that directory on sys.path.
+        # PYTHONPATH is not required for this layout.
+        run: python -m pytest tests -q
 
   postgres:
     runs-on: ubuntu-latest
@@ -60,7 +62,7 @@ jobs:
           STASHTAB_PG_URL: postgresql+psycopg2://postgres:stashtab@localhost:55432/stashtab_it
           STASHTAB_NOTIFICATION_PG_DESTRUCTIVE_OK: local-stashtab_it-55432
           STASHTAB_NOTIFICATION_MIGRATOR_ROLE: stashtab_notification_migrator
-        run: pytest tests/test_notification_pg.py tests/test_notification_pg_112.py -q
+        run: python -m pytest tests/test_notification_pg.py tests/test_notification_pg_112.py -q
 
   contract:
     runs-on: ubuntu-latest

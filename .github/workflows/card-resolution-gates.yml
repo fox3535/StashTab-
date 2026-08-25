@@ -37,7 +37,9 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - run: python ../../scripts/validate_card_resolution_contract.py
       - run: python ../../scripts/validate_agent_context.py
-      - run: pytest tests -q
+      # `python -m pytest` from services/api puts that directory on sys.path.
+      # PYTHONPATH is not required for this layout.
+      - run: python -m pytest tests -q
 
   frontend-build:
     runs-on: ubuntu-latest
