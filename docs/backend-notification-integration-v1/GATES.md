@@ -13,6 +13,7 @@
 | Local 1.1.2 backend acceptance | Human | `ACCEPTANCE-1.1.2.md`; two disposable PostgreSQL 16.14 runs 21/21; SQLite 178 passed | **APPROVED 2026-08-25 — NOT PUSHED — NOT MERGED — NOT DEPLOYED** |
 | Freeze-evidence checkout correction | CI | `FREEZE-*-git-canonical.json`; historical freeze JSON preserved | **BYTE-HASH ONLY 2026-08-25** — not a product/contract amendment |
 | **GITHUB-NOTIFICATION-CI-GATE** | Human + GitHub Actions | Blocking PostgreSQL notification workflow must run green on the exact pushed commits | **OPEN — BLOCKS merge and deployment**. Unexecuted workflow file is not execution evidence |
+| Optional Cursor/OpenAI review jobs | Advisory | `.github/EXTERNAL-AI-REVIEWS.md` | Advisory only. Missing secrets skip the jobs; they do not pass product gates |
 | **NOTIFICATION-INTEGRATION-GATE** | Human + integration reviewer | Overlapping identity/inventory files remain reviewed before merge; both suites green | Open — **BLOCKS merge and deployment** |
 | Production VAPID / live Web Push | Human | Complete server-side VAPID; no Git secrets | Open — **disabled** |
 | Production notification schema apply | Human | Migrator role gate + standing deployment gates | Open |

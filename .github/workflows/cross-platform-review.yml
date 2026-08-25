@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   cursor_reviews:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+      && secrets.CURSOR_API_KEY != ''
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -44,8 +46,25 @@ jobs:
           path: cursor-${{ matrix.role }}.md
           retention-days: 14
 
+  cursor_reviews_unavailable:
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+      && secrets.CURSOR_API_KEY == ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record that Cursor review was not run
+        run: |
+          {
+            echo "### Cursor external review not run"
+            echo
+            echo "CURSOR_API_KEY is not configured. Advisory Cursor review was skipped."
+            echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   codex_reviews:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+      && secrets.OPENAI_API_KEY != ''
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -76,7 +95,23 @@ jobs:
           path: codex-${{ matrix.role }}.md
           retention-days: 14
 
+  codex_reviews_unavailable:
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+      && secrets.OPENAI_API_KEY == ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record that Codex review was not run
+        run: |
+          {
+            echo "### Codex external review not run"
+            echo
+            echo "OPENAI_API_KEY is not configured. Advisory OpenAI review was skipped."
+            echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   synthesize:
+    if: ${{ always() && needs.cursor_reviews.result == 'success' && needs.codex_reviews.result == 'success' }}
     needs: [cursor_reviews, codex_reviews]
     runs-on: ubuntu-latest
     outputs:
@@ -107,6 +142,7 @@ jobs:
           retention-days: 30
 
   context_handoff:
+    if: ${{ always() && needs.synthesize.result == 'success' }}
     needs: synthesize
     runs-on: ubuntu-latest
     steps:
@@ -135,7 +171,7 @@ jobs:
           retention-days: 30
 
   post_review:
-    if: github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' && always() && needs.synthesize.result == 'success' }}
     needs: synthesize
     runs-on: ubuntu-latest
     permissions:
@@ -166,3 +202,25 @@ jobs:
                 issue_number: context.issue.number, body,
               });
             }
+
+  advisory_status:
+    if: always()
+    needs: [cursor_reviews, codex_reviews, synthesize]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record advisory AI review status
+        run: |
+          {
+            echo "## Optional external AI reviews"
+            echo
+            echo "- Cursor jobs: \`${{ needs.cursor_reviews.result }}\`"
+            echo "- Codex jobs: \`${{ needs.codex_reviews.result }}\`"
+            echo "- Synthesis: \`${{ needs.synthesize.result }}\`"
+            echo
+            if [ "${{ needs.synthesize.result }}" != "success" ]; then
+              echo "External AI review was **not treated as passed**."
+              echo "Synthesis and context handoff do not run unless both advisory reviews actually ran."
+              echo "Checked-in independent review files remain the inspectable evidence."
+              echo "See .github/EXTERNAL-AI-REVIEWS.md."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
