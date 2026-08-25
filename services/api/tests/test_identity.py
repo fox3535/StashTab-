@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models import Base, InventoryItem, Shop, ShopMember
 from app.models.base import new_uuid
 from app.routers import inventory as inventory_router
+from app.routers import notifications as notifications_router
 from app.routers import shops as shops_router
 
 
@@ -79,6 +80,7 @@ def _client(db, monkeypatch, *, app_env="production", allow_bypass=False, issuer
     app = FastAPI()
     app.include_router(shops_router.router, prefix="/api/v1")
     app.include_router(inventory_router.router, prefix="/api/v1")
+    app.include_router(notifications_router.router, prefix="/api/v1")
 
     def override_db():
         yield db
@@ -145,6 +147,26 @@ def test_header_only_user_rejected_in_production(monkeypatch):
         headers={"X-Shop-Id": "shop-a", "X-Clerk-User-Id": "user-a"},
     )
     assert res.status_code == 401
+
+
+def test_notification_headers_without_verified_bearer_are_rejected(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch, app_env="production", allow_bypass=True)
+    res = client.post(
+        "/api/v1/notifications/test",
+        headers={"X-Shop-Id": "shop-a", "X-Clerk-User-Id": "user-a"},
+    )
+    assert res.status_code == 401
+
+
+def test_notification_jwt_without_shop_membership_is_forbidden(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(
+        "/api/v1/notifications/preferences",
+        headers=_headers(user="user-z", shop="shop-a"),
+    )
+    assert res.status_code == 403
 
 
 def test_jwt_without_membership_forbidden(monkeypatch):
