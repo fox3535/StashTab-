@@ -2,19 +2,33 @@ name: Backend notification gates
 
 on:
   pull_request:
-    paths:
-      - "services/api/**"
-      - "docs/backend-notification-integration-v1/**"
-      - "scripts/validate_notification_freeze.py"
-      - "scripts/validate_inventory_truth_freeze.py"
-      - ".gitattributes"
-      - ".github/workflows/backend-notification-gates.yml"
 
 permissions:
   contents: read
 
 jobs:
+  paths:
+    runs-on: ubuntu-latest
+    outputs:
+      sqlite: ${{ steps.gate.outputs.sqlite }}
+      postgres: ${{ steps.gate.outputs.postgres }}
+      contract: ${{ steps.gate.outputs.contract }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_pr_gate.py sqlite postgres contract >> "$GITHUB_OUTPUT"
+
   sqlite:
+    needs: paths
+    if: needs.paths.outputs.sqlite == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +47,8 @@ jobs:
         run: python -m pytest tests -q
 
   postgres:
+    needs: paths
+    if: needs.paths.outputs.postgres == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -67,6 +83,8 @@ jobs:
         run: python -m pytest tests/test_notification_pg.py tests/test_notification_pg_112.py -q
 
   contract:
+    needs: paths
+    if: needs.paths.outputs.contract == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

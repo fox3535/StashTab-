@@ -2,21 +2,34 @@ name: Inventory truth gates
 
 on:
   pull_request:
-    paths:
-      - "services/api/**"
-      - "docs/inventory-truth-v1/**"
-      - "scripts/validate_inventory_truth_freeze.py"
-      - ".gitattributes"
-      - ".github/workflows/inventory-truth-gates.yml"
 
 permissions:
   contents: read
 
 jobs:
+  paths:
+    runs-on: ubuntu-latest
+    outputs:
+      pg-acceptance: ${{ steps.gate.outputs.pg-acceptance }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_pr_gate.py pg-acceptance >> "$GITHUB_OUTPUT"
+
   # Blocking: inventory-truth acceptance harness on real PostgreSQL.
   # Uses only ephemeral CI credentials (postgres/postgres on localhost);
   # no production or repository secrets are involved.
   pg-acceptance:
+    needs: paths
+    if: needs.paths.outputs.pg-acceptance == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:

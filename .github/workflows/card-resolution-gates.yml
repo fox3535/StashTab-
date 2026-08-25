@@ -2,27 +2,32 @@ name: Card resolution contract gates
 
 on:
   pull_request:
-    paths:
-      - "services/api/**"
-      - "app/admin/**"
-      - "components/notification-settings.tsx"
-      - "lib/**"
-      - "public/sw.js"
-      - "docs/card-resolution-workflow/**"
-      - "docs/agent-context/**"
-      - "PLAN.md"
-      - "AGENTS.md"
-      - ".cursor/rules/card-resolution.mdc"
-      - ".github/workflows/card-resolution-gates.yml"
-      - "scripts/**"
-      - ".env.example"
-      - "services/api/.env.example"
 
 permissions:
   contents: read
 
 jobs:
+  paths:
+    runs-on: ubuntu-latest
+    outputs:
+      contract-and-backend: ${{ steps.gate.outputs.contract-and-backend }}
+      frontend-build: ${{ steps.gate.outputs.frontend-build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_pr_gate.py contract-and-backend frontend-build >> "$GITHUB_OUTPUT"
+
   contract-and-backend:
+    needs: paths
+    if: needs.paths.outputs.contract-and-backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,6 +47,8 @@ jobs:
       - run: python -m pytest tests -q
 
   frontend-build:
+    needs: paths
+    if: needs.paths.outputs.frontend-build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
