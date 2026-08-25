@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 SUPPORTED_APP_ENVS = ("local", "test", "staging", "production")
@@ -36,6 +37,17 @@ class Settings(BaseSettings):
     web_push_max_attempts: int = 8
     web_push_retry_backoff_seconds: int = 30
     notifications_backend_enabled: bool = False
+
+    @field_validator("web_push_allowed_host_suffixes")
+    @classmethod
+    def reject_custom_push_hosts(cls, value: str) -> str:
+        if (value or "").strip():
+            raise ValueError(
+                "Custom Web Push provider hosts are disabled. "
+                "Unset WEB_PUSH_ALLOWED_HOST_SUFFIXES. "
+                "Amendment 1.1.2 uses the built-in provider allowlist only."
+            )
+        return ""
 
     @property
     def web_push_enabled(self) -> bool:

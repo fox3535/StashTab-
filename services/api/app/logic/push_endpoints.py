@@ -33,14 +33,22 @@ class PushEndpointError(ValueError):
     pass
 
 
+def frozen_push_host_suffixes() -> tuple[str, ...]:
+    return DEFAULT_PUSH_HOST_SUFFIXES
+
+
+def assert_no_custom_push_hosts() -> None:
+    extras = (getattr(settings, "web_push_allowed_host_suffixes", "") or "").strip()
+    if extras:
+        raise PushEndpointError(
+            "Custom Web Push provider hosts are disabled. "
+            "Unset WEB_PUSH_ALLOWED_HOST_SUFFIXES."
+        )
+
+
 def _configured_suffixes() -> tuple[str, ...]:
-    configured = getattr(settings, "web_push_allowed_host_suffixes", "")
-    extra = tuple(
-        item.strip().lstrip(".").lower().rstrip(".")
-        for item in configured.split(",")
-        if item.strip()
-    )
-    return DEFAULT_PUSH_HOST_SUFFIXES + extra
+    assert_no_custom_push_hosts()
+    return frozen_push_host_suffixes()
 
 
 def _host_matches_suffix(host: str, suffix: str) -> bool:

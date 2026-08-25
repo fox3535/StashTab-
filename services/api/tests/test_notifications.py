@@ -390,9 +390,37 @@ def test_15_push_endpoint_safety():
             validate_push_endpoint(endpoint)
 
 
-def test_16_configured_provider_suffix_is_accepted(monkeypatch):
+def test_16_custom_provider_hosts_cannot_be_enabled(monkeypatch):
     monkeypatch.setattr(settings, "web_push_allowed_host_suffixes", "push.partner.test")
-    validate_push_endpoint("https://eu.push.partner.test/v1/sub")
+    with pytest.raises(PushEndpointError, match="Custom Web Push"):
+        validate_push_endpoint("https://eu.push.partner.test/v1/sub")
+    with pytest.raises(PushEndpointError, match="Custom Web Push"):
+        validate_push_endpoint(FCM_ENDPOINT)
+
+
+def test_16c_settings_reject_custom_push_hosts():
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError, match="Custom Web Push"):
+        Settings(web_push_allowed_host_suffixes="evil.example")
+
+
+def test_16d_custom_host_is_never_contacted(monkeypatch):
+    sent: list[str] = []
+
+    class _FakeSession:
+        def send(self, request, **_kwargs):
+            sent.append(getattr(request, "url", ""))
+            raise AssertionError("must not contact a custom push host")
+
+    monkeypatch.setattr(settings, "web_push_allowed_host_suffixes", "evil.example")
+    with pytest.raises(PushEndpointError, match="Custom Web Push"):
+        push_endpoints.no_redirect_session().send(
+            SimpleNamespace(url="https://push.evil.example/v1")
+        )
+    assert sent == []
 
 
 def test_16b_dns_validation_has_a_deadline(monkeypatch):
