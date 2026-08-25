@@ -5,9 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const API = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
-const SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
+import { adminRequest } from "@/lib/admin-api";
 
 type ReconResult = {
   success?: boolean;
@@ -29,21 +27,17 @@ export default function ReconciliationPage() {
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !SHOP_ID) return;
+    if (!file) return;
     setLoading(true);
     try {
       const form = new FormData();
       form.append("file", file);
       const params = new URLSearchParams({ stage_unknown: "true" });
       if (sinceDate) params.set("since_date", sinceDate);
-      const res = await fetch(
-        `${API}/api/v1/reports/reconciliation?${params}`,
-        {
-          method: "POST",
-          headers: { "X-Shop-Id": SHOP_ID },
-          body: form,
-        }
-      );
+      const res = await adminRequest(`/reports/reconciliation?${params}`, {
+        method: "POST",
+        body: form,
+      });
       if (!res.ok) throw new Error(await res.text());
       const data = (await res.json()) as ReconResult;
       setResult(data);

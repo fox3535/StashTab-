@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { adminApi } from "@/lib/admin-api";
 
 export default function AdminImportPage() {
-  const { getToken, userId } = useAuth();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, number | boolean> | null>(null);
 
@@ -19,7 +19,6 @@ export default function AdminImportPage() {
       const token = await getToken();
       const data = await adminApi.importCsv(file, {
         authToken: token,
-        clerkUserId: userId,
       });
       setResult(data);
       toast.success(`Import done — ${data.imported} new, ${data.updated} updated`);

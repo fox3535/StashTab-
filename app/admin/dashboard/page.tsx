@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { adminApi } from "@/lib/admin-api";
+import { adminRequest } from "@/lib/admin-api";
 
 type Kpis = {
   inventory_count: number;
@@ -18,13 +18,7 @@ export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<Kpis | null>(null);
 
   useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
-    const shopId = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
-    if (!shopId) return;
-    fetch(`${base}/api/v1/admin/dashboard`, {
-      headers: { "X-Shop-Id": shopId },
-      cache: "no-store",
-    })
+    adminRequest("/admin/dashboard", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then(setKpis)
       .catch(() => setKpis(null));

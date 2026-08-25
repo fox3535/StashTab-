@@ -12,7 +12,7 @@ export default function ShopifySyncPage() {
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [pulling, setPulling] = useState(false);
-  const apiOpts = { shopId: SHOP_ID };
+  const apiOpts = { shopId: SHOP_ID || undefined };
 
   async function loadStatus() {
     if (!SHOP_ID) return;

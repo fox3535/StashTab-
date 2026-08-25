@@ -1,3 +1,9 @@
+import {
+  buildProtectedApiHeaders,
+  SessionExpiredError,
+  type ProtectedApiAuth,
+} from "@/lib/protected-api-headers";
+
 const API_BASE = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
 const API_PREFIX = "/api/v1";
 
@@ -72,25 +78,41 @@ export type ShowSession = {
 };
 
 type RequestOptions = {
-  shopId: string;
-  clerkUserId?: string;
+  shopId?: string;
   authToken?: string;
 };
+
+type MimirAuthProvider = () => Promise<ProtectedApiAuth>;
+let mimirAuthProvider: MimirAuthProvider | null = null;
+
+export function setMimirAuthProvider(provider: MimirAuthProvider | null) {
+  mimirAuthProvider = provider;
+}
+
+async function resolveMimirAuth(options: RequestOptions): Promise<ProtectedApiAuth> {
+  if (options.authToken && options.authToken.trim()) {
+    return { authToken: options.authToken, shopId: options.shopId };
+  }
+  if (mimirAuthProvider) {
+    const provided = await mimirAuthProvider();
+    return {
+      authToken: provided.authToken,
+      shopId: options.shopId || provided.shopId,
+    };
+  }
+  throw new SessionExpiredError();
+}
 
 async function mimirFetch<T>(
   path: string,
   options: RequestOptions,
   init?: RequestInit
 ): Promise<T> {
+  const resolved = await resolveMimirAuth(options);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Shop-Id": options.shopId,
+    ...buildProtectedApiHeaders(resolved),
   };
-  if (options.authToken) {
-    headers.Authorization = `Bearer ${options.authToken}`;
-  } else if (options.clerkUserId) {
-    headers["X-Clerk-User-Id"] = options.clerkUserId;
-  }
 
   const res = await fetch(`${API_BASE}${API_PREFIX}${path}`, {
     ...init,
@@ -133,20 +155,14 @@ export const mimirApi = {
   health: () =>
     fetch(`${API_BASE}${API_PREFIX}/health`).then((r) => r.json()),
 
-  createShop: (name: string, slug: string) =>
-    fetch(`${API_BASE}${API_PREFIX}/shops`, {
+  createShop: (name: string, slug: string, opts: RequestOptions) =>
+    mimirFetch<ShopRecord>("/shops", opts, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, slug }),
-    }).then((r) => r.json()),
-
-  getMyShop: (clerkUserId: string) =>
-    fetch(`${API_BASE}${API_PREFIX}/shops/me`, {
-      headers: { "X-Clerk-User-Id": clerkUserId },
-    }).then(async (r) => {
-      if (!r.ok) throw new Error(await r.text());
-      return r.json() as Promise<ShopRecord>;
     }),
+
+  getMyShop: (opts: RequestOptions = {}) =>
+    mimirFetch<ShopRecord>("/shops/me", opts),
 
   searchInventory: (
     q: string,

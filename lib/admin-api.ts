@@ -1,32 +1,56 @@
+import {
+  buildProtectedApiHeaders,
+  SessionExpiredError,
+  type ProtectedApiAuth,
+} from "@/lib/protected-api-headers";
+
 const API_BASE = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
 const API_PREFIX = "/api/v1";
 const DEFAULT_SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
 
-export type AdminAuth = {
-  shopId?: string;
-  authToken?: string | null;
-  clerkUserId?: string | null;
-};
+export type AdminAuth = ProtectedApiAuth;
+
+type AdminAuthProvider = () => Promise<ProtectedApiAuth>;
+let adminAuthProvider: AdminAuthProvider | null = null;
+
+export function setAdminAuthProvider(provider: AdminAuthProvider | null) {
+  adminAuthProvider = provider;
+}
+
+async function resolveAdminAuth(auth: AdminAuth = {}): Promise<ProtectedApiAuth> {
+  if (auth.authToken && auth.authToken.trim()) {
+    return { authToken: auth.authToken, shopId: auth.shopId || DEFAULT_SHOP_ID };
+  }
+  if (adminAuthProvider) {
+    const provided = await adminAuthProvider();
+    return {
+      authToken: provided.authToken,
+      shopId: auth.shopId || provided.shopId || DEFAULT_SHOP_ID,
+    };
+  }
+  throw new SessionExpiredError();
+}
+
+export async function adminRequest(path: string, init?: RequestInit, auth: AdminAuth = {}) {
+  const resolved = await resolveAdminAuth(auth);
+  const headers: Record<string, string> = {
+    ...buildProtectedApiHeaders(resolved),
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (!(init?.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  } else {
+    delete headers["Content-Type"];
+  }
+  return fetch(`${API_BASE}${API_PREFIX}${path}`, { ...init, headers });
+}
 
 async function adminFetch(
   path: string,
   init?: RequestInit,
   auth: AdminAuth = {}
 ) {
-  const shopId = auth.shopId || DEFAULT_SHOP_ID;
-  const headers: Record<string, string> = {
-    "X-Shop-Id": shopId,
-    ...(init?.headers as Record<string, string>),
-  };
-  if (auth.authToken) {
-    headers.Authorization = `Bearer ${auth.authToken}`;
-  } else if (auth.clerkUserId) {
-    headers["X-Clerk-User-Id"] = auth.clerkUserId;
-  }
-  if (!(init?.body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-  }
-  return fetch(`${API_BASE}${API_PREFIX}${path}`, { ...init, headers });
+  return adminRequest(path, init, auth);
 }
 
 export type CardLookupResult = {
