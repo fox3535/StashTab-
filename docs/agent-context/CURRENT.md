@@ -2,8 +2,8 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-25
-**Branch:** `feature/backend-notification-v1.1.2` (isolated worktree; not pushed)
-**Commit:** local 1.1.2 implementation checkpoint pending on this branch
+**Branch:** `feature/backend-notification-v1.1.2` (draft PR #1)
+**Commit:** `4d317f8` (merge-readiness corrections follow this head)
 
 ## Frozen contracts
 
@@ -11,8 +11,8 @@
   product-policy record. AMENDMENT-1.1.1 **FROZEN** 2026-08-24
   (`freezes/FREEZE-1.1.1.json`). AMENDMENT-1.1.2 **FROZEN** 2026-08-24
   (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`).
-  Web Push disabled. Local 1.1.2 backend **ACCEPTED 2026-08-25**; not
-  pushed, not merged, not deployed.
+  Web Push disabled. Local 1.1.2 backend **ACCEPTED 2026-08-25**;
+  pushed as draft PR #1; not merged, not deployed.
 - `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — FROZEN 2026-08-24
   (AMENDMENT-1.2.0 applied; hashes in `freezes/FREEZE-1.2.0.json`).
   Slice-03 accepted 2026-08-24; not merged, not deployed. Slice-02 accepted;
@@ -21,10 +21,8 @@
 ## Current phase
 
 `backend-notification-integration-v1 / implementation-1.1.2`
-**COMPLETED — NOT PUSHED — NOT MERGED — NOT DEPLOYED** (human acceptance
-2026-08-25; see `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`).
-Identity, receive, outbound, and adjustment backend slices are present on
-this branch. Merge waits for **GITHUB-NOTIFICATION-CI-GATE**.
+**ON DRAFT PR #1 AT `4d317f8` — REQUIRED CI GREEN — NOT MERGED — NOT DEPLOYED**.
+Backend overlap integration review passed. PR stays draft.
 
 Deployment gates standing: production schema apply needs human approval;
 production membership unique index required first; cutover reconciliation
@@ -44,12 +42,14 @@ required.
 
 1. ~~Human acceptance of the identity slice.~~ **Completed 2026-08-23.**
 2. ~~AMENDMENT-1.1.1 and AMENDMENT-1.1.2 frozen.~~ Local 1.1.2 backend
-   **accepted 2026-08-25**. **GITHUB-NOTIFICATION-CI-GATE** blocks merge and
-   deployment until GitHub runs the blocking PostgreSQL notification
-   workflow on the exact pushed commits.
+   **accepted 2026-08-25**. Draft PR #1 exists. Required GitHub jobs passed
+   at `4d317f8`. **NOTIFICATION-INTEGRATION-GATE** is **closed for backend
+   overlap only**. Frontend settings/service-worker, frontend authenticated
+   transport, production VAPID, and production migrator/roles/cutover
+   remain open.
 3. `slice-02-outbound-events` **accepted 2026-08-24** (not merged, not
-   deployed). **NOTIFICATION-INTEGRATION-GATE** and
-   **MIGRATOR-ROLE-PROVISIONING-GATE** block merge/schema-apply/deploy.
+   deployed). **MIGRATOR-ROLE-PROVISIONING-GATE** still blocks production
+   schema apply/deploy.
 4. `slice-03-adjustments` **accepted 2026-08-24** (not merged, not
    deployed). **CSV-COST-FEEDBACK-GATE** blocks production CSV adjust use.
 5. `card-resolution-core-v1` build blocked.
@@ -60,7 +60,6 @@ required.
 
 ## Next queued phases
 
-1. Owner authorization to push `feature/backend-notification-v1.1.2` for
-   remote CI.
-2. **GITHUB-NOTIFICATION-CI-GATE** must pass on those exact commits.
+1. Owner ready-for-review decision on draft PR #1 (do not mark ready here).
+2. Remaining frontend transport / settings / production gates below.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

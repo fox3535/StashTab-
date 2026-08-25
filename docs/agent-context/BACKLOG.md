@@ -142,17 +142,16 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 
 ## backend-notification-integration-v1
 
-**Status:** `COMPLETED LOCALLY 2026-08-25 — NOT PUSHED — NOT MERGED — NOT DEPLOYED`
+**Status:** `DRAFT PR #1 AT 4d317f8 — REQUIRED CI GREEN — NOT MERGED — NOT DEPLOYED`
 **Source:** `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`;
 `AMENDMENT-1.1.1.md`; `AMENDMENT-1.1.2.md`; manifests `freezes/FREEZE-1.1.1.json`
 and `FREEZE-1.1.2.json`
 
-Local 1.1.2 backend accepted 2026-08-25. Merge and deployment remain blocked by
-**GITHUB-NOTIFICATION-CI-GATE** until the blocking PostgreSQL notification
-workflow runs green on the exact pushed commits. **NOTIFICATION-INTEGRATION-GATE**
-and **MIGRATOR-ROLE-PROVISIONING-GATE** still block merge/schema-apply/deploy.
-Frontend settings, service-worker install, and live Web Push remain out of
-this slice.
+Local 1.1.2 backend accepted 2026-08-25 and pushed as draft PR #1. Required
+GitHub jobs passed at `4d317f8`. **NOTIFICATION-INTEGRATION-GATE** is closed
+for backend overlap only. **MIGRATOR-ROLE-PROVISIONING-GATE** still blocks
+production schema apply/deploy. Frontend settings, service-worker install,
+authenticated transport on remaining callers, and live Web Push remain open.
 
 ## inventory-truth-v1 / slice-03-adjustments
 

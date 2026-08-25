@@ -269,3 +269,14 @@ the exact pushed commits. The unexecuted workflow definition is not execution
 evidence. Production VAPID, live Web Push, production schema apply, frontend
 settings, and service-worker install remain blocked.
 
+## D-020 — Draft foundation PR and backend overlap review (approved)
+
+Approved by named human owner 2026-08-25. Keep draft PR #1 as one foundation
+PR; do not split or rewrite history. Head `4d317f8` required GitHub CI passed.
+Backend notification overlap integration review passed.
+**NOTIFICATION-INTEGRATION-GATE** is closed for backend overlap only.
+Remaining open gates: frontend notification settings/service worker;
+frontend authenticated API transport; production VAPID/live Web Push;
+production migration/roles/cutover. **CSV-COST-FEEDBACK-GATE** stays open.
+The PR stays draft, unmerged, and undeployed.
+

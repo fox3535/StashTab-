@@ -32,7 +32,7 @@ task points to it.
   AMENDMENT-1.1.0 (product policy, file unchanged);
   AMENDMENT-1.1.1 frozen (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json`);
   AMENDMENT-1.1.2 frozen (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`);
-  local 1.1.2 backend accepted 2026-08-25, not pushed, not merged, not deployed
+  local 1.1.2 backend accepted 2026-08-25; draft PR #1 at `4d317f8`; not merged, not deployed
 - Inventory truth: `docs/inventory-truth-v1/CONTRACT.md` v1.2.0
   (`FROZEN; slices accepted, not merged, not deployed`)
 
