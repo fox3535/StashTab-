@@ -8,11 +8,13 @@ No API keys are stored in this repository.
 
 ## If secrets are not configured
 
-The workflow detects missing `CURSOR_API_KEY` or `OPENAI_API_KEY` and
-records that the external review was not run. It does not invent a review.
-It does not run synthesis or context handoff as if those reviews passed.
-Checked-in human/independent review files under `docs/**/reviews/` remain
-the inspectable review evidence.
+GitHub does not allow `secrets` in job-level `if` conditions. The workflow
+copies the secret into a step `env` and checks whether it is empty. If
+`CURSOR_API_KEY` or `OPENAI_API_KEY` is missing, it records that the external
+review was not run. It does not invent a review. It does not run synthesis
+or context handoff as if those reviews passed. Checked-in
+human/independent review files under `docs/**/reviews/` remain the
+inspectable review evidence.
 
 ## To enable the advisory automation later
 

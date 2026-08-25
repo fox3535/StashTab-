@@ -13,10 +13,44 @@ permissions:
   contents: read
 
 jobs:
+  secret_probe:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      has_cursor: ${{ steps.probe.outputs.has_cursor }}
+      has_openai: ${{ steps.probe.outputs.has_openai }}
+    steps:
+      - id: probe
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$CURSOR_API_KEY" ]; then
+            echo "has_cursor=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_cursor=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Cursor external review not run"
+              echo
+              echo "CURSOR_API_KEY is not configured. Advisory Cursor review was skipped."
+              echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "has_openai=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_openai=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Codex external review not run"
+              echo
+              echo "OPENAI_API_KEY is not configured. Advisory OpenAI review was skipped."
+              echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   cursor_reviews:
-    if: >
-      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
-      && secrets.CURSOR_API_KEY != ''
+    needs: secret_probe
+    if: needs.secret_probe.outputs.has_cursor == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -46,25 +80,9 @@ jobs:
           path: cursor-${{ matrix.role }}.md
           retention-days: 14
 
-  cursor_reviews_unavailable:
-    if: >
-      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
-      && secrets.CURSOR_API_KEY == ''
-    runs-on: ubuntu-latest
-    steps:
-      - name: Record that Cursor review was not run
-        run: |
-          {
-            echo "### Cursor external review not run"
-            echo
-            echo "CURSOR_API_KEY is not configured. Advisory Cursor review was skipped."
-            echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
-          } >> "$GITHUB_STEP_SUMMARY"
-
   codex_reviews:
-    if: >
-      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
-      && secrets.OPENAI_API_KEY != ''
+    needs: secret_probe
+    if: needs.secret_probe.outputs.has_openai == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -94,21 +112,6 @@ jobs:
           name: codex-${{ matrix.role }}
           path: codex-${{ matrix.role }}.md
           retention-days: 14
-
-  codex_reviews_unavailable:
-    if: >
-      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
-      && secrets.OPENAI_API_KEY == ''
-    runs-on: ubuntu-latest
-    steps:
-      - name: Record that Codex review was not run
-        run: |
-          {
-            echo "### Codex external review not run"
-            echo
-            echo "OPENAI_API_KEY is not configured. Advisory OpenAI review was skipped."
-            echo "No review result was fabricated. See .github/EXTERNAL-AI-REVIEWS.md."
-          } >> "$GITHUB_STEP_SUMMARY"
 
   synthesize:
     if: ${{ always() && needs.cursor_reviews.result == 'success' && needs.codex_reviews.result == 'success' }}
@@ -205,7 +208,7 @@ jobs:
 
   advisory_status:
     if: always()
-    needs: [cursor_reviews, codex_reviews, synthesize]
+    needs: [secret_probe, cursor_reviews, codex_reviews, synthesize]
     runs-on: ubuntu-latest
     steps:
       - name: Record advisory AI review status
@@ -213,6 +216,7 @@ jobs:
           {
             echo "## Optional external AI reviews"
             echo
+            echo "- Secret probe: \`${{ needs.secret_probe.result }}\`"
             echo "- Cursor jobs: \`${{ needs.cursor_reviews.result }}\`"
             echo "- Codex jobs: \`${{ needs.codex_reviews.result }}\`"
             echo "- Synthesis: \`${{ needs.synthesize.result }}\`"
