@@ -46,3 +46,34 @@ Required hashed paths:
 `--negative-check` mutates and restores each frozen file and rejects
 version, amendment, missing, duplicate, absolute, and path-escaping
 manifests.
+
+## AMENDMENT-1.1.2 freeze (additive)
+
+After the human APPROVE vote for 1.1.2:
+
+1. Leave `FREEZE-1.1.1.json` and every 1.1.1 hashed file byte-identical.
+2. Leave `docs/card-resolution-workflow/AMENDMENT-1.1.0.md` byte-identical.
+3. Hash exact bytes of AMENDMENT-1.1.2 and 1.1.2 freeze-check evidence.
+4. Write `docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`.
+   The manifest does **not** list or hash itself.
+5. Do not edit any hashed file after writing the manifest.
+
+Required 1.1.2 fields:
+
+- `contract_version` (`1.1.2`)
+- `approved_amendments` includes `AMENDMENT-1.1.0`, `AMENDMENT-1.1.1`,
+  `AMENDMENT-1.1.2`
+- `previous_freeze.contract_version` (`1.1.1`)
+- `table_inventory`: `{ "frozen_1_1_1": 8, "added_1_1_2": 4, "total": 12 }`
+
+Required hashed 1.1.2 paths:
+
+- `docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md`
+- `docs/backend-notification-integration-v1/FREEZE-CHECK-1.1.2.md`
+
+Validator:
+
+`python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json --negative-check`
+
+Negative checks also reject wrong 8-to-12 inventory and unresolved
+TODO/TBD/FIXME wording in hashed 1.1.2 files.

@@ -238,3 +238,21 @@ Backend implementation is **not** authorized until a named unlock of
 `DIRECTIVE-IMPLEMENTATION.md`. Frontend, production VAPID, live push,
 migrations, merge, and deploy remain blocked.
 
+## D-018 — Notification AMENDMENT-1.1.2 approved and frozen (approved)
+
+Approved by named human vote 2026-08-24. `STASHTAB-CARD-RESOLUTION-001 /
+AMENDMENT-1.1.2` is **FROZEN**. AMENDMENT-1.1.0 and AMENDMENT-1.1.1 remain
+unchanged. Hashes live in
+`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`.
+
+Additive schema: `notification_source_observation`,
+`notification_occurrence_transition`, `notification_delivery_attempt`,
+`notification_recovery_park`; event `occurrence_count` and `last_seen_at`;
+delivery `claimed_until` and `UNIQUE (shop_id, id)`. Inventory is 8 frozen
+plus 4 new = 12 tables.
+
+Backend implementation is **not** authorized until a new named unlock of
+`DIRECTIVE-IMPLEMENTATION.md` covering 1.1.0+1.1.1+1.1.2. The 1.1.1 unlock
+does not authorize 1.1.2 apply. Frontend, production VAPID, live push,
+migrations, merge, and deploy remain blocked.
+

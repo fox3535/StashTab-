@@ -32,6 +32,20 @@ REQUIRED_PATHS = (
     "docs/card-resolution-workflow/AMENDMENT-1.1.0.md",
 )
 
+REQUIRED_PATHS_112 = (
+    "docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md",
+    "docs/backend-notification-integration-v1/FREEZE-CHECK-1.1.2.md",
+)
+
+TABLES_112 = (
+    "notification_source_observation",
+    "notification_occurrence_transition",
+    "notification_delivery_attempt",
+    "notification_recovery_park",
+)
+
+PLACEHOLDER_MARKERS = ("TODO", "TBD", "FIXME", "unresolved alternative")
+
 ALLOWED_PREFIXES = (
     "docs/backend-notification-integration-v1/",
     "docs/card-resolution-workflow/",
@@ -62,7 +76,7 @@ def normalize_relpath(raw: str) -> str:
         raise ValueError(f"path escapes repository: {raw}")
     if not any(path.startswith(prefix) for prefix in ALLOWED_PREFIXES):
         raise ValueError(f"path outside freeze tree: {path}")
-    if path.endswith(MANIFEST_NAME) or path.endswith("freezes/" + MANIFEST_NAME):
+    if path.endswith("FREEZE-1.1.1.json") or path.endswith("FREEZE-1.1.2.json"):
         raise ValueError("manifest must not hash itself")
     return path
 
@@ -77,8 +91,119 @@ def load_manifest(path: Path) -> dict:
     return payload
 
 
+def _listed_files(root: Path, manifest: dict, manifest_rel: str) -> dict[str, str]:
+    files = manifest["files"]
+    if not isinstance(files, list) or not files:
+        raise ValueError("files must be a non-empty list")
+    seen: set[str] = set()
+    listed: dict[str, str] = {}
+    for entry in files:
+        if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
+            raise ValueError("each files[] entry needs path and sha256")
+        rel = normalize_relpath(entry["path"])
+        if rel == manifest_rel:
+            raise ValueError("manifest must not hash itself")
+        if rel in seen:
+            raise ValueError(f"duplicate path: {rel}")
+        digest = str(entry["sha256"]).lower()
+        if len(digest) != HEX64 or any(ch not in "0123456789abcdef" for ch in digest):
+            raise ValueError(f"invalid sha256 for {rel}")
+        seen.add(rel)
+        listed[rel] = digest
+    for rel, expected in listed.items():
+        target = (root / rel).resolve()
+        try:
+            target.relative_to(root.resolve())
+        except ValueError as exc:
+            raise ValueError(f"path escapes repository: {rel}") from exc
+        if not target.is_file():
+            raise ValueError(f"missing file: {rel}")
+        actual = sha256_bytes(target.read_bytes())
+        if actual != expected:
+            raise ValueError(f"hash mismatch: {rel}")
+    return listed
+
+
+def validate_v112(root: Path, manifest_path: Path, manifest: dict) -> None:
+    manifest_rel = manifest_path.resolve().relative_to(root.resolve()).as_posix()
+    if manifest["algorithm"] != "SHA-256":
+        raise ValueError("algorithm must be SHA-256")
+    if manifest["canonical_bytes"] != "exact-file-bytes-no-rewrite":
+        raise ValueError("canonical_bytes must be exact-file-bytes-no-rewrite")
+    if manifest["contract_id"] != "STASHTAB-CARD-RESOLUTION-001":
+        raise ValueError("contract_id mismatch")
+    if manifest["freeze_status"] != "FROZEN":
+        raise ValueError("freeze_status must be FROZEN")
+    if "AMENDMENT-1.1.0" not in manifest["approved_amendments"]:
+        raise ValueError("approved_amendments must record AMENDMENT-1.1.0")
+    if "AMENDMENT-1.1.1" not in manifest["approved_amendments"]:
+        raise ValueError("approved_amendments must record AMENDMENT-1.1.1")
+    if "AMENDMENT-1.1.2" not in manifest["approved_amendments"]:
+        raise ValueError("approved_amendments must include AMENDMENT-1.1.2")
+    previous = manifest["previous_freeze"]
+    if not isinstance(previous, dict) or previous.get("contract_version") != "1.1.1":
+        raise ValueError("previous_freeze.contract_version must be 1.1.1")
+    inventory = manifest.get("table_inventory")
+    if not isinstance(inventory, dict):
+        raise ValueError("table_inventory required")
+    if inventory.get("frozen_1_1_1") != 8 or inventory.get("added_1_1_2") != 4 or inventory.get("total") != 12:
+        raise ValueError("incorrect 8-to-12 table inventory")
+
+    listed = _listed_files(root, manifest, manifest_rel)
+    missing_required = [path for path in REQUIRED_PATHS_112 if path not in listed]
+    if missing_required:
+        raise ValueError(f"manifest missing required files: {missing_required}")
+
+    amendment = (root / "docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md").read_text(
+        encoding="utf-8"
+    )
+    if "AMENDMENT-1.1.2" not in amendment:
+        raise ValueError("AMENDMENT-1.1.2.md does not name AMENDMENT-1.1.2")
+    if "APPROVED AND FROZEN" not in amendment:
+        raise ValueError("AMENDMENT-1.1.2.md is not marked APPROVED AND FROZEN")
+    if "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json" not in amendment:
+        raise ValueError("AMENDMENT-1.1.2.md must point at FREEZE-1.1.2.json")
+    own_hash = listed["docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md"]
+    if own_hash in amendment:
+        raise ValueError("AMENDMENT-1.1.2.md must not contain its own SHA-256")
+    if "**12 total**" not in amendment:
+        raise ValueError("AMENDMENT-1.1.2.md must state 12-table inventory")
+    for table in TABLES_112:
+        if table not in amendment:
+            raise ValueError(f"AMENDMENT-1.1.2.md missing table {table}")
+    for marker in PLACEHOLDER_MARKERS:
+        if marker in amendment:
+            raise ValueError(f"AMENDMENT-1.1.2.md contains unresolved wording: {marker}")
+
+    check = (root / "docs/backend-notification-integration-v1/FREEZE-CHECK-1.1.2.md").read_text(
+        encoding="utf-8"
+    )
+    if "APPROVE" not in check or "AMENDMENT-1.1.2" not in check:
+        raise ValueError("FREEZE-CHECK-1.1.2.md missing vote/amendment identity")
+    for marker in PLACEHOLDER_MARKERS:
+        if marker in check:
+            raise ValueError(f"FREEZE-CHECK-1.1.2.md contains unresolved wording: {marker}")
+
+    parent_amendment = (root / "docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md").read_text(
+        encoding="utf-8"
+    )
+    if "APPROVED AND FROZEN" not in parent_amendment:
+        raise ValueError("parent AMENDMENT-1.1.1.md is not frozen")
+    policy = (root / "docs/card-resolution-workflow/AMENDMENT-1.1.0.md").read_text(
+        encoding="utf-8"
+    )
+    if "Proposed Contract Amendment 1.1.0" not in policy:
+        raise ValueError("AMENDMENT-1.1.0.md was unexpectedly rewritten")
+    parent = (root / "docs/card-resolution-workflow/CONTRACT.md").read_text(encoding="utf-8")
+    if "**Version:** `1.0.0`" not in parent:
+        raise ValueError("parent CONTRACT.md version must remain 1.0.0")
+
+
 def validate(root: Path, manifest_path: Path) -> None:
     manifest = load_manifest(manifest_path)
+    if manifest.get("contract_version") == "1.1.2":
+        validate_v112(root, manifest_path, manifest)
+        return
     manifest_rel = manifest_path.resolve().relative_to(root.resolve()).as_posix()
 
     if manifest["algorithm"] != "SHA-256":
@@ -341,6 +466,7 @@ def negative_check(root: Path, manifest_path: Path) -> None:
 
         backup = manifest_path.read_bytes()
         payload = json.loads(backup)
+        original_version = payload["contract_version"]
         payload["contract_version"] = "0.0.0"
         manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         try:
@@ -391,6 +517,37 @@ def negative_check(root: Path, manifest_path: Path) -> None:
             raise SystemExit("expected live missing-entry failure")
         except ValueError:
             pass
+        payload = json.loads(backup)
+        if original_version == "1.1.2":
+            payload["table_inventory"] = {
+                "frozen_1_1_1": 8,
+                "added_1_1_2": 4,
+                "total": 11,
+            }
+            manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            try:
+                validate(root, manifest_path)
+                raise SystemExit("expected live table-inventory failure")
+            except ValueError:
+                pass
+            amendment_path = root / "docs/backend-notification-integration-v1/AMENDMENT-1.1.2.md"
+            original_amendment = originals.get(amendment_path, amendment_path.read_bytes())
+            amendment_path.write_bytes(original_amendment + b"\nTODO freeze later\n")
+            payload = json.loads(backup)
+            payload["files"] = [
+                {
+                    "path": entry["path"],
+                    "sha256": sha256_bytes((root / entry["path"]).read_bytes()),
+                }
+                for entry in payload["files"]
+            ]
+            manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            try:
+                validate(root, manifest_path)
+                raise SystemExit("expected live placeholder failure")
+            except ValueError:
+                pass
+            amendment_path.write_bytes(original_amendment)
         manifest_path.write_bytes(backup)
         validate(root, manifest_path)
         compatibility(root)
@@ -403,8 +560,29 @@ def negative_check(root: Path, manifest_path: Path) -> None:
 
 
 def write_manifest(root: Path, manifest_path: Path) -> None:
-    files = [root / path for path in REQUIRED_PATHS]
-    payload = _manifest_for(root, files)
+    if manifest_path.name == "FREEZE-1.1.2.json":
+        files = [root / path for path in REQUIRED_PATHS_112]
+        payload = _manifest_for(root, files)
+        payload["contract_version"] = "1.1.2"
+        payload["approved_amendments"] = [
+            "AMENDMENT-1.1.0",
+            "AMENDMENT-1.1.1",
+            "AMENDMENT-1.1.2",
+        ]
+        payload["previous_freeze"] = {
+            "contract_version": "1.1.1",
+            "record": "docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1.json",
+        }
+        payload["table_inventory"] = {
+            "frozen_1_1_1": 8,
+            "added_1_1_2": 4,
+            "total": 12,
+        }
+        payload["human_vote"] = "APPROVE"
+        payload["freeze_timestamp"] = "2026-08-24T22:50:00Z"
+    else:
+        files = [root / path for path in REQUIRED_PATHS]
+        payload = _manifest_for(root, files)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 

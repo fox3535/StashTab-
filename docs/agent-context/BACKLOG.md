@@ -142,14 +142,13 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 
 ## backend-notification-integration-v1
 
-**Status:** `FROZEN — IMPLEMENTATION AWAITING NAMED UNLOCK`
+**Status:** `FROZEN 1.1.0+1.1.1+1.1.2 — IMPLEMENTATION AWAITING NEW NAMED UNLOCK`
 **Source:** `docs/backend-notification-integration-v1/AMENDMENT-1.1.1.md`;
-`DIRECTIVE.md`; `DIRECTIVE-IMPLEMENTATION.md` (prepared, not executed);
-manifest `freezes/FREEZE-1.1.1.json`
+`AMENDMENT-1.1.2.md`; `DIRECTIVE.md`; `DIRECTIVE-IMPLEMENTATION.md` (prepared,
+not executed); manifests `freezes/FREEZE-1.1.1.json` and `FREEZE-1.1.2.json`
 
-AMENDMENT-1.1.1 frozen 2026-08-24. AMENDMENT-1.1.0 unchanged. Do not copy
-implementation files, enable Web Push, migrate, commit, or deploy until
-named unlock. **NOTIFICATION-INTEGRATION-GATE** still blocks merge.
+AMENDMENT-1.1.2 frozen 2026-08-24 after human APPROVE. Prior 1.1.1 unlock does
+not authorize 1.1.2 apply. **NOTIFICATION-INTEGRATION-GATE** still blocks merge.
 
 ## inventory-truth-v1 / slice-03-adjustments
 
