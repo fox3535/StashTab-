@@ -17,6 +17,8 @@ Verified identity routes need SELECT and INSERT only. `stashtab_api` gets those 
 
 The migrator does not change database role membership. Before any DDL it checks that api, worker, and readonly cannot assume the migrator, and fails closed if they can.
 
+On objects it owns, it revokes all table privileges from PUBLIC, api, worker, and readonly, then grants api SELECT and INSERT only. It also revokes its own default table privileges so later tables do not inherit broad API DML. Verification uses effective privileges, not grant presence alone.
+
 ## Commands (local / operator)
 
 ```text

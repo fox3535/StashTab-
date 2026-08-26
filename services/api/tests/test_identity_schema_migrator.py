@@ -107,6 +107,21 @@ def pg16():
                     "stashtab_api, stashtab_worker, stashtab_readonly"
                 )
             )
+            conn.execute(text("SET ROLE stashtab_migrator"))
+            conn.execute(
+                text(
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+                    "GRANT ALL ON TABLES TO PUBLIC"
+                )
+            )
+            for role in ("stashtab_api", "stashtab_worker", "stashtab_readonly"):
+                conn.execute(
+                    text(
+                        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+                        f"GRANT ALL ON TABLES TO {role}"
+                    )
+                )
+            conn.execute(text("RESET ROLE"))
         yield db_engine
         db_engine.dispose()
     finally:
@@ -152,6 +167,16 @@ def _decode(authorization):
     return token
 
 
+def _has_priv(engine, role: str, table: str, priv: str) -> bool:
+    with engine.connect() as conn:
+        return bool(
+            conn.execute(
+                text("SELECT has_table_privilege(:role, :rel, :priv)"),
+                {"role": role, "rel": f"public.{table}", "priv": priv},
+            ).scalar()
+        )
+
+
 def _api_client(engine, monkeypatch):
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     monkeypatch.setattr(settings, "app_env", "staging")
@@ -174,6 +199,32 @@ def _api_client(engine, monkeypatch):
     return TestClient(app)
 
 
+def test_permissive_defaults_are_reproduced(pg16, migrator_engine):
+    with pg16.begin() as conn:
+        conn.execute(text("SET ROLE stashtab_migrator"))
+        conn.execute(
+            text(
+                "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO PUBLIC"
+            )
+        )
+        for role in ("stashtab_api", "stashtab_worker", "stashtab_readonly"):
+            conn.execute(
+                text(
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+                    f"GRANT ALL ON TABLES TO {role}"
+                )
+            )
+        conn.execute(text("RESET ROLE"))
+    with migrator_engine.begin() as conn:
+        conn.execute(text("CREATE TABLE privilege_probe (id int PRIMARY KEY)"))
+    try:
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "UPDATE")
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "DELETE")
+    finally:
+        with migrator_engine.begin() as conn:
+            conn.execute(text("DROP TABLE privilege_probe"))
+
+
 def test_migrator_creates_two_tables_and_is_idempotent(pg16, migrator_engine):
     first = apply(migrator_engine)
     assert set(_tables(pg16)) == {"shop_members", "shops"}
@@ -186,25 +237,24 @@ def test_migrator_creates_two_tables_and_is_idempotent(pg16, migrator_engine):
             text("SELECT tableowner FROM pg_tables WHERE tablename = 'shops'")
         ).scalar()
         assert owner == "stashtab_migrator"
-        grants = {
-            (r[0], r[1])
-            for r in conn.execute(
-                text(
-                    """
-                    SELECT table_name, privilege_type
-                    FROM information_schema.role_table_grants
-                    WHERE grantee = 'stashtab_api'
-                      AND table_schema = 'public'
-                    """
+        for table in ("shops", "shop_members"):
+            held = {
+                priv
+                for priv in (
+                    "SELECT",
+                    "INSERT",
+                    "UPDATE",
+                    "DELETE",
+                    "TRUNCATE",
+                    "REFERENCES",
+                    "TRIGGER",
                 )
-            )
-        }
-        assert grants == {
-            ("shops", "SELECT"),
-            ("shops", "INSERT"),
-            ("shop_members", "SELECT"),
-            ("shop_members", "INSERT"),
-        }
+                if conn.execute(
+                    text("SELECT has_table_privilege('stashtab_api', :rel, :priv)"),
+                    {"rel": f"public.{table}", "priv": priv},
+                ).scalar()
+            }
+            assert held == {"SELECT", "INSERT"}
 
 
 def test_constraints_fk_unique_and_role_check(pg16, migrator_engine):
@@ -331,6 +381,13 @@ def test_api_has_only_required_dml(pg16, migrator_engine):
             conn.execute(text("CREATE ROLE extra_role"))
         with pytest.raises(Exception):
             conn.execute(text("SET ROLE stashtab_migrator"))
+    with pg16.connect() as conn:
+        for table in ("shops", "shop_members"):
+            for priv in ("UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+                assert not conn.execute(
+                    text("SELECT has_table_privilege('stashtab_api', :rel, :priv)"),
+                    {"rel": f"public.{table}", "priv": priv},
+                ).scalar()
     worker = create_engine(_role_url("stashtab_worker"), pool_pre_ping=True)
     with worker.connect() as conn:
         with pytest.raises(Exception):
@@ -382,6 +439,38 @@ def test_identity_http_cases_on_migrated_schema(pg16, migrator_engine, monkeypat
     )
     assert dup.status_code == 409
     api.dispose()
+
+
+def test_future_tables_do_not_inherit_broad_api_dml(pg16, migrator_engine):
+    apply(migrator_engine)
+    with migrator_engine.begin() as conn:
+        conn.execute(text("CREATE TABLE privilege_probe (id int PRIMARY KEY)"))
+    try:
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "SELECT") is False
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "INSERT") is False
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "UPDATE") is False
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "DELETE") is False
+        with migrator_engine.begin() as conn:
+            conn.execute(text("INSERT INTO privilege_probe VALUES (1)"))
+    finally:
+        with migrator_engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS privilege_probe"))
+
+
+def test_rollback_keeps_safe_default_privileges(pg16, migrator_engine):
+    apply(migrator_engine)
+    rollback(pg16)
+    assert _tables(pg16) == []
+    with migrator_engine.begin() as conn:
+        conn.execute(text("CREATE TABLE privilege_probe (id int PRIMARY KEY)"))
+    try:
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "UPDATE") is False
+        assert _has_priv(pg16, "stashtab_api", "privilege_probe", "DELETE") is False
+        with migrator_engine.begin() as conn:
+            conn.execute(text("INSERT INTO privilege_probe VALUES (1)"))
+    finally:
+        with migrator_engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS privilege_probe"))
 
 
 def test_rollback_drops_only_kernel_tables_and_keeps_roles(pg16, migrator_engine):

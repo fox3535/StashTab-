@@ -23,6 +23,7 @@ INSERT only. No sequence privileges. Worker and readonly get no DML.
 
 This migrator does not CREATE, ALTER, GRANT, or REVOKE database roles.
 It fails closed before DDL if api, worker, or readonly can assume migrator.
+It may change privileges on objects it owns and its own default privileges.
 """
 
 from __future__ import annotations
@@ -41,6 +42,17 @@ MIGRATOR_ROLE = "stashtab_migrator"
 API_ROLE = "stashtab_api"
 WORKER_ROLE = "stashtab_worker"
 READONLY_ROLE = "stashtab_readonly"
+_RUNTIME_ROLES = (API_ROLE, WORKER_ROLE, READONLY_ROLE)
+_TABLE_PRIVS = (
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "TRUNCATE",
+    "REFERENCES",
+    "TRIGGER",
+)
+_API_PRIVS = frozenset({"SELECT", "INSERT"})
 _ROLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 _CREATE_SHOPS = """
@@ -123,6 +135,87 @@ def _assert_runtime_cannot_assume_migrator(conn) -> None:
         )
 
 
+def _has_table_privilege(conn, role: str, table: str, priv: str) -> bool:
+    return bool(
+        conn.execute(
+            text("SELECT has_table_privilege(:role, :rel, :priv)"),
+            {"role": role, "rel": f"public.{table}", "priv": priv},
+        ).scalar()
+    )
+
+
+def _public_has_table_privilege(conn, table: str, priv: str) -> bool:
+    return bool(
+        conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl, '{}'::aclitem[])) a
+                    WHERE n.nspname = 'public'
+                      AND c.relname = :table
+                      AND a.grantee = 0
+                      AND a.privilege_type = :priv
+                )
+                """
+            ),
+            {"table": table, "priv": priv},
+        ).scalar()
+    )
+
+
+def _normalize_owned_privileges(conn, api: str) -> list[str]:
+    grants: list[str] = []
+    conn.execute(
+        text("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC")
+    )
+    for role in _RUNTIME_ROLES:
+        if _role_exists(conn, role):
+            conn.execute(
+                text(
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+                    f"REVOKE ALL ON TABLES FROM {_ident(role)}"
+                )
+            )
+    for table in TABLES:
+        conn.execute(text(f"REVOKE ALL PRIVILEGES ON TABLE {table} FROM PUBLIC"))
+        for role in _RUNTIME_ROLES:
+            if _role_exists(conn, role):
+                conn.execute(
+                    text(f"REVOKE ALL PRIVILEGES ON TABLE {table} FROM {_ident(role)}")
+                )
+        if _role_exists(conn, api):
+            conn.execute(text(f"GRANT SELECT, INSERT ON TABLE {table} TO {api}"))
+            grants.append(f"{api}:{table}:select,insert")
+    return grants
+
+
+def _assert_contract_privileges(conn) -> None:
+    for table in TABLES:
+        for priv in _TABLE_PRIVS:
+            if _public_has_table_privilege(conn, table, priv):
+                raise RuntimeError(f"PUBLIC has {priv} on {table}")
+        if _role_exists(conn, API_ROLE):
+            allowed = {
+                priv for priv in _TABLE_PRIVS if _has_table_privilege(conn, API_ROLE, table, priv)
+            }
+            if allowed != _API_PRIVS:
+                raise RuntimeError(
+                    f"stashtab_api privileges on {table} are {sorted(allowed)}, "
+                    f"expected {sorted(_API_PRIVS)}"
+                )
+        for role in (WORKER_ROLE, READONLY_ROLE):
+            if not _role_exists(conn, role):
+                continue
+            held = {
+                priv for priv in _TABLE_PRIVS if _has_table_privilege(conn, role, table, priv)
+            }
+            if held:
+                raise RuntimeError(f"{role} has table privileges on {table}: {sorted(held)}")
+
+
 def _public_tables(conn) -> list[str]:
     rows = conn.execute(
         text(
@@ -170,19 +263,14 @@ def apply(target_engine: Engine | None = None, *, fail_after: str | None = None)
         )
         for table in TABLES:
             conn.execute(text(f"ALTER TABLE {table} OWNER TO {migrator}"))
+        applied["grants"] = _normalize_owned_privileges(conn, api)
         conn.execute(text("RESET ROLE"))
-        for table in TABLES:
-            conn.execute(text(f"REVOKE ALL ON TABLE {table} FROM PUBLIC"))
-            if _role_exists(conn, api):
-                conn.execute(text(f"GRANT SELECT, INSERT ON TABLE {table} TO {api}"))
-                applied["grants"].append(f"{api}:{table}:select,insert")
-            for extra in (WORKER_ROLE, READONLY_ROLE):
-                if _role_exists(conn, extra):
-                    conn.execute(text(f"REVOKE ALL ON TABLE {table} FROM {_ident(extra)}"))
+        _assert_contract_privileges(conn)
     with engine.connect() as probe:
         names = _public_tables(probe)
-    if set(names) != set(TABLES):
-        raise RuntimeError(f"identity schema verification failed: {names}")
+        if set(names) != set(TABLES):
+            raise RuntimeError(f"identity schema verification failed: {names}")
+        _assert_contract_privileges(probe)
     return applied
 
 
