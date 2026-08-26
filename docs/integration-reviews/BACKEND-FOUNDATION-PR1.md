@@ -1,5 +1,7 @@
 # Backend foundation PR #1 — integration synthesis
 
+**Later status (2026-08-25):** PR #1 merged to `main` as `c3647a4eda37d355ed47f9e77ad667e4fda7930c`. **Not deployed.** The review body below is historical evidence at head `4d317f8`.
+
 **Status:** review evidence. Included in the merge-readiness pass after owner approved one foundation PR.
 
 ## Merge-readiness follow-up (after `4d317f8`)

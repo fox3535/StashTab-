@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     web_push_max_attempts: int = 8
     web_push_retry_backoff_seconds: int = 30
     notifications_backend_enabled: bool = False
+    worker_jobs_enabled: bool = False
+    stashtab_truth_migrator_role: str = ""
 
     @field_validator("web_push_allowed_host_suffixes")
     @classmethod

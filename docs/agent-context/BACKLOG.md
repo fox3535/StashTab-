@@ -140,22 +140,31 @@ remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
 deployment gates. Adjustment, production cutover, refund payments,
 manual-resolution UI, payments, and Watch remain outside this slice.
 
+## staging-readiness-v1 / slice-00-isolated-api-code
+
+**Status:** `COMPLETED, NOT MERGED, NOT DEPLOYED (ACCEPTED 2026-08-25)`
+**Source:** `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`; planning
+checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`
+
+Isolated API safety code accepted. No Railway, Neon, Clerk, Vercel,
+Convex, or Shopify resources created. Deployment and schema apply remain
+blocked. Cloud provision needs a later named unlock.
+
 ## backend-notification-integration-v1
 
-**Status:** `DRAFT PR #1 AT 4d317f8 — REQUIRED CI GREEN — NOT MERGED — NOT DEPLOYED`
+**Status:** `MERGED TO main AS c3647a4 — NOT DEPLOYED`
 **Source:** `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`;
 `AMENDMENT-1.1.1.md`; `AMENDMENT-1.1.2.md`; manifests `freezes/FREEZE-1.1.1.json`
 and `FREEZE-1.1.2.json`
 
-Local 1.1.2 backend accepted 2026-08-25 and pushed as draft PR #1. Required
-GitHub jobs passed at `4d317f8`. **NOTIFICATION-INTEGRATION-GATE** is closed
-for backend overlap only. **MIGRATOR-ROLE-PROVISIONING-GATE** still blocks
-production schema apply/deploy. Frontend settings, service-worker install,
-authenticated transport on remaining callers, and live Web Push remain open.
+Local 1.1.2 backend accepted 2026-08-25. PR #1 merged as `c3647a4`.
+**NOTIFICATION-INTEGRATION-GATE** is closed for backend overlap only.
+**MIGRATOR-ROLE-PROVISIONING-GATE** still blocks production schema apply/deploy.
+Frontend settings, service-worker install, and live Web Push remain open.
 
 ## inventory-truth-v1 / slice-03-adjustments
 
-**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED (ACCEPTED 2026-08-24)`
+**Status:** `COMPLETED — ON main VIA c3647a4 — NOT DEPLOYED (ACCEPTED 2026-08-24)`
 **Entry gate:** named human implementation unlock of `DIRECTIVE-SLICE-03-IMPLEMENTATION.md`.
 
 Must cover every remaining absolute or manual inventory mutation path

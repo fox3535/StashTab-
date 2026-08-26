@@ -280,3 +280,40 @@ frontend authenticated API transport; production VAPID/live Web Push;
 production migration/roles/cutover. **CSV-COST-FEEDBACK-GATE** stays open.
 The PR stays draft, unmerged, and undeployed.
 
+## D-021 — Foundation PR #1 merged, not deployed (approved)
+
+Approved by named human owner. PR #1 merged to `main` as
+`c3647a4eda37d355ed47f9e77ad667e4fda7930c`. **Not deployed.** D-020’s
+“keep draft / do not merge” is superseded for merge status only. Production
+schema, VAPID, and live Web Push remain blocked.
+
+## D-022 — Staging owner decisions (approved)
+
+Approved by named human owner 2026-08-25. Slice 0: separate Railway API
+project, separate Neon, dedicated Clerk; worker later in that Railway
+project under a separate unlock; Vercel and Convex deferred. No shared
+production database, credentials, Clerk tenant, or secrets. Synthetic
+data only; no production clone. No Shopify in slice 0; missing
+settings/tokens mean sync off. Neon owner runs reviewed role SQL; runtime
+cannot create roles or assume migrator. Chris is initial incident owner
+and break-glass approver; a second qualified human is required before
+production. First boot: `APP_ENV=staging`, debug off, bypass off,
+notifications off, no VAPID, worker not running, Shopify absent, inventory
+cutover off, no production credentials. Never run local seed against
+staging. Details: `docs/staging-readiness-v1/OWNER-DECISIONS.md`.
+
+## D-023 — Staging slice-00 isolated API code accepted (approved)
+
+Approved by named human owner 2026-08-25.
+`staging-readiness-v1 / slice-00-isolated-api-code` is **COMPLETED, NOT
+MERGED, NOT DEPLOYED**. Planning checkpoint
+`131bc1eed01f3e9b732e41cde039de6c15cea707`. Evidence: separate liveness and
+readiness; staging/production startup DDL disabled; local/test-only named
+legacy bootstrap; notifications, Web Push, cutover, worker, and Shopify
+default off; missing Shopify configuration skips rather than auto-enables;
+development seed rejects staging/production; controlled `503 FEATURE_NOT_READY`;
+SQLite 192 passed with 46 PostgreSQL-only skipped; disposable PostgreSQL 46
+passed; frontend typecheck and frozen validators passed; stock/CSV freeze
+response correction passed. Cloud provisioning still requires a later named
+unlock. Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`.
+

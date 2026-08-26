@@ -1,0 +1,81 @@
+{
+  "packet_id": "STASHTAB-STAGING-READINESS-001",
+  "packet_version": "1.0.0",
+  "freeze_status": "FROZEN",
+  "freeze_timestamp": "2026-08-26T00:05:00Z",
+  "baseline_commit": "c3647a4eda37d355ed47f9e77ad667e4fda7930c",
+  "algorithm": "SHA-256",
+  "canonical_bytes": "git-lf-text-bytes",
+  "human_vote": "APPROVE",
+  "owner_decisions": "docs/staging-readiness-v1/OWNER-DECISIONS.md",
+  "files": [
+    {
+      "path": "docs/staging-readiness-v1/INDEX.md",
+      "sha256": "f3a41c24fc51be0375f3ca419a112178b05d99fdfd21d797e056eefe4d868513"
+    },
+    {
+      "path": "docs/staging-readiness-v1/TOPOLOGY.md",
+      "sha256": "197500b3c0cf85b6965bca8318252ae0bf9f53432570c2fd922fd10e6f325020"
+    },
+    {
+      "path": "docs/staging-readiness-v1/ENVIRONMENT.md",
+      "sha256": "d9a4ecd38d23aa401ee2f14ad68f8fd97ac812f0e128f2715456c9c7354ba44a"
+    },
+    {
+      "path": "docs/staging-readiness-v1/ROLES.md",
+      "sha256": "c2e21b908ffb5915aa507ba4481d2b728961fb0a9b683a4714302e7808afb8e5"
+    },
+    {
+      "path": "docs/staging-readiness-v1/SCHEMA.md",
+      "sha256": "6f0d80b639f3fe6d351405a506defd5abc6e6d28058407f9721270237dff495f"
+    },
+    {
+      "path": "docs/staging-readiness-v1/SAFEGUARDS.md",
+      "sha256": "31a0271a117bd5cbe25f4c02dc1001ceb66bc97fccc4c0df836c993fd8a7b565"
+    },
+    {
+      "path": "docs/staging-readiness-v1/REHEARSAL.md",
+      "sha256": "0d04962771b36ad80f9dc4814c99027ce8523efb2f13d9978db7969c2b2d59b1"
+    },
+    {
+      "path": "docs/staging-readiness-v1/CUTOVER.md",
+      "sha256": "eeef6a40da9ed4210f38fad858988b868b00c155659655176813c327fe558062"
+    },
+    {
+      "path": "docs/staging-readiness-v1/FLAGS.md",
+      "sha256": "c776acf15454502b6480317ad6e94fdcb00b11b304386b90195e4ee6ef103edf"
+    },
+    {
+      "path": "docs/staging-readiness-v1/SMOKE.md",
+      "sha256": "a6a002bbaf625034158a2243a9b478a52b103812bcd14fe1d496210f8df13234"
+    },
+    {
+      "path": "docs/staging-readiness-v1/OPERATIONS.md",
+      "sha256": "2454bb164897b8e94df03fe64b4d84e351016a8227f434b14ba4a40e2474ff07"
+    },
+    {
+      "path": "docs/staging-readiness-v1/RUNBOOK.md",
+      "sha256": "d8650d3b32bca2780bad7067c8fb297fac8738b6886b8a16a38e709d35084268"
+    },
+    {
+      "path": "docs/staging-readiness-v1/GATES.md",
+      "sha256": "49a24107c3ddc4d10ed49f86f4d8a2b38386c72ebbd73085b3c83cb2cb53e0d8"
+    },
+    {
+      "path": "docs/staging-readiness-v1/REVIEWS.md",
+      "sha256": "2912cf9dbc270d56825f57837a0f78b3ca801868c68ce8454e10aa116e129d17"
+    },
+    {
+      "path": "docs/staging-readiness-v1/OWNER-DECISIONS.md",
+      "sha256": "ec4848ad8be758c5c5f2be753094f9cc1675b61b0965bd2f9082c071ca53cac1"
+    },
+    {
+      "path": "docs/staging-readiness-v1/sql/provision-staging-roles.sql",
+      "sha256": "0d9e495077c6a40a7edd9f66a49b874ddbc72706bdaa071e95c0fd54c678debc"
+    },
+    {
+      "path": "docs/staging-readiness-v1/freezes/MANIFEST-SPEC.md",
+      "sha256": "76b497d9785a4ba802423543397d1d0dc6e722069b6e0cd6d7e929293b26e2c8"
+    }
+  ]
+}

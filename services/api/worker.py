@@ -21,7 +21,7 @@ def _shop_auto_sync(db, shop_id: str) -> bool:
         db.query(SystemSettings).filter(SystemSettings.shop_id == shop_id).first()
     )
     if settings is None:
-        return True
+        return False
     return bool(settings.auto_sync_enabled)
 
 
@@ -106,7 +106,14 @@ def run_worker_loop(interval: int, *, max_ticks: int | None = None) -> None:
 
 
 def main() -> None:
-    init_db()
+    from app.database import startup_schema_mutation_forbidden
+    from app.feature_readiness import worker_jobs_enabled
+
+    if not worker_jobs_enabled():
+        print("Worker jobs disabled; scheduled sync will not run.")
+        return
+    if not startup_schema_mutation_forbidden():
+        init_db()
     interval = int(os.environ.get("SYNC_INTERVAL_SECONDS", "30"))
     print(f"StashTab sync worker started (interval={interval}s)")
     print("Worker shop identity is the persisted Shop.id row, never request headers.")

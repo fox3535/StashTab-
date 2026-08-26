@@ -262,14 +262,13 @@ class TestFreeze:
         s.close()
 
     def test_stock_overwrite_rejected_while_frozen(self, db):
-        from fastapi import HTTPException
-
+        from app.errors import FeatureNotReadyError
         from app.routers.admin import _reject_if_truth_frozen
 
         # shop-b has no completed cutover → frozen
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(FeatureNotReadyError) as exc:
             _reject_if_truth_frozen(db=db, shop_id="shop-b")
-        assert exc.value.status_code == 503
+        assert exc.value.feature == "inventory_truth"
 
 
 class TestBackfillAndRecon:
