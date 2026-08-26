@@ -115,7 +115,9 @@ def pull_shopify_orders(db: Session, shop_id: str) -> dict[str, int | list[dict]
         .filter(ShopifyCredentials.shop_id == shop_id)
         .first()
     )
-    if not creds:
+    from app.feature_readiness import shopify_credentials_usable
+
+    if not shopify_credentials_usable(creds):
         return {"new_pulls": 0, "notifications": [], "message": "No Shopify credentials"}
 
     try:
@@ -422,7 +424,9 @@ def process_sync_outbox(db: Session, shop_id: str) -> dict[str, int | str]:
         .filter(ShopifyCredentials.shop_id == shop_id)
         .first()
     )
-    if not creds:
+    from app.feature_readiness import shopify_credentials_usable
+
+    if not shopify_credentials_usable(creds):
         return {"synced": 0, "failed": 0, "message": "No Shopify credentials configured"}
 
     try:

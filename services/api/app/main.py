@@ -2,11 +2,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
+from app.errors import FeatureNotReadyError
 from app.auth.identity import log_dev_identity_bypass_state
 from app.routers import (
     admin,
@@ -23,7 +25,10 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    init_db()
+    from app.database import startup_schema_mutation_forbidden
+
+    if not startup_schema_mutation_forbidden():
+        init_db()
     log_dev_identity_bypass_state()
     static_root = Path(__file__).resolve().parent / "static"
     (static_root / "barcodes").mkdir(parents=True, exist_ok=True)
@@ -32,6 +37,19 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+
+@app.exception_handler(FeatureNotReadyError)
+async def feature_not_ready_handler(_request, exc: FeatureNotReadyError):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "FEATURE_NOT_READY",
+            "feature": exc.feature,
+            "message": exc.message,
+        },
+    )
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -36,8 +36,9 @@ def _truth_dual_write_purchase_receive(
     from decimal import Decimal
 
     from app.inventory_truth import core as truth
+    from app.feature_readiness import ensure_inventory_mutations_ready
 
-    truth.require_receive_open(db, shop_id)
+    ensure_inventory_mutations_ready(db, shop_id)
     try:
         truth.record_purchase_receive(
             db,

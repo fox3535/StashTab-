@@ -1146,7 +1146,17 @@ def _reject_if_truth_frozen(db: Session, shop_id: str) -> None:
     """MIGRATION.md §Order steps 3/5: direct stock overwrites (PATCH, CSV)
     stay frozen through this whole slice — they unlock only with the later
     adjust slice. 503 signals the freeze state."""
+    from app.config import settings
     from app.inventory_truth import core as truth_core
+    from app.feature_readiness import ensure_inventory_mutations_ready, inventory_truth_schema_present
+    from app.errors import FeatureNotReadyError
+
+    if not inventory_truth_schema_present(db) or settings.parsed_app_env in (
+        "staging",
+        "production",
+    ):
+        ensure_inventory_mutations_ready(db, shop_id)
+        return
 
     if truth_core.cutover_status(db, shop_id) != "complete":
         raise HTTPException(

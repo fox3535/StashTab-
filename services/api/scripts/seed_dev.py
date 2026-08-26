@@ -47,6 +47,11 @@ IMAGE_URLS: dict[str, str] = {
 
 
 def main() -> None:
+    from app.config import settings
+
+    env = (settings.parsed_app_env or "").lower()
+    if env in ("staging", "production"):
+        raise SystemExit("Refusing to run development seed against staging/production.")
     init_db()
     db = SessionLocal()
 

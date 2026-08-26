@@ -127,12 +127,9 @@ def finalize_sale(
     """
     from app.inventory_truth import core as truth
     from app.inventory_truth import core_outbound as out
+    from app.feature_readiness import ensure_inventory_mutations_ready
 
-    status = truth.cutover_status(db, shop_id)
-    if status != "complete":
-        raise ReceiveFrozenError(
-            f"POS finalize frozen during inventory-truth cutover (status: {status})"
-        )
+    ensure_inventory_mutations_ready(db, shop_id)
 
     # Lock the item rows before the stock check so concurrent checkouts
     # serialize per item: the fail-closed validation cannot race a parallel
