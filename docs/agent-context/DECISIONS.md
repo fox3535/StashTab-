@@ -302,6 +302,19 @@ notifications off, no VAPID, worker not running, Shopify absent, inventory
 cutover off, no production credentials. Never run local seed against
 staging. Details: `docs/staging-readiness-v1/OWNER-DECISIONS.md`.
 
+## D-024 — Convex removed from the target architecture (approved)
+
+Approved by named human owner 2026-08-26. Convex is not part of StashTab.
+Identity is Clerk. FastAPI owns business logic and authorization. Neon is
+the application database. Railway hosts the API and later the worker.
+This supersedes earlier “Convex deferred / later Convex staging” language
+in frozen staging packets (`docs/staging-readiness-v1/`, including
+OWNER-DECISIONS D-022). Those files stay frozen; do not provision Convex.
+Do not mirror Clerk users into Neon for this change. Clerk Protect and
+the Clerk pricing table remain as a billing shell only; no payment,
+payment-attempt, or webhook replacement is added. Implementation is a
+frontend/docs PR only. FastAPI, Neon schema, and Railway are unchanged.
+
 ## D-023 — Staging slice-00 isolated API code accepted (approved)
 
 Approved by named human owner 2026-08-25.

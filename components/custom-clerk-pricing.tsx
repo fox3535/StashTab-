@@ -1,4 +1,5 @@
 'use client'
+// Clerk-hosted pricing table only. Not a StashTab payment backend and not Convex.
 import { PricingTable } from "@clerk/nextjs";
 import { dark } from '@clerk/themes'
 import { useTheme } from "next-themes"

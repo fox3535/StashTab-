@@ -4,7 +4,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import { ClerkProvider } from '@clerk/nextjs'
-import ConvexClientProvider from '@/components/ConvexClientProvider'
 
 /** Body / UI text */
 const inter = Inter({
@@ -50,11 +49,9 @@ export default function RootLayout({
 }>) {
   const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const appTree = clerkPublishableKey ? (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <ConvexClientProvider>{children}</ConvexClientProvider>
-    </ClerkProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey}>{children}</ClerkProvider>
   ) : (
-    <ConvexClientProvider>{children}</ConvexClientProvider>
+    children
   );
 
   return (
