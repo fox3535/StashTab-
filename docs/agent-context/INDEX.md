@@ -39,4 +39,6 @@ task points to it.
 - Staging readiness: `docs/staging-readiness-v1/` frozen at
   `freezes/FREEZE-v1.json`; slice-00 isolated API code accepted 2026-08-25
   (`COMPLETED, NOT MERGED, NOT DEPLOYED`)
+- Convex is not in the target architecture (D-024 in `DECISIONS.md`). Frozen
+  staging text that said “Convex deferred” is historical and superseded.
 

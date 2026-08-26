@@ -21,8 +21,8 @@ FastAPI (Python)         ← Brain: port logic from Mimir Card Shop App
       ↓
 PostgreSQL               ← Inventory, sales, sync outbox (multi-tenant via shop_id)
 
-Clerk = auth + billing shell
-Convex = users + subscription tracking (from starter kit)
+Clerk = identity + billing shell
+Convex is not part of the architecture. FastAPI + Neon own application data.
 ```
 
 **Do NOT rewrite business logic in TypeScript.** Port Python from:

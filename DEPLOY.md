@@ -16,7 +16,7 @@
 | FastAPI | Railway | `services/api/` |
 | Sync worker | Railway (2nd service) | `services/api/worker.py` |
 | PostgreSQL | Neon | — |
-| Auth/Billing | Clerk + Convex | — |
+| Auth/Billing | Clerk (billing shell only; no Convex) | — |
 
 ## 1. Neon (Postgres)
 
@@ -64,35 +64,25 @@ DEV_SHOP_ID=          # leave empty in prod
 ```
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
 CLERK_SECRET_KEY=sk_live_...
-NEXT_PUBLIC_CONVEX_URL=https://....convex.cloud
 NEXT_PUBLIC_MIMIR_API_URL=https://your-api.railway.app
-CONVEX_DEPLOY_KEY=...
 ```
 
 Do **not** set `NEXT_PUBLIC_DEV_SHOP_ID` in production.
 
-## 4. Convex
-
-```powershell
-npx convex deploy
-```
-
-Configure Clerk webhook → Convex HTTP endpoint (users + subscription events).
-
-## 5. Clerk
+## 4. Clerk
 
 1. Create production application
-2. Enable Billing / Pricing table (Free + Pro plans)
+2. Enable Billing / Pricing table (Free + Pro plans). This is a Clerk-hosted shell, not a StashTab payment backend.
 3. Add allowed redirect URLs for Vercel domain
 4. Set JWT issuer URL → `CLERK_JWT_ISSUER` on Railway API
 
-## 6. Custom domain
+## 5. Custom domain
 
 - **Vercel:** add domain in project settings → DNS CNAME
 - **Railway API:** add custom domain → set `NEXT_PUBLIC_MIMIR_API_URL` on Vercel
 - Update `CORS_ORIGINS` on API to include production URL
 
-## 7. Smoke test after deploy
+## 6. Smoke test after deploy
 
 1. Sign up → `/onboarding` → create shop
 2. Admin → Settings → Shopify credentials

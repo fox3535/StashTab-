@@ -15,8 +15,8 @@ FastAPI (Python) in services/api/                ← business logic
       ↓
 PostgreSQL (all tenant data scoped by shop_id)
 
-Clerk  = auth + billing
-Convex = users + subscription tracking only (not inventory)
+Clerk  = identity + billing shell
+FastAPI + Neon = application data (Convex is not used)
 ```
 
 Business rules are ported from the partner desktop Card Shop App into Python. Do not rewrite inventory logic in TypeScript.
@@ -36,7 +36,7 @@ Business rules are ported from the partner desktop Card Shop App into Python. Do
 | UI | Next.js 15, TypeScript, Tailwind, shadcn/ui |
 | API | Python FastAPI |
 | DB | PostgreSQL (+ Redis for worker) |
-| Auth / billing | Clerk + Convex |
+| Auth / billing | Clerk (billing UI is a shell; no Convex) |
 
 ## Local development
 
@@ -63,9 +63,8 @@ uvicorn app.main:app --reload --port 8001
 
 ```powershell
 copy .env.example .env.local
-# Fill Clerk + Convex keys; set NEXT_PUBLIC_MIMIR_API_URL and NEXT_PUBLIC_DEV_SHOP_ID
+# Fill Clerk keys; set NEXT_PUBLIC_MIMIR_API_URL and NEXT_PUBLIC_DEV_SHOP_ID
 npm install
-npx convex dev
 npm run dev -- -p 3001
 ```
 
@@ -82,7 +81,7 @@ npm run dev -- -p 3001
 NEXT_PUBLIC_MIMIR_API_URL=http://localhost:8001
 NEXT_PUBLIC_DEV_SHOP_ID=<id from seed_dev.py>
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-# + Clerk and Convex keys from .env.example
+# + Clerk keys from .env.example
 ```
 
 Admin billing is bypassed in dev when `NEXT_PUBLIC_DEV_SHOP_ID` is set.
@@ -99,7 +98,6 @@ python -m pytest tests/ -v
 ```
 app/                  # Next.js routes (landing, pos, admin, onboarding)
 components/           # Shared UI
-convex/               # Users + subscription tracking
 lib/                  # mimir-api.ts, admin-api.ts → FastAPI
 services/api/         # FastAPI brain, models, routers, sync worker
 docs/                 # Auth/setup notes
@@ -112,11 +110,11 @@ docs/                 # Auth/setup notes
 | [PLAN.md](./PLAN.md) | Phase status and build rules |
 | [DEPLOY.md](./DEPLOY.md) | Vercel + Railway + Neon deploy |
 | [FEATURE_PARITY.md](./FEATURE_PARITY.md) | Partner feature matrix |
-| [docs/CLERK_CONVEX_AUTH.md](./docs/CLERK_CONVEX_AUTH.md) | Clerk JWT for Convex |
+| [docs/agent-context/DECISIONS.md](./docs/agent-context/DECISIONS.md) | Architecture decisions, including Convex removal |
 
 ## Deploy
 
-See [DEPLOY.md](./DEPLOY.md). Target stack: Vercel (UI), Railway (API + worker), Neon (Postgres), Clerk + Convex (auth/billing).
+See [DEPLOY.md](./DEPLOY.md). Target stack: Vercel (UI), Railway (API + worker), Neon (Postgres), Clerk (identity). Convex is not used.
 
 ## Phase status
 

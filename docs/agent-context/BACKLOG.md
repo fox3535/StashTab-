@@ -147,8 +147,9 @@ manual-resolution UI, payments, and Watch remain outside this slice.
 checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`
 
 Isolated API safety code accepted. No Railway, Neon, Clerk, Vercel,
-Convex, or Shopify resources created. Deployment and schema apply remain
-blocked. Cloud provision needs a later named unlock.
+or Shopify resources created. Convex is out of architecture (D-024), not
+a later staging item. Deployment and schema apply remain blocked. Cloud
+provision needs a later named unlock.
 
 ## backend-notification-integration-v1
 

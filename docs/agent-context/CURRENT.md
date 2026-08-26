@@ -29,6 +29,9 @@ production membership unique index required first; cutover reconciliation
 must equal zero; cutover runbook + audit logging + break-glass procedure
 required.
 
+**Architecture (D-024):** Convex is removed from the target stack. Clerk is
+identity. FastAPI + Neon own application data. Do not provision Convex.
+
 ## Approved boundaries
 
 - Python/FastAPI owns business logic; tenant data uses `shop_id`.
