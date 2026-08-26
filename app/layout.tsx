@@ -41,11 +41,22 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const appTree = clerkPublishableKey ? (
+    <ClerkProvider publishableKey={clerkPublishableKey}>
+      <ConvexClientProvider>{children}</ConvexClientProvider>
+    </ClerkProvider>
+  ) : (
+    <ConvexClientProvider>{children}</ConvexClientProvider>
+  );
+
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
@@ -58,11 +69,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <ClerkProvider>
-            <ConvexClientProvider>
-              {children}
-            </ConvexClientProvider>
-          </ClerkProvider>
+          {appTree}
         </ThemeProvider>
       </body>
     </html>
