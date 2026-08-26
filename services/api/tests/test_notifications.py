@@ -928,6 +928,8 @@ def test_37_shopify_failure_still_runs_notification_tick(monkeypatch):
 
     db = _session()
     shop = db.query(Shop).filter(Shop.id == "shop-a").one()
+    db.add(SystemSettings(shop_id="shop-a", auto_sync_enabled=True))
+    db.commit()
     Session = sessionmaker(bind=db.get_bind(), autocommit=False, autoflush=False)
     calls = []
     monkeypatch.setattr(settings, "notifications_backend_enabled", True)

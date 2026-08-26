@@ -10,7 +10,7 @@ import pytest
 from app.auth.clerk import ClerkAuthError
 from app.config import settings
 from app.database import get_db
-from app.models import Base, InventoryItem, Shop, ShopMember
+from app.models import Base, InventoryItem, Shop, ShopMember, SystemSettings
 from app.models.base import new_uuid
 from app.routers import inventory as inventory_router
 from app.routers import notifications as notifications_router
@@ -344,6 +344,8 @@ def test_worker_uses_persisted_shop_id(monkeypatch):
 
     db = _session()
     shop = db.query(Shop).filter(Shop.id == "shop-a").one()
+    db.add(SystemSettings(shop_id="shop-a", auto_sync_enabled=True))
+    db.commit()
     seen = []
 
     def fake_sync(_db, shop_id):

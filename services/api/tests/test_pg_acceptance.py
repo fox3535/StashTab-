@@ -1349,6 +1349,10 @@ class TestSlice02Outbound:
                 price=5, game="Pokemon",
             )
         )
+        from app.models import SystemSettings
+
+        s.add(SystemSettings(shop_id="shop-iso", auto_sync_enabled=True))
+        s.add(SystemSettings(shop_id="shop-other", auto_sync_enabled=True))
         s.commit()
         from app.inventory_truth import core as truth
 
