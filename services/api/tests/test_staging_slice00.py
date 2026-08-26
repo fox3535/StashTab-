@@ -204,3 +204,200 @@ def test_synthetic_fixture_script_does_not_connect(monkeypatch):
     from scripts.staging_synthetic_fixtures import main
 
     assert main() == 0
+
+
+def _decode(authorization):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    if token == "invalid":
+        from app.auth.clerk import ClerkAuthError
+
+        raise ClerkAuthError("Invalid session")
+    return token
+
+
+def _admin_client(db, monkeypatch):
+    from app.database import get_db
+    from app.errors import FeatureNotReadyError
+    from app.models import InventoryItem, ShopMember
+    from app.models.base import new_uuid
+    from app.routers import admin as admin_router
+
+    monkeypatch.setattr(settings, "app_env", "staging")
+    monkeypatch.setattr(settings, "stashtab_allow_dev_identity", False)
+    monkeypatch.setattr(settings, "debug", False)
+    monkeypatch.setattr(settings, "clerk_jwt_issuer", "https://clerk.example")
+    monkeypatch.setattr("app.auth.identity.decode_bearer_user_id", _decode)
+    monkeypatch.setattr("app.auth.clerk.decode_bearer_user_id", _decode)
+
+    db.add(Shop(id="shop-a", name="A", slug="a"))
+    db.add(Shop(id="shop-b", name="B", slug="b"))
+    db.add(ShopMember(id=new_uuid(), shop_id="shop-a", clerk_user_id="user-a", role="owner"))
+    db.add(ShopMember(id=new_uuid(), shop_id="shop-b", clerk_user_id="user-b", role="owner"))
+    db.add(
+        InventoryItem(
+            shop_id="shop-a",
+            sku="CS-1",
+            name="Alpha",
+            set_name="Base",
+            cost=1,
+            price=2,
+            stock=4,
+            game="Pokemon",
+        )
+    )
+    db.add(
+        InventoryItem(
+            shop_id="shop-a",
+            sku="CS-2",
+            name="Beta",
+            set_name="Base",
+            cost=1,
+            price=3,
+            stock=6,
+            game="Pokemon",
+        )
+    )
+    db.add(
+        InventoryItem(
+            shop_id="shop-b",
+            sku="CS-1",
+            name="Bravo",
+            set_name="Base",
+            cost=1,
+            price=2,
+            stock=8,
+            game="Pokemon",
+        )
+    )
+    db.commit()
+
+    app = FastAPI()
+    app.add_exception_handler(FeatureNotReadyError, _feature_not_ready_handler)
+    app.include_router(admin_router.router, prefix="/api/v1")
+
+    def override_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    return TestClient(app)
+
+
+def _headers(user="user-a", shop="shop-a"):
+    return {"Authorization": f"Bearer {user}", "X-Shop-Id": shop}
+
+
+def _item(db, sku="CS-1", shop="shop-a"):
+    from app.models import InventoryItem
+
+    return (
+        db.query(InventoryItem)
+        .filter(InventoryItem.shop_id == shop, InventoryItem.sku == sku)
+        .one()
+    )
+
+
+def test_quantity_patch_missing_schema_returns_feature_not_ready(monkeypatch):
+    engine, db = _sqlite()
+    Base.metadata.create_all(engine)
+    try:
+        client = _admin_client(db, monkeypatch)
+        item = _item(db)
+        res = client.patch(
+            f"/api/v1/admin/inventory/{item.id}",
+            headers=_headers(),
+            json={"stock": 9},
+        )
+        assert res.status_code == 503
+        body = res.json()
+        assert body["error"] == "FEATURE_NOT_READY"
+        assert body["feature"] == "inventory_truth"
+        db.expire_all()
+        assert _item(db).stock == 4
+        assert _item(db).price == 2
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_mixed_patch_missing_schema_changes_neither_field(monkeypatch):
+    engine, db = _sqlite()
+    Base.metadata.create_all(engine)
+    try:
+        client = _admin_client(db, monkeypatch)
+        item = _item(db)
+        res = client.patch(
+            f"/api/v1/admin/inventory/{item.id}",
+            headers=_headers(),
+            json={"stock": 9, "price": 9.99},
+        )
+        assert res.status_code == 503
+        assert res.json()["error"] == "FEATURE_NOT_READY"
+        db.expire_all()
+        assert _item(db).stock == 4
+        assert _item(db).price == 2
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_price_only_patch_allowed_without_truth_schema(monkeypatch):
+    engine, db = _sqlite()
+    Base.metadata.create_all(engine)
+    try:
+        client = _admin_client(db, monkeypatch)
+        item = _item(db)
+        res = client.patch(
+            f"/api/v1/admin/inventory/{item.id}",
+            headers=_headers(),
+            json={"price": 9.99},
+        )
+        assert res.status_code == 200
+        db.expire_all()
+        assert _item(db).stock == 4
+        assert abs(_item(db).price - 9.99) < 0.001
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_quantity_csv_missing_schema_applies_nothing(monkeypatch):
+    engine, db = _sqlite()
+    Base.metadata.create_all(engine)
+    try:
+        client = _admin_client(db, monkeypatch)
+        csv_body = "Product Name,Set,Quantity\nAlpha,Base,9\nBeta,Base,1\n"
+        res = client.post(
+            "/api/v1/admin/import",
+            headers=_headers(),
+            files={"file": ("qty.csv", csv_body, "text/csv")},
+        )
+        assert res.status_code == 503
+        assert res.json()["error"] == "FEATURE_NOT_READY"
+        db.expire_all()
+        assert _item(db, "CS-1").stock == 4
+        assert _item(db, "CS-2").stock == 6
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_cross_shop_patch_rejected_before_mutation(monkeypatch):
+    engine, db = _sqlite()
+    Base.metadata.create_all(engine)
+    try:
+        client = _admin_client(db, monkeypatch)
+        foreign = _item(db, shop="shop-b")
+        res = client.patch(
+            f"/api/v1/admin/inventory/{foreign.id}",
+            headers=_headers(user="user-a", shop="shop-a"),
+            json={"stock": 1},
+        )
+        assert res.status_code in (403, 404)
+        db.expire_all()
+        assert _item(db, shop="shop-b").stock == 8
+    finally:
+        db.close()
+        engine.dispose()
+

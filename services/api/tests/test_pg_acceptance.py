@@ -714,9 +714,11 @@ class TestFreezeCoverage:
         ok, message = apply_trade_values_to_staging(s, "shop-frz", [])
         assert ok is False  # no valid pending trades path unchanged; frozen checked inside loop below
 
-        with pytest.raises(HTTPException) as exc:
+        from app.errors import FeatureNotReadyError
+
+        with pytest.raises(FeatureNotReadyError) as exc:
             _reject_if_truth_frozen(db=s, shop_id="shop-frz")
-        assert exc.value.status_code == 503
+        assert exc.value.feature == "inventory_truth"
 
         line = CartLine(item=s.query(InventoryItem).first(), quantity=1, unit_price=2.0)
         with pytest.raises(ReceiveFrozenError):

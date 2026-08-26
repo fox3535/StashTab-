@@ -704,14 +704,8 @@ def update_inventory_item(
     old_price = float(item.price or 0.0)
     quantity_requested = payload.stock is not None or payload.stock_delta is not None
 
-    if quantity_requested and payload.price is not None:
-        from app.inventory_truth.core import cutover_status
-
-        if cutover_status(db, ctx.shop_id) != "complete":
-            raise HTTPException(
-                status_code=503,
-                detail="mixed price-plus-quantity PATCH rejected while frozen",
-            )
+    if quantity_requested:
+        _reject_if_truth_frozen(db, ctx.shop_id)
     if payload.stock is not None and payload.stock_delta is not None:
         raise HTTPException(status_code=400, detail="provide stock or stock_delta, not both")
     if quantity_requested:
@@ -743,7 +737,9 @@ def update_inventory_item(
                 client_idempotency_key=idempotency_key,
             )
         except AdjustFrozenError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            from app.errors import FeatureNotReadyError
+
+            raise FeatureNotReadyError("inventory_truth") from exc
         except AdjustConflict as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except AdjustForbidden as exc:
@@ -1143,29 +1139,17 @@ def delete_shipping_rule(
 
 
 def _reject_if_truth_frozen(db: Session, shop_id: str) -> None:
-    """MIGRATION.md §Order steps 3/5: direct stock overwrites (PATCH, CSV)
-    stay frozen through this whole slice — they unlock only with the later
-    adjust slice. 503 signals the freeze state."""
-    from app.config import settings
-    from app.inventory_truth import core as truth_core
-    from app.feature_readiness import ensure_inventory_mutations_ready, inventory_truth_schema_present
+    """Quantity writes need inventory-truth readiness. Missing schema/cutover
+    raises FeatureNotReadyError (HTTP 503 FEATURE_NOT_READY). Uses inspect,
+    not a failing truth-table query, to detect absence."""
+    from app.inventory_truth.core import ReceiveFrozenError
     from app.errors import FeatureNotReadyError
+    from app.feature_readiness import ensure_inventory_mutations_ready
 
-    if not inventory_truth_schema_present(db) or settings.parsed_app_env in (
-        "staging",
-        "production",
-    ):
+    try:
         ensure_inventory_mutations_ready(db, shop_id)
-        return
-
-    if truth_core.cutover_status(db, shop_id) != "complete":
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "inventory-truth quantity adjust frozen until cutover is "
-                f"complete (cutover status: {truth_core.cutover_status(db, shop_id)})"
-            ),
-        )
+    except ReceiveFrozenError as exc:
+        raise FeatureNotReadyError("inventory_truth") from exc
 
 
 class InventoryTruthCutoverIn(BaseModel):

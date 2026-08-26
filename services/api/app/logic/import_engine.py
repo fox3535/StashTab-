@@ -172,6 +172,21 @@ def process_csv_import(
         except Exception:
             errors += 1
 
+    quantity_changing = qty_col is not None or bool(parsed_rows) or imported > 0
+    if quantity_changing:
+        from app.errors import FeatureNotReadyError
+        from app.feature_readiness import ensure_inventory_mutations_ready
+        from app.inventory_truth.core import ReceiveFrozenError
+
+        try:
+            ensure_inventory_mutations_ready(db, shop_id)
+        except FeatureNotReadyError:
+            db.rollback()
+            raise
+        except ReceiveFrozenError as exc:
+            db.rollback()
+            raise FeatureNotReadyError("inventory_truth") from exc
+
     if imported:
         db.rollback()
         return {
@@ -199,9 +214,11 @@ def process_csv_import(
                 rows=parsed_rows,
                 default_reason=reason_code,
             )
-        except AdjustFrozenError as exc:
+        except AdjustFrozenError:
             db.rollback()
-            return {"success": False, "message": str(exc)}
+            from app.errors import FeatureNotReadyError
+
+            raise FeatureNotReadyError("inventory_truth")
         except (AdjustRejected, AdjustConflict, AdjustForbidden) as exc:
             db.rollback()
             return {"success": False, "message": str(exc)}
