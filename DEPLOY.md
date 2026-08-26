@@ -1,5 +1,13 @@
 # StashTab — Deployment Guide
 
+> **Outdated for the current architecture.** Do not use this file to create staging or to launch production as currently planned.
+>
+> Staging isolation, roles, flags, and operator steps live in `docs/staging-readiness-v1/` (`RUNBOOK.md`, `ENVIRONMENT.md`, `OWNER-DECISIONS.md`). Local docker/dev notes below are historical only.
+>
+> Backend foundation is on `main` at `c3647a4eda37d355ed47f9e77ad667e4fda7930c` and is **not deployed**.
+
+# StashTab — Deployment Guide (historical)
+
 ## Architecture
 
 | Service | Platform | Path |
