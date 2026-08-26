@@ -36,4 +36,7 @@ task points to it.
   `c3647a4eda37d355ed47f9e77ad667e4fda7930c`; not deployed
 - Inventory truth: `docs/inventory-truth-v1/CONTRACT.md` v1.2.0
   (`FROZEN; slices accepted, on main via c3647a4, not deployed`)
+- Staging readiness: `docs/staging-readiness-v1/` frozen at
+  `freezes/FREEZE-v1.json`; slice-00 isolated API code accepted 2026-08-25
+  (`COMPLETED, NOT MERGED, NOT DEPLOYED`)
 

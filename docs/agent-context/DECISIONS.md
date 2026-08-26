@@ -302,3 +302,18 @@ notifications off, no VAPID, worker not running, Shopify absent, inventory
 cutover off, no production credentials. Never run local seed against
 staging. Details: `docs/staging-readiness-v1/OWNER-DECISIONS.md`.
 
+## D-023 — Staging slice-00 isolated API code accepted (approved)
+
+Approved by named human owner 2026-08-25.
+`staging-readiness-v1 / slice-00-isolated-api-code` is **COMPLETED, NOT
+MERGED, NOT DEPLOYED**. Planning checkpoint
+`131bc1eed01f3e9b732e41cde039de6c15cea707`. Evidence: separate liveness and
+readiness; staging/production startup DDL disabled; local/test-only named
+legacy bootstrap; notifications, Web Push, cutover, worker, and Shopify
+default off; missing Shopify configuration skips rather than auto-enables;
+development seed rejects staging/production; controlled `503 FEATURE_NOT_READY`;
+SQLite 192 passed with 46 PostgreSQL-only skipped; disposable PostgreSQL 46
+passed; frontend typecheck and frozen validators passed; stock/CSV freeze
+response correction passed. Cloud provisioning still requires a later named
+unlock. Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`.
+

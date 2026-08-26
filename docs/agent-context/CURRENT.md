@@ -2,8 +2,8 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-25
-**Branch:** `main`
-**Commit:** `c3647a4eda37d355ed47f9e77ad667e4fda7930c` (PR #1 merge). **Not deployed.**
+**Branch:** `feature/staging-readiness-slice-00`
+**Commit:** planning checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`. **Not merged. Not deployed.**
 
 ## Frozen contracts
 
@@ -20,9 +20,9 @@
 ## Current phase
 
 `backend-foundation / staging-readiness-v1`
-**ON `main` AT `c3647a4` — MERGED — NOT DEPLOYED.**
-Owner staging decisions approved 2026-08-25. Packet freeze and slice-0
-directive do not provision cloud resources.
+**ON `feature/staging-readiness-slice-00` — SLICE-00 CODE COMPLETED, NOT MERGED, NOT DEPLOYED.**
+Owner accepted the isolated API code 2026-08-25. Planning checkpoint
+`131bc1eed01f3e9b732e41cde039de6c15cea707`. No cloud resources provisioned.
 
 Deployment gates standing: production schema apply needs human approval;
 production membership unique index required first; cutover reconciliation
@@ -60,7 +60,8 @@ required.
 
 ## Next queued phases
 
-1. Named unlock to provision slice-0 isolated API (Railway + Neon + Clerk).
-   Do not provision from the freeze alone.
+1. Draft PR review of slice-00 code, then a separate named unlock to
+   provision isolated Railway + Neon + Clerk. Do not provision from
+   the freeze or this code acceptance.
 2. Remaining frontend notification settings / production gates.
 3. `card-resolution-core-v1` — planning allowed, build blocked.

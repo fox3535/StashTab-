@@ -140,6 +140,16 @@ remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
 deployment gates. Adjustment, production cutover, refund payments,
 manual-resolution UI, payments, and Watch remain outside this slice.
 
+## staging-readiness-v1 / slice-00-isolated-api-code
+
+**Status:** `COMPLETED, NOT MERGED, NOT DEPLOYED (ACCEPTED 2026-08-25)`
+**Source:** `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`; planning
+checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`
+
+Isolated API safety code accepted. No Railway, Neon, Clerk, Vercel,
+Convex, or Shopify resources created. Deployment and schema apply remain
+blocked. Cloud provision needs a later named unlock.
+
 ## backend-notification-integration-v1
 
 **Status:** `MERGED TO main AS c3647a4 — NOT DEPLOYED`
