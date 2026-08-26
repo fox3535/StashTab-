@@ -216,6 +216,57 @@ def test_anonymous_shop_create_and_invite_rejected(monkeypatch):
     ).status_code == 401
 
 
+def test_duplicate_slug_returns_409(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    first = client.post(
+        "/api/v1/shops",
+        json={"name": "One", "slug": "dup-slug"},
+        headers={"Authorization": "Bearer user-c"},
+    )
+    assert first.status_code == 200
+    second = client.post(
+        "/api/v1/shops",
+        json={"name": "Two", "slug": "dup-slug"},
+        headers={"Authorization": "Bearer user-d"},
+    )
+    assert second.status_code == 409
+    assert "slug" in second.json()["detail"].lower()
+    assert db.query(Shop).filter(Shop.slug == "dup-slug").count() == 1
+
+
+def test_duplicate_invite_returns_409(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    headers = _headers(user="user-a", shop="shop-a")
+    first = client.post(
+        "/api/v1/shops/shop-a/members",
+        json={"clerk_user_id": "user-z"},
+        headers=headers,
+    )
+    assert first.status_code == 200
+    second = client.post(
+        "/api/v1/shops/shop-a/members",
+        json={"clerk_user_id": "user-z"},
+        headers=headers,
+    )
+    assert second.status_code == 409
+    assert db.query(ShopMember).filter(
+        ShopMember.shop_id == "shop-a", ShopMember.clerk_user_id == "user-z"
+    ).count() == 1
+
+
+def test_identity_conflict_mapper_hides_database_text():
+    from app.identity_schema.conflicts import identity_conflict_http
+
+    err = IntegrityError("INSERT", {}, Exception("uq_shop_members_shop_user duplicate"))
+    http = identity_conflict_http(err)
+    assert http is not None
+    assert http.status_code == 409
+    assert "uq_" not in http.detail
+    assert "duplicate" not in http.detail.lower()
+
+
 def test_create_shop_establishes_owner_membership(monkeypatch):
     db = _session()
     client = _client(db, monkeypatch)
