@@ -20,6 +20,9 @@ Identity endpoint privilege map (verified against shops.py + deps.py):
 No identity endpoint updates or deletes rows when owner membership is
 written in the same transaction. stashtab_api therefore receives SELECT and
 INSERT only. No sequence privileges. Worker and readonly get no DML.
+
+This migrator does not CREATE, ALTER, GRANT, or REVOKE database roles.
+It fails closed before DDL if api, worker, or readonly can assume migrator.
 """
 
 from __future__ import annotations
@@ -84,6 +87,42 @@ def _role_exists(conn, role: str) -> bool:
     )
 
 
+def _role_can_assume(conn, member: str, role: str) -> bool:
+    return bool(
+        conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_auth_members m
+                    JOIN pg_roles r ON r.oid = m.roleid
+                    JOIN pg_roles u ON u.oid = m.member
+                    WHERE r.rolname = :role
+                      AND u.rolname = :member
+                )
+                """
+            ),
+            {"member": member, "role": role},
+        ).scalar()
+    )
+
+
+def _assert_runtime_cannot_assume_migrator(conn) -> None:
+    migrator = _ident(MIGRATOR_ROLE)
+    blocked = []
+    for member in (API_ROLE, WORKER_ROLE, READONLY_ROLE):
+        if not _role_exists(conn, member):
+            continue
+        if _role_can_assume(conn, member, migrator):
+            blocked.append(member)
+    if blocked:
+        raise RuntimeError(
+            "prohibited membership: "
+            + ",".join(blocked)
+            + " can assume stashtab_migrator"
+        )
+
+
 def _public_tables(conn) -> list[str]:
     rows = conn.execute(
         text(
@@ -107,8 +146,7 @@ def apply(target_engine: Engine | None = None, *, fail_after: str | None = None)
     with engine.begin() as conn:
         if not _role_exists(conn, migrator):
             raise RuntimeError("stashtab_migrator role is missing")
-        conn.execute(text(f"GRANT USAGE, CREATE ON SCHEMA public TO {migrator}"))
-        conn.execute(text("REVOKE CREATE ON SCHEMA public FROM PUBLIC"))
+        _assert_runtime_cannot_assume_migrator(conn)
         conn.execute(text(f"SET LOCAL ROLE {migrator}"))
         before = set(_public_tables(conn))
         conn.execute(text(_CREATE_SHOPS))
@@ -141,11 +179,6 @@ def apply(target_engine: Engine | None = None, *, fail_after: str | None = None)
             for extra in (WORKER_ROLE, READONLY_ROLE):
                 if _role_exists(conn, extra):
                     conn.execute(text(f"REVOKE ALL ON TABLE {table} FROM {_ident(extra)}"))
-        if _role_exists(conn, api):
-            conn.execute(text(f"REVOKE CREATE ON SCHEMA public FROM {api}"))
-            conn.execute(text(f"GRANT USAGE ON SCHEMA public TO {api}"))
-        if _role_exists(conn, api) and _role_exists(conn, migrator):
-            conn.execute(text(f"REVOKE {migrator} FROM {api}"))
     with engine.connect() as probe:
         names = _public_tables(probe)
     if set(names) != set(TABLES):

@@ -15,6 +15,8 @@ Constraints: `uq_shops_slug`, `uq_shop_members_shop_user`, `fk_shop_members_shop
 
 Verified identity routes need SELECT and INSERT only. `stashtab_api` gets those two operations. Worker and readonly get no DML. Startup in staging still creates no schema.
 
+The migrator does not change database role membership. Before any DDL it checks that api, worker, and readonly cannot assume the migrator, and fails closed if they can.
+
 ## Commands (local / operator)
 
 ```text
