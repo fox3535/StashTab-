@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import ShopContext, get_authenticated_user, get_shop_context
+from app.identity_schema.conflicts import identity_conflict_http
 from app.models import Shop, ShopMember
 from app.models.base import new_uuid
 from app.schemas import ShopCreate, ShopOut
@@ -48,6 +50,12 @@ def _create_shop_with_owner(db: Session, name: str, slug: str, owner_id: str) ->
             )
         )
         db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        conflict = identity_conflict_http(exc)
+        if conflict is not None:
+            raise conflict from exc
+        raise
     except Exception:
         db.rollback()
         raise
@@ -61,8 +69,6 @@ def _create_shop_with_owner(db: Session, name: str, slug: str, owner_id: str) ->
         .first()
     )
     if not member:
-        db.delete(shop)
-        db.commit()
         raise HTTPException(status_code=500, detail="Failed to establish shop membership")
     return shop
 
@@ -175,6 +181,13 @@ def invite_member(
         role=payload.role,
     )
     db.add(member)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        conflict = identity_conflict_http(exc)
+        if conflict is not None:
+            raise conflict from exc
+        raise
     db.refresh(member)
     return member
