@@ -119,6 +119,13 @@ def _reset_kernel(pg16):
     yield
 
 
+@pytest.fixture
+def migrator_engine():
+    engine = create_engine(_role_url("stashtab_migrator"), pool_pre_ping=True)
+    yield engine
+    engine.dispose()
+
+
 def _tables(engine) -> list[str]:
     with engine.connect() as conn:
         rows = conn.execute(
@@ -167,11 +174,11 @@ def _api_client(engine, monkeypatch):
     return TestClient(app)
 
 
-def test_migrator_creates_two_tables_and_is_idempotent(pg16):
-    first = apply(pg16)
+def test_migrator_creates_two_tables_and_is_idempotent(pg16, migrator_engine):
+    first = apply(migrator_engine)
     assert set(_tables(pg16)) == {"shop_members", "shops"}
     assert set(first["tables"]) == {"shop_members", "shops"}
-    second = apply(pg16)
+    second = apply(migrator_engine)
     assert second["tables"] == []
     assert set(_tables(pg16)) == {"shop_members", "shops"}
     with pg16.connect() as conn:
@@ -200,8 +207,8 @@ def test_migrator_creates_two_tables_and_is_idempotent(pg16):
         }
 
 
-def test_constraints_fk_unique_and_role_check(pg16):
-    apply(pg16)
+def test_constraints_fk_unique_and_role_check(pg16, migrator_engine):
+    apply(migrator_engine)
     migrator = create_engine(_role_url("stashtab_migrator"), pool_pre_ping=True)
     with migrator.begin() as conn:
         conn.execute(
@@ -250,8 +257,8 @@ def test_constraints_fk_unique_and_role_check(pg16):
     migrator.dispose()
 
 
-def test_shop_and_owner_commit_atomically(pg16, monkeypatch):
-    apply(pg16)
+def test_shop_and_owner_commit_atomically(pg16, migrator_engine, monkeypatch):
+    apply(migrator_engine)
     api = create_engine(_role_url("stashtab_api"), pool_pre_ping=True)
     client = _api_client(api, monkeypatch)
     res = client.post(
@@ -290,8 +297,8 @@ def test_shop_and_owner_commit_atomically(pg16, monkeypatch):
     api.dispose()
 
 
-def test_api_has_only_required_dml(pg16):
-    apply(pg16)
+def test_api_has_only_required_dml(pg16, migrator_engine):
+    apply(migrator_engine)
     api = create_engine(_role_url("stashtab_api"), pool_pre_ping=True)
     with api.begin() as conn:
         conn.execute(
@@ -337,8 +344,8 @@ def test_api_has_only_required_dml(pg16):
     readonly.dispose()
 
 
-def test_identity_http_cases_on_migrated_schema(pg16, monkeypatch):
-    apply(pg16)
+def test_identity_http_cases_on_migrated_schema(pg16, migrator_engine, monkeypatch):
+    apply(migrator_engine)
     api = create_engine(_role_url("stashtab_api"), pool_pre_ping=True)
     Session = sessionmaker(bind=api, autocommit=False, autoflush=False)
     db = Session()
@@ -377,8 +384,8 @@ def test_identity_http_cases_on_migrated_schema(pg16, monkeypatch):
     api.dispose()
 
 
-def test_rollback_drops_only_kernel_tables_and_keeps_roles(pg16):
-    apply(pg16)
+def test_rollback_drops_only_kernel_tables_and_keeps_roles(pg16, migrator_engine):
+    apply(migrator_engine)
     before_roles = _roles(pg16)
     result = rollback(pg16)
     assert set(result["dropped"]) == {"shop_members", "shops"}
@@ -386,11 +393,27 @@ def test_rollback_drops_only_kernel_tables_and_keeps_roles(pg16):
     assert _roles(pg16) == before_roles == set(ROLES)
 
 
-def test_injected_failure_leaves_zero_tables(pg16):
+def test_injected_failure_leaves_zero_tables(pg16, migrator_engine):
     rollback(pg16)
     with pytest.raises(RuntimeError, match="injected"):
-        apply(pg16, fail_after="shops")
+        apply(migrator_engine, fail_after="shops")
     assert _tables(pg16) == []
+
+
+def test_prohibited_membership_fails_before_ddl(pg16, migrator_engine):
+    with pg16.begin() as conn:
+        conn.execute(text("GRANT stashtab_migrator TO stashtab_api"))
+        conn.execute(text("GRANT stashtab_migrator TO stashtab_worker"))
+        conn.execute(text("GRANT stashtab_migrator TO stashtab_readonly"))
+    try:
+        with pytest.raises(RuntimeError, match="prohibited membership"):
+            apply(migrator_engine)
+        assert _tables(pg16) == []
+    finally:
+        with pg16.begin() as conn:
+            conn.execute(text("REVOKE stashtab_migrator FROM stashtab_api"))
+            conn.execute(text("REVOKE stashtab_migrator FROM stashtab_worker"))
+            conn.execute(text("REVOKE stashtab_migrator FROM stashtab_readonly"))
 
 
 def test_staging_startup_still_creates_no_schema(pg16, monkeypatch):
