@@ -600,12 +600,13 @@ Does not start implementation, deploy, or enable writes.
 
 Evidence: `docs/frontend-recovery-v1/OWNER-DECISIONS.md`.
 
-## D-037 — my-shop memberships read accepted locally
+## D-037 — my-shop memberships read merged on main
 
 Approved by named human owner 2026-08-27.
 
 `frontend-recovery-v1 / prerequisite-my-shop-memberships-read-v1` is
-**COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED**.
+**MERGED ON `main` via PR #15 — NOT DEPLOYED**.
+Merge commit `af72bac501cd9c42b70cd0347f778db388c8c943`.
 
 `GET /api/v1/shops/me/memberships` lists the verified Clerk user’s shops
 as `{id, name, role}` only. Bearer token is required. Shop headers cannot

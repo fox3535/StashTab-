@@ -2,7 +2,7 @@
 
 **Status:** `PREPARED — DO NOT EXECUTE`  
 **Slice:** `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`  
-**Pinned `main`:** `6a266b10639df2931e1bd37d4040b49a0efd0bd2`  
+**Pinned `main`:** `af72bac501cd9c42b70cd0347f778db388c8c943`  
 **This document is not an implementation unlock.**
 
 When a later named unlock is given, implement only:
@@ -19,8 +19,8 @@ When a later named unlock is given, implement only:
 4. Locked actions (Shopify, POS sell, intake commit, resticker, CSV,
    notifications, payments, Watch) explain “not ready”. They must not
    look successful or do nothing silently.
-5. Shop selector uses `GET /api/v1/shops/me/memberships` (D-037, local
-   only until merged). Do not invent a second list route.
+5. Shop selector uses `GET /api/v1/shops/me/memberships` now on `main`
+   (D-037 / PR #15). Do not invent a second list route.
 6. Tests for the flows above. No Convex. No Neon from the browser.
 
 Do not implement until that named unlock. Do not enable writes or deploy.
