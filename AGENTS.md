@@ -1,20 +1,81 @@
 # StashTab agent instructions
 
-Before planning or changing card identification, OCR intake, catalog matching,
-JustTCG fallback, pricing enrichment, review queues, notifications, staging, or
-inventory promotion:
+## Canonical workspace and product boundary
+
+- Work from `C:\Users\Chris\Desktop\Cursor Projects\StashTab` unless a named
+  clean worktree is explicitly approved.
+- StashTab is a vendor-only trading-card operating system. A consumer
+  marketplace, escrow, and seller-payout platform are out of scope.
+- Never delete, overwrite, or silently absorb preserved legacy worktrees or the
+  partner Python snapshot.
+
+## Required reading and source precedence
+
+Before planning or changing code:
 
 1. Read `PLAN.md`.
-2. Read `docs/card-resolution-workflow/CONTRACT.md`.
-3. Read every proposed or frozen amendment in `docs/card-resolution-workflow/`.
-4. Read `docs/agent-context/INDEX.md` and only the role packet it assigns.
-5. Preserve Python/FastAPI ownership of business logic and `shop_id` scoping.
-6. Do not enable external delivery, perform production migrations, push, or deploy
-   without explicit human approval.
+2. Read `docs/agent-context/INDEX.md` and `CURRENT.md`, then only the role packet
+   assigned for the task.
+3. Read the relevant frozen contract and amendments for the subsystem being
+   changed. Do not load unrelated contract packets.
+4. Inspect the current implementation and tests before proposing replacement
+   code.
 
-Reviewers must cite contract clauses, exact code, or failing tests. Agreement
-between agents is not acceptance evidence.
+When sources disagree, frozen contracts and approved amendments win, followed
+by recorded decisions/current context, then this plan. Report stale text rather
+than guessing. Chat transcripts are not durable project memory.
 
-Agents must not treat chat transcripts as durable project memory. Record only
-verified facts, approved decisions, evidence-backed lessons, and explicit open
-questions through the context-handoff process.
+## Preserve and use the partner Python brain
+
+- `vendor/mimir-partner/` is a read-only reference snapshot of the partner's
+  Python application. Preserve its behavior and provenance.
+- Python/FastAPI owns business rules, tenant authorization, inventory, sales,
+  reconciliation, pricing, and worker logic. Do not rewrite that logic in
+  TypeScript.
+- Do not blindly copy the snapshot. For each port or optimization, cite the
+  partner source file/function, current StashTab target, preserved behavior,
+  intentional deviations, and parity/regression tests.
+- Extend the existing FastAPI modules when they are the stronger foundation.
+  Do not create parallel inventory, sales, pricing, Shopify, reporting, or
+  reconciliation systems.
+
+## Preserve and later recover frontend work
+
+- Existing frontend work and dirty legacy worktrees belong to the owners. Do
+  not discard, bulk-copy, or overwrite them.
+- Until the backend-foundation exit gate in `PLAN.md` closes, frontend changes
+  are limited to safety, authentication, deployment compatibility, and required
+  smoke-test fixes.
+- Immediately after that gate closes, begin the planned frontend recovery and
+  redesign phase: inventory current and legacy UI, preserve valuable work,
+  improve the UX/design system, and reconnect it to accepted FastAPI contracts.
+- A redesign is not permission to replace working backend behavior or revive
+  starter-kit architecture such as Convex.
+
+## Non-negotiable engineering rules
+
+- Every tenant-owned operation is scoped by verified Clerk identity plus shop
+  membership and `shop_id`; caller headers are hints, never identity.
+- Neon PostgreSQL is the application database. Convex is not part of the target
+  architecture.
+- Use reviewed migrators for staging/production schema changes; never startup
+  `create_all` or ad-hoc schema mutation.
+- Preserve append-only inventory/notification evidence, idempotency,
+  reconciliation, rollback, and least-privilege database roles.
+- Do not commit secrets or local env files. Do not push, merge, migrate, deploy,
+  enable external delivery, use paid provider credits, or use production
+  credentials without the matching explicit human approval.
+- Reviews require contract clauses, exact code, or test evidence. Agent
+  agreement is not acceptance evidence.
+- Use bounded review/correction/finalization paths. A timeout or repeated review
+  is not success and must not create an endless gate loop.
+
+## Planning and context hygiene
+
+- Pin implementation and review work to an exact Git commit.
+- Backlog approval permits planning only unless a named gate explicitly unlocks
+  implementation.
+- Record only verified facts, approved decisions, evidence-backed lessons, and
+  explicit open questions through the context-handoff process.
+- Keep `PLAN.md`, mutable agent context, and acceptance records aligned after
+  each completed slice; never rewrite frozen history to make it look current.

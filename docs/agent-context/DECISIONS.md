@@ -183,6 +183,8 @@ accepted 2026-08-24 (see D-014).
 Approved by named human vote 2026-08-24. `inventory-truth-v1 /
 slice-02-outbound-events` is **COMPLETED, NOT MERGED, NOT DEPLOYED**.
 Evidence: `docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`.
+Merge status later superseded by D-021; the code is on `main` via
+`c3647a4` and remains not deployed.
 
 Binding follow-up gates:
 
@@ -214,6 +216,8 @@ overwrite `FREEZE-1.2.0.json`.
 Approved by named human vote 2026-08-24. `inventory-truth-v1 /
 slice-03-adjustments` is **COMPLETED, NOT MERGED, NOT DEPLOYED**.
 Evidence: `docs/inventory-truth-v1/ACCEPTANCE-SLICE-03.md`.
+Merge status later superseded by D-021; the code is on `main` via
+`c3647a4` and remains not deployed.
 
 CSV cost fields on existing items remain unapplied. **CSV-COST-FEEDBACK-GATE**
 blocks production CSV adjust use until the API/import result and eventual
@@ -262,6 +266,8 @@ Approved by named human owner 2026-08-25.
 `backend-notification-integration-v1 / implementation-1.1.2` is
 **COMPLETED — NOT PUSHED — NOT MERGED — NOT DEPLOYED**. Evidence is in
 `docs/backend-notification-integration-v1/ACCEPTANCE-1.1.2.md`.
+Push/merge status later superseded by D-021; the code is on `main` via
+`c3647a4` and remains not deployed.
 
 Merge and deployment now require **GITHUB-NOTIFICATION-CI-GATE**: the blocking
 PostgreSQL notification workflow must execute successfully on GitHub against
@@ -348,4 +354,23 @@ SQLite 192 passed with 46 PostgreSQL-only skipped; disposable PostgreSQL 46
 passed; frontend typecheck and frozen validators passed; stock/CSV freeze
 response correction passed. Cloud provisioning still requires a later named
 unlock. Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`.
+Merge status later superseded by PR #2 and later `main` history; staging
+now runs the identity-only API in D-025. Production remains undeployed.
+
+## D-026 — Master plan and agent context reconciled (approved)
+
+Approved by named human owner 2026-08-26 as documentation alignment.
+Canonical workspace is `C:\Users\Chris\Desktop\Cursor Projects\StashTab`.
+`PLAN.md` honest capability status and F0–F4 sequence are the current
+operational plan. They do not rewrite frozen contracts or
+`docs/product-strategy/VENDOR-OS-USP-ROADMAP.md`. F0 is current: staging
+identity is accepted; next proposed work is inventory schema rehearsal.
+F1 frontend recovery starts only after the recorded F0 exit gate.
+Partner Python is `vendor/mimir-partner/`; cite source, preserve behavior,
+and test; do not copy blindly or rewrite it in TypeScript. Existing and
+legacy frontend work is preserved; do not bulk-overwrite `main`. Convex
+stays out (D-024). Agents load only the frozen contract for the subsystem
+being changed. This decision does not unlock slice-02, production,
+payments, Watch, live Web Push, worker, Shopify, migrations, or deploy.
+The PR stays draft until acceptance.
 

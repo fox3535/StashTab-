@@ -1,11 +1,13 @@
-# Mimir SaaS — Master Plan
+# StashTab — Master Product and Build Plan
 
-> **How to use this file:** Cursor agents should read this before implementing. Chat is for decisions; this file is the source of truth for what to build next.
+> **How to use this file:** Agents read this before work, then verify the exact
+> current state in `docs/agent-context/CURRENT.md` and the relevant frozen
+> contract. Chat is for decisions; it is not durable project memory.
 >
-> **Last updated:** 2026-08-13 — full partner brain consolidate (b798bf0) into StashTab.
+> **Last reconciled:** 2026-08-26 — staging identity accepted, Convex removed,
+> canonical workspace created, partner/frontend preservation plan added.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
-> **Local sparse checkout (code, no ~20GB card images):** `D:\Users\Desktop\Cursor Projects\Mimir`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
 
 ---
@@ -17,7 +19,7 @@ Phone / Browser
       ↓
 Next.js (TypeScript)     ← UI: mobile POS + admin + landing
       ↓
-FastAPI (Python)         ← Brain: port logic from Mimir Card Shop App
+FastAPI (Python)         ← Brain: port logic from the partner Python snapshot
       ↓
 PostgreSQL               ← Inventory, sales, sync outbox (multi-tenant via shop_id)
 
@@ -26,30 +28,128 @@ Convex is not part of the architecture. FastAPI + Neon own application data.
 ```
 
 **Do NOT rewrite business logic in TypeScript.** Port Python from:
-`Mimir/Card Shop App/card_shop_app/`
+`vendor/mimir-partner/`
 
 ---
 
-## Phase Status
+## Honest capability status
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 0 | Foundation (scaffold, DB, dev env) | ✅ DONE |
-| 1 | Mobile POS (sell at shows) | ✅ DONE |
-| 2 | Shopify cloud sync | ✅ DONE |
-| 3 | Admin dashboard (intake, inventory) | ✅ DONE |
-| 4 | Reconciliation + reports | ✅ DONE |
-| 5 | Show mode + P&L | ✅ DONE |
-| 6 | SaaS launch (billing tiers, deploy) | ✅ DONE |
-| 7 | OCR upload, native app | ⏳ Post-launch |
+| Capability | Current status |
+|---|---|
+| Fail-closed Clerk/shop identity | Built; staging smoke accepted |
+| Staging API and Neon roles | Running in isolated staging |
+| Base identity schema | `shops` and `shop_members` on staging |
+| Mobile POS, admin, Shopify, reports, show/P&L | Existing foundations; preserve and optimize |
+| Inventory truth receive/outbound/adjust slices | Accepted code on `main`; staging schema/cutover incomplete |
+| Notification backend 1.1.2 | Accepted code on `main`; staging schema, worker, and live push off |
+| Card-resolution workflow | Frozen planning; core implementation gated |
+| Frontend | Substantial current and legacy work; cohesive recovery/redesign pending |
+| Payments/accounting | Labels/foundations only; real capture and subledger not built |
+| Portfolio/Market Watch | Product direction/contracts only; not built |
+| Production launch | Not complete and not authorized |
 
-Completed phases describe current feature foundations. They do not mean the
-optimized vendor-OS architecture or payment, accounting, and Watch products are
-implemented or production-ready.
+`FEATURE_PARITY.md` records historical capability parity, not production
+readiness. Existing code must still pass current identity, integrity, security,
+staging, and UX gates.
+
+## Current build sequence
+
+### F0 — Backend foundation (current)
+
+Goal: establish trustworthy identity, schema ownership, inventory evidence,
+card resolution, notification mechanics, and staging operations before broad UI
+redesign or production rollout.
+
+1. **Identity and isolated staging** — completed and accepted on staging.
+2. **Inventory schema rehearsal** — current proposed slice; reconcile required
+   live/base tables with frozen inventory-truth migrators on synthetic staging.
+3. **Inventory truth staging proof** — after a named unlock, prove
+   receive/outbound/adjust behavior, tenant isolation, privileges, rollback,
+   idempotency, and reconciliation without production data.
+4. **Card-resolution core** — deterministic matching, confidence/evidence,
+   budgeted default-off JustTCG fallback, human review, and verified promotion.
+5. **Notification staging mechanics** — schema/worker rehearsal with delivery
+   disabled; live Web Push and its frontend UX remain separate gates.
+6. **Minimum security/operations baseline** — staging runbooks, audit evidence,
+   restore proof, break-glass, and closure of relevant foundation P0/P1 issues.
+
+The full SOC 2 program, payments, Watch, production deployment, live Shopify,
+and polished notification UI do not have to finish before frontend recovery.
+
+### Backend-foundation exit gate
+
+Frontend recovery begins as soon as all of these are recorded:
+
+- staging identity/shop isolation accepted;
+- approved inventory schema and core truth paths pass synthetic staging
+  reconciliation and rollback;
+- card-resolution core has an accepted bounded intake/abstention path (paid
+  fallback may remain disabled);
+- notification mechanics do not lose or cross shops for required foundation
+  events (live Web Push may remain off);
+- no open foundation P0/P1 blocks safe UI integration;
+- stable API contracts and a synthetic frontend test environment exist.
+
+This gate starts product UI work; it is not a production-readiness claim.
+
+### F1 — Frontend recovery and redesign (next after F0)
+
+The owners want to resume and improve the frontend immediately after the
+backend-foundation exit gate.
+
+1. Inventory every current page and preserved legacy UI change, including its
+   purpose, screenshots, data dependencies, and merge status.
+2. Recover valuable owner/partner work through focused branches. Never bulk-copy
+   a dirty legacy tree over current `main`.
+3. Define a cohesive vendor-first information architecture and design system
+   for desktop admin and mobile/show POS.
+4. Rework onboarding, dashboard, intake, inventory, POS, trades, shows,
+   reconciliation, settings, and exception/review queues against accepted APIs.
+5. Preserve barcode/label workflows, fast show-floor use, accessibility,
+   responsive behavior, and explicit loading/offline/error states.
+6. Use visual regression, browser smoke, API-contract tests, and direct owner
+   review for each page slice.
+7. Never move Python calculations into React or revive Convex/starter billing.
+
+### F2 — Vendor financial operations
+
+Extend existing `Sale`, `PendingTrade`, and `ShowSession` behavior with
+receipt identity, cash sessions, exact-money migration, immutable operational
+subledger, processor reconciliation, and accountant-reviewed exports. StashTab
+does not hold funds or operate escrow.
+
+### F3 — Market data and Watch
+
+Use licensed point-in-time observations and deterministic metrics before agent
+narratives. Portfolio/Market Watch remains advisory: no automatic buying,
+selling, repricing, listing, or inventory mutation.
+
+### F4 — Production readiness and launch
+
+Production requires separate evidence and approval for migrations, roles,
+reconciliation, backups/restores, monitoring, incident response,
+privacy/vendor controls, payments, deployment, and rollback.
+
+## Partner-brain integration method
+
+`vendor/mimir-partner/` is read-only domain knowledge, not a runtime
+dependency. For every feature derived from it, the slice plan must record:
+
+1. partner source file, class/function, and observed behavior;
+2. current StashTab implementation and tests;
+3. behavior to preserve, optimize, defer, or retire—with reason;
+4. target FastAPI module, database contract, and API boundary;
+5. golden fixtures/parity tests using synthetic data;
+6. tenant, idempotency, money, audit, and failure-mode requirements;
+7. owner/partner review evidence before declaring parity.
+
+Port business behavior, not obsolete desktop or single-shop assumptions.
+Prefer incremental adapters over rewrites. If current StashTab logic is
+stronger, keep it and document why.
 
 ---
 
-## Phase 2 — Shopify Cloud Sync ✅
+## Existing Shopify sync foundation (preserve; disabled on staging)
 
 - [x] Background worker (`worker.py`)
 - [x] Full `_process_sync_outbox()` with product create/update
@@ -61,7 +161,7 @@ implemented or production-ready.
 
 ---
 
-## Phase 3 — Admin Dashboard ✅
+## Existing admin foundation (preserve; redesign after F0)
 
 | Mimir screen | Admin route | Status |
 |---|---|---|
@@ -76,7 +176,7 @@ implemented or production-ready.
 
 ---
 
-## Phase 6 — SaaS Launch ✅
+## Existing SaaS shell (not a production-launch claim)
 
 - [x] Clerk Billing tiers (Free / Pro) — admin gated via `<Protect>`
 - [x] Onboarding: sign up → create shop → connect Shopify
@@ -88,7 +188,10 @@ implemented or production-ready.
 
 ---
 
-## Feature Parity Checklist
+## Historical feature-parity checklist
+
+These checks mean a foundation exists; they do not mean the capability is
+currently staged, production-ready, or UX-complete.
 
 - [x] Manual intake (single + sealed)
 - [x] Staging dock + batch commit
@@ -118,6 +221,10 @@ See [FEATURE_PARITY.md](./FEATURE_PARITY.md) for the full partner-feature matrix
 
 ## Local Dev
 
+Canonical workspace:
+
+`C:\Users\Chris\Desktop\Cursor Projects\StashTab`
+
 ```powershell
 docker compose up -d
 cd services/api; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8001
@@ -130,10 +237,14 @@ npm run dev -- -p 3001
 
 ## Agent Instructions
 
-1. Read this file first. Phase 7 (OCR, native app) is post-launch only.
-2. Port Python logic from Mimir repo — don't rewrite in TypeScript.
-3. Multi-tenant: every query must filter by `shop_id`.
-4. Do not push to git unless user explicitly asks.
+1. Read this file, mutable current context, and only the relevant contract/role
+   packet before work.
+2. Map and test partner Python behavior; do not blindly copy it or rewrite it in
+   TypeScript.
+3. Preserve existing and legacy frontend work until F1 recovery review.
+4. Multi-tenant: verified Clerk identity plus membership and `shop_id` scope.
+5. Roadmap approval permits planning only. Do not push, merge, migrate, deploy,
+   use paid credits, or access production without the matching human approval.
 
 ### Frozen card-resolution contract
 
