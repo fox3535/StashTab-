@@ -1,6 +1,6 @@
 # Prepared directive — slice-01 authenticated shell and read-only inventory
 
-**Status:** `PREPARED — DO NOT EXECUTE`  
+**Status:** `LOCALLY EXECUTED — NOT MERGED — NOT DEPLOYED`  
 **Slice:** `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`  
 **Pinned `main`:** `af72bac501cd9c42b70cd0347f778db388c8c943`  
 **This document is not an implementation unlock.**

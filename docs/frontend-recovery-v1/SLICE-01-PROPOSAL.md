@@ -1,7 +1,7 @@
 # Slice-01 — authenticated shell and read-only inventory
 
 **Slice:** `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`  
-**Status:** `OWNER-APPROVED FOR PLANNING — IMPLEMENTATION AWAITING NAMED UNLOCK`  
+**Status:** `COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING`  
 **Pinned `main`:** `6a266b10639df2931e1bd37d4040b49a0efd0bd2`  
 **Decisions:** `OWNER-DECISIONS.md`  
 **Directive (prepared, not authorized):**
