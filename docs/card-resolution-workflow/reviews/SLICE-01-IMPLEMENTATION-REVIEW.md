@@ -1,9 +1,9 @@
 # Bounded review — local intake/abstention implementation
 
-**Slice:** `card-resolution-core-v1 / intake-abstention-local-v0`  
-**Freeze checkpoint:** `671f663`  
-**Implementation:** accepted locally on `feature/card-resolution-intake-abstention-local-v0` (D-034); not merged, not deployed, feature off  
-**Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0  
+**Slice:** `card-resolution-core-v1 / intake-abstention-local-v0`
+**Freeze checkpoint:** `671f663`
+**Implementation:** merged on `main` `6a266b1` via PR #13 (D-034); not deployed, feature off
+**Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0
 **Policy:** `identity-score-v0`
 
 One review round. Findings below. No second review loop.

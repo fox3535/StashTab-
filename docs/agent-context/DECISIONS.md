@@ -555,8 +555,48 @@ An earlier combined PostgreSQL invocation failed because rehearsal ran
 under the wrong role and older suites targeted an unavailable port. That
 is superseded harness evidence, not a product defect. Keep the record.
 
-This decision does **not** authorize merge, staging/production schema,
-flag enablement, provider calls, inventory writes, or cloud action.
+Local acceptance did **not** by itself authorize merge. Merge was later
+approved separately and completed as PR #13 into `main`
+`6a266b10639df2931e1bd37d4040b49a0efd0bd2`. Feature remains off. Staging
+and production schema and flags remain off.
 
 Evidence: `docs/card-resolution-workflow/ACCEPTANCE-SLICE-01-INTAKE-ABSTENTION.md`.
+
+## D-035 — F0 exit passed for frontend recovery
+
+Approved by named human owner 2026-08-27.
+
+`BACKEND FOUNDATION EXIT — PASSED FOR FRONTEND RECOVERY` on `main`
+`6a266b10639df2931e1bd37d4040b49a0efd0bd2`.
+
+This is not production approval. It does not enable inventory writes,
+notifications, Shopify, payments, Watch, workers, or Web Push.
+
+Satisfied for frontend recovery: staging identity isolation (D-025);
+inventory schema and authenticated read smoke (D-028, D-029);
+card-resolution intake/abstention merged and off (D-034); notification
+isolation proven locally/PostgreSQL; no open foundation P0/P1 blocking
+read-only UI work; Clerk + FastAPI header contracts exist.
+
+Later enablement, not F0 blockers: hosted inventory write smoke,
+notification staging apply, production restore drill.
+
+Evidence: `docs/staging-readiness-v1/ACCEPTANCE-F0-EXIT.md`.
+
+## D-036 — F1 slice-01 owner decisions
+
+Approved by named human owner 2026-08-27.
+
+First frontend slice is authenticated shell plus read-only inventory
+search. FastAPI membership is shop authority. Stored shop ID is a
+preference only. One membership auto-selects; several show a selector;
+stale preference is discarded. No caller user headers. No silent
+development shop fallback. Explicit sign-out on desktop and mobile.
+Landing stays public. Shopify, POS sell, intake commit, resticker, CSV
+quantity, notification settings/service worker, payments, and Watch
+stay deferred and visibly not-ready.
+
+Does not start implementation, deploy, or enable writes.
+
+Evidence: `docs/frontend-recovery-v1/OWNER-DECISIONS.md`.
 

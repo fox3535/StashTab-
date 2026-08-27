@@ -29,9 +29,10 @@ Acceptance verification against freeze `671f663`, contract 1.0.0, and
 
 ## Remaining deployment gates
 
-- Draft PR review and a later merge unlock.
 - Staging/production schema and flag enablement.
 - JustTCG/TCGCSV, inventory promotion, review UI.
+
+PR #13 is merged to `main` `6a266b1`. Feature remains off.
 
 ## Superseded harness
 

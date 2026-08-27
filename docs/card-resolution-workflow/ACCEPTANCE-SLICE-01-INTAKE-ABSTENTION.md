@@ -1,7 +1,7 @@
 # Slice-01 local intake/abstention — acceptance
 
 **Slice:** `card-resolution-core-v1 / intake-abstention-local-v0`  
-**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF`  
+**Status:** `MERGED ON main 6a266b1 via PR #13 — NOT DEPLOYED — FEATURE OFF`  
 **Decision:** D-034  
 **Accepted:** named human owner 2026-08-27  
 **Freeze checkpoint:** `671f663`  
@@ -46,7 +46,13 @@ PostgreSQL runs above. Do not delete it.
 
 See `reviews/SUPERSEDED-COMBINED-PG-HARNESS.md`.
 
+## Later merge addendum
+
+PR #13 merged to `main` as `6a266b10639df2931e1bd37d4040b49a0efd0bd2` on
+2026-08-27. The original local-acceptance evidence above is unchanged.
+Feature remains off. Staging and production schema and flags remain off.
+
 ## Remaining gates
 
-Draft PR review. Merge only after a separate owner instruction. Staging
-and production remain off until later named unlocks.
+Staging/production schema and flag enablement. JustTCG/TCGCSV, inventory
+promotion, and review UI remain later unlocks.

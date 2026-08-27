@@ -19,8 +19,9 @@ Still open:
   payments / Watch
 - Inventory-truth receive/outbound/adjust **staging proof** (code on
   `main`; needs a later write unlock; do not seed merely to probe)
-- `card-resolution-core-v1` intake/abstention **accepted locally, not
-  merged, not deployed, feature off** (D-034; see
+- `card-resolution-core-v1` intake/abstention **merged on `main` `6a266b1`
+  (PR #13), feature off, not deployed** (D-034; see
   `GATES-POINTER-CARD-RESOLUTION-SLICE-01.md`)
+- F0 exit for frontend recovery **passed** (D-035); writes and push stay off
 - Production gates (`CSV-COST-FEEDBACK-GATE`, production recon,
   `PRODUCTION-VAPID-GATE`, second production owner)

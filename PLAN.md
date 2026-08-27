@@ -6,11 +6,12 @@
 >
 > **Last reconciled:** 2026-08-27 — staging identity accepted, Convex removed,
 > inventory schema applied (D-028), inventory read smoke accepted (D-029);
-> local card-resolution intake/abstention accepted, not merged, not
-> deployed, feature off (D-034); writes still off.
-> inventory schema applied (D-028), inventory read smoke accepted (D-029);
-> local card-resolution intake/abstention accepted, not merged, not
-> deployed, feature off (D-034); writes still off.
+> card-resolution intake/abstention merged on `main` `6a266b1` (PR #13,
+> D-034), feature off, not deployed; F0 exit passed for frontend recovery
+> (D-035); F1 slice-01 (authenticated shell + read-only inventory) approved
+> (D-036), implementation awaiting named unlock. Writes, notifications,
+> Shopify, payments, Watch, and Web Push remain off. This is not
+> production approval.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
@@ -49,7 +50,7 @@ Convex is not part of the architecture. FastAPI + Neon own application data.
 | Mobile POS, admin, Shopify, reports, show/P&L | Existing foundations; preserve and optimize |
 | Inventory truth receive/outbound/adjust slices | Accepted code on `main`; staging schema applied; cutover/routes incomplete |
 | Notification backend 1.1.2 | Accepted code on `main`; staging schema, worker, and live push off |
-| Card-resolution workflow | Local intake/abstention accepted, not merged, not deployed, feature off |
+| Card-resolution workflow | Merged on `main` `6a266b1` (PR #13); feature off; not deployed |
 | Frontend | Substantial current and legacy work; cohesive recovery/redesign pending |
 | Payments/accounting | Labels/foundations only; real capture and subledger not built |
 | Portfolio/Market Watch | Product direction/contracts only; not built |
@@ -61,7 +62,7 @@ staging, and UX gates.
 
 ## Current build sequence
 
-### F0 — Backend foundation (current)
+### F0 — Backend foundation (exit passed for frontend recovery)
 
 Goal: establish trustworthy identity, schema ownership, inventory evidence,
 card resolution, notification mechanics, and staging operations before broad UI
@@ -72,43 +73,69 @@ redesign or production rollout.
    (D-028). Tables empty. Routes not enabled.
 3. **Inventory read-only search** — completed and accepted on staging
    (D-029). Empty-table search only. Writes stay off.
-4. **Card-resolution intake/abstention** — planning approved (D-030);
-   scoring frozen (D-033). Local accept/abstain/reject **accepted** as
-   `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF` (D-034).
-   JustTCG off. No inventory writes. Staging/production off.
-   Packet: `docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`.
-5. **Inventory truth staging proof** — after a named **write** unlock,
-   prove receive/outbound/adjust, isolation, privileges, rollback,
-   idempotency, and reconciliation. Do not seed merely to finish D-029
-   PATCH/checkout/intake probes.
-6. **Notification staging mechanics** — schema/worker rehearsal with delivery
-   disabled; live Web Push and its frontend UX remain separate gates.
-7. **Minimum security/operations baseline** — staging runbooks, audit evidence,
-   restore proof, break-glass, and closure of relevant foundation P0/P1 issues.
+4. **Card-resolution intake/abstention** — merged on `main` `6a266b1`
+   via PR #13 (D-034). Feature off. Not deployed. Staging/production
+   schema and flags remain off.
+5. **Inventory truth write staging smoke** — later named write unlock.
+   Not an F0 frontend-recovery blocker. Authenticated read contracts
+   already exist. Do not seed merely to finish D-029 PATCH/checkout
+   probes.
+6. **Notification staging mechanics** — later hosted rehearsal with delivery
+   disabled. Local/PostgreSQL isolation is accepted. Live Web Push remains
+   a separate gate.
+7. **Production security/operations** — restore drill and production
+   break-glass remain production gates. Identity, roles, CI, readiness,
+   and fail-closed flags already cover frontend recovery.
 
 The full SOC 2 program, payments, Watch, production deployment, live Shopify,
 and polished notification UI do not have to finish before frontend recovery.
 
 ### Backend-foundation exit gate
 
-Frontend recovery begins as soon as all of these are recorded:
+**Status:** `PASSED FOR FRONTEND RECOVERY` (D-035) on `main`
+`6a266b10639df2931e1bd37d4040b49a0efd0bd2`.
 
-- staging identity/shop isolation accepted;
-- approved inventory schema and core truth paths pass synthetic staging
-  reconciliation and rollback;
-- card-resolution core has an accepted bounded intake/abstention path (paid
-  fallback may remain disabled);
-- notification mechanics do not lose or cross shops for required foundation
-  events (live Web Push may remain off);
-- no open foundation P0/P1 blocks safe UI integration;
-- stable API contracts and a synthetic frontend test environment exist.
+Recorded:
 
-This gate starts product UI work; it is not a production-readiness claim.
+- staging identity/shop isolation accepted (D-025);
+- inventory schema applied and authenticated read smoke accepted (D-028,
+  D-029); local/PostgreSQL truth paths accepted on `main`;
+- card-resolution intake/abstention merged, feature off (D-034 / PR #13);
+- notification isolation proven locally/PostgreSQL; live Web Push off;
+- no open foundation P0/P1 blocks UI integration against disabled writes;
+- Clerk + FastAPI header contracts exist for a local frontend test loop.
 
-### F1 — Frontend recovery and redesign (next after F0)
+This is not production approval. Writes, notifications, Shopify, payments,
+Watch, workers, and Web Push stay disabled. Frontend recovery may begin
+against read-ready APIs and explicit not-ready write states.
 
-The owners want to resume and improve the frontend immediately after the
-backend-foundation exit gate.
+### F1 — Frontend recovery and redesign (planning approved; code awaiting unlock)
+
+F0 exit passed for frontend recovery (D-035). Slice-00 inventory is
+recorded. First code slice is approved (D-036):
+`frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`.
+Implementation still requires a named unlock. Do not start frontend
+code from this plan.
+
+Owner rules for slice-01:
+
+- FastAPI shop membership is shop-context authority.
+- A stored/local shop ID is a selection preference only. It cannot grant
+  access and must match current memberships.
+- One membership auto-selects. Several memberships show an authorized
+  shop selector. Stale or unauthorized preference is discarded.
+- Never use caller-supplied user headers or a silent development shop
+  fallback.
+- Explicit sign-out in the authenticated desktop shell and mobile
+  navigation. Landing and public marketing stay public.
+- First live backend screen is read-only inventory search.
+- Shopify connection/sync, POS checkout/selling, intake commit, resticker
+  writes, CSV quantity writes, notification settings and service worker,
+  payments, and Watch stay deferred and visibly not-ready. Disabled
+  actions must explain that the feature is not ready; they must not look
+  successful or silently do nothing.
+
+Planning packet: `docs/frontend-recovery-v1/`.
 
 1. Inventory every current page and preserved legacy UI change, including its
    purpose, screenshots, data dependencies, and merge status.

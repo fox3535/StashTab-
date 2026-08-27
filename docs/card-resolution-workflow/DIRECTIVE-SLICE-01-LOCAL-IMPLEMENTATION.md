@@ -1,9 +1,9 @@
 # Directive — slice-01 local intake/abstention
 
-**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF`
+**Status:** `MERGED ON main 6a266b1 — NOT DEPLOYED — FEATURE OFF`
 **Frozen policy:** `identity-score-v0`
 **Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0
-**Unlock `intake-abstention-local-v0` was given. Local implementation is accepted as D-034. It is not merged, not deployed, and the feature stays off.**
+**Unlock `intake-abstention-local-v0` was given. Implementation is accepted as D-034 and merged via PR #13. It is not deployed, and the feature stays off.**
 
 The executed local slice is:
 

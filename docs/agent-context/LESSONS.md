@@ -21,3 +21,6 @@
   role or a dead port) without being a product defect. Keep the record
   and rerun suites separately. Source: D-034;
   `reviews/SUPERSEDED-COMBINED-PG-HARNESS.md`.
+- Frontend recovery does not require hosted write smoke, live push, or
+  production restore drills. Authenticated read contracts and fail-closed
+  writes are enough to start UI work. Source: D-035.

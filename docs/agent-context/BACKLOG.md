@@ -2,18 +2,18 @@
 
 ## card-resolution-core-v1
 
-**Status:** COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF
+**Status:** MERGED ON `main` `6a266b1` — NOT DEPLOYED — FEATURE OFF
 **Entry gate:** named unlock `intake-abstention-local-v0` was used.
-Local slice accepted as D-034. Merge, staging/production schema, and flag
-enablement remain blocked. Notification backend overlap is closed (D-021).
+Merged via PR #13 (D-034). Staging/production schema and flag enablement
+remain blocked. Notification backend overlap is closed (D-021).
 Frontend notification settings, service worker, and live Web Push remain
 separate gates.
 
 ### Planned slices
 
 0. **D-033 `identity-score-v0` frozen** at `671f663`.
-1. Local authenticated intake/abstain/reject **accepted locally** (D-034).
-   Not merged. Not deployed. Feature off.
+1. Authenticated intake/abstain/reject **merged on `main`** (D-034 / PR #13).
+   Not deployed. Feature off.
 2. Workflow state and audit schema with `shop_id` and idempotency constraints.
 3. Versioned deterministic local candidate scoring with component evidence.
 4. State-transition service and reconciliation accounting.
@@ -83,13 +83,11 @@ Product-direction order from the strategy file, unchanged:
 6. Deterministic Portfolio/Market Watch.
 7. Governed advisory agents and outcome evaluation.
 
-Current operational sequence is PLAN.md F0 then F1 (D-026, D-028, D-029):
-staging identity (accepted) → inventory schema (applied) → inventory
-read smoke (accepted) → proposed card-resolution intake/abstention
-(planning) → inventory-truth staging proof (later write unlock) →
-notification staging mechanics → minimum security/ops; then frontend
-recovery. This overlay does not rewrite the strategy file or unlock
-implementation.
+Current operational sequence: F0 identity, inventory schema, inventory
+read, and card-resolution merge are done. F0 exit passed for frontend
+recovery (D-035). Later enablement: inventory write staging smoke,
+notification staging apply. This overlay does not rewrite the strategy
+file or unlock writes.
 
 ### Reuse gate
 
@@ -204,14 +202,15 @@ runs the identity kernel (D-025) plus inventory schema (D-028). Production
 remains undeployed. Convex is out of architecture (D-024). Inventory
 routes, worker, Shopify, and notifications remain off.
 
-## frontend-recovery-f1
+## frontend-recovery-v1
 
-**Status:** `QUEUED — PLANNING ALLOWED, IMPLEMENTATION BLOCKED ON F0 EXIT`
-**Source:** `PLAN.md` F1; D-026
+**Status:** `SLICE-01 APPROVED — IMPLEMENTATION AWAITING NAMED UNLOCK`
+**Source:** `PLAN.md` F1; D-035; `docs/frontend-recovery-v1/`
 
-Inventory, recover, and redesign current plus preserved legacy UI after
-the backend-foundation exit gate. Do not bulk-copy a dirty legacy tree
-over `main`. Do not move Python logic into React or revive Convex.
+Slice-00 inventory recorded. First code slice approved:
+`slice-01-authenticated-shell-and-readonly-inventory`. Implementation
+awaits a named unlock. Do not bulk-copy a dirty legacy tree over `main`.
+Do not revive Convex. Writes stay visibly not-ready.
 
 ## master-plan-reconciliation
 

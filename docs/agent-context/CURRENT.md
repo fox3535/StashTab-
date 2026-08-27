@@ -2,7 +2,7 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-27
-**Branch:** `feature/card-resolution-intake-abstention-local-v0` (from `main` `d49eca9`; freeze checkpoint `671f663`)
+**Branch:** `main` `6a266b10639df2931e1bd37d4040b49a0efd0bd2`
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
@@ -15,11 +15,12 @@
 ## Current phase
 
 `backend-foundation / staging-readiness-v1` (**PLAN.md F0**)
+**F0 exit: PASSED FOR FRONTEND RECOVERY (D-035).** Not production approval.
 **Slice-01 identity: COMPLETED, STAGING ONLY (D-025).**
 **Slice-02 inventory schema: COMPLETED, APPLIED TO STAGING ONLY (D-028).**
 **Slice-03 inventory read smoke: COMPLETED, STAGING ONLY (D-029).**
-**Card-resolution local intake/abstention: COMPLETED — NOT MERGED — NOT
-DEPLOYED — FEATURE OFF (D-034).**
+**Card-resolution intake/abstention: MERGED ON `main` `6a266b1` via PR #13
+(D-034). FEATURE OFF. Not deployed. Not migrated on staging.**
 Exact 13 staging tables. Inventory empty. API SELECT only; INSERT denied.
 Writes, worker, Shopify, notifications, Watch remain off.
 
@@ -38,14 +39,17 @@ Production schema apply remains blocked. Convex is out (D-024).
 2. Inventory schema on staging: **closed** (D-028).
 3. Inventory read smoke: **closed** (D-029). Writes still off.
 4. Production schema apply blocked.
-5. Local card-resolution intake/abstention: **accepted locally** (D-034).
-   Not merged. Not deployed. Feature off. Staging/production remain off.
-6. F1 frontend recovery blocked until the F0 exit gate.
+5. Card-resolution intake/abstention: **merged, feature off** (D-034 / PR #13).
+   Staging/production schema and flags remain off.
+6. F0 exit for frontend recovery: **passed** (D-035). F1 slice-01 is
+   **approved** (D-036); implementation awaits a named unlock.
+   Writes, notifications, Shopify, payments, Watch, workers, and Web Push
+   stay disabled.
 
 ## Next queued phases
 
-1. Draft PR review for the local intake/abstention branch. Merge only after
-   a separate owner instruction.
-2. Later F0: inventory-truth staging proof (write unlock), notification
-   staging mechanics, minimum security/ops.
-3. F1 frontend recovery after the F0 exit gate.
+1. Frontend recovery: slice-00 inventory recorded; slice-01 shell +
+   read-only inventory approved, implementation awaiting named unlock.
+2. Later enablement, not F0: inventory write staging smoke, notification
+   staging apply, production restore drill.
+3. Do not enable card-resolution, writes, or push without a named unlock.
