@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import init_db
 from app.errors import FeatureNotReadyError
 from app.auth.identity import log_dev_identity_bypass_state
+from app.card_resolution.router import router as card_resolution_router
 from app.routers import (
     admin,
     health,
@@ -71,6 +72,7 @@ app.include_router(sync.router, prefix=settings.api_prefix)
 app.include_router(shows.router, prefix=settings.api_prefix)
 app.include_router(reports.router, prefix=settings.api_prefix)
 app.include_router(admin.router, prefix=settings.api_prefix)
+app.include_router(card_resolution_router, prefix=settings.api_prefix)
 if settings.notifications_backend_enabled:
     app.include_router(notifications.router, prefix=settings.api_prefix)
 

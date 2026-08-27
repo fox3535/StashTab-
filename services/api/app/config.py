@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     notifications_backend_enabled: bool = False
     worker_jobs_enabled: bool = False
     stashtab_truth_migrator_role: str = ""
+    card_resolution_intake_enabled: bool = False
 
     @field_validator("web_push_allowed_host_suffixes")
     @classmethod
