@@ -76,6 +76,48 @@ def verified_user_id(
     raise HTTPException(status_code=401, detail="Authenticated user required")
 
 
+ALLOWED_MEMBER_ROLES = frozenset({"owner", "staff"})
+_MEMBERSHIP_CORRUPT = "Conflicting shop membership"
+
+
+def normalized_shop_sort_name(name: str) -> str:
+    return " ".join((name or "").casefold().split())
+
+
+def compose_caller_membership_shops(
+    members: list[ShopMember],
+    shops_by_id: dict[str, Shop],
+) -> list[tuple[str, str, str]]:
+    """Build authorized shop rows for the verified caller. Fail closed on corruption."""
+    seen: set[str] = set()
+    rows: list[tuple[str, str, str]] = []
+    for member in members:
+        if member.shop_id in seen:
+            raise HTTPException(status_code=403, detail=_MEMBERSHIP_CORRUPT)
+        seen.add(member.shop_id)
+        shop = shops_by_id.get(member.shop_id)
+        if shop is None:
+            raise HTTPException(status_code=403, detail=_MEMBERSHIP_CORRUPT)
+        role = (member.role or "").strip()
+        if role not in ALLOWED_MEMBER_ROLES:
+            raise HTTPException(status_code=403, detail=_MEMBERSHIP_CORRUPT)
+        rows.append((shop.id, shop.name, role))
+    rows.sort(key=lambda row: (normalized_shop_sort_name(row[1]), row[0]))
+    return rows
+
+
+def list_caller_membership_shops(db: Session, clerk_user_id: str) -> list[tuple[str, str, str]]:
+    """Return (id, name, role) for every shop the verified Clerk user belongs to."""
+    members = (
+        db.query(ShopMember).filter(ShopMember.clerk_user_id == clerk_user_id).all()
+    )
+    if not members:
+        return []
+    shop_ids = {member.shop_id for member in members}
+    shops = db.query(Shop).filter(Shop.id.in_(shop_ids)).all()
+    return compose_caller_membership_shops(members, {shop.id: shop for shop in shops})
+
+
 def require_membership(db: Session, shop_id: str, clerk_user_id: str) -> ShopMember:
     members = (
         db.query(ShopMember)

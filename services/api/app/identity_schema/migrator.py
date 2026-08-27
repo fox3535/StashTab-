@@ -13,7 +13,7 @@ Types are taken from the live SQLAlchemy models compiled for PostgreSQL:
 Identity endpoint privilege map (verified against shops.py + deps.py):
 
 - POST /shops, POST /shops/onboard: INSERT shops, INSERT shop_members
-- GET /shops/me, GET /shops/{id}, GET /shops/{id}/members: SELECT both
+- GET /shops/me, GET /shops/me/memberships, GET /shops/{id}, GET /shops/{id}/members: SELECT both
 - POST /shops/{id}/members: SELECT both, INSERT shop_members
 - get_shop_context / get_authenticated_user: SELECT only
 

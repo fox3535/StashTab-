@@ -117,7 +117,7 @@ Partner: floor find speed and barcode intent; not desktop Python UI.
 | Need | Contract | Class |
 |---|---|---|
 | Current shop | `GET /api/v1/shops/me` | read-ready |
-| Membership list | missing; optional tiny GET list | read-only add allowed |
+| Membership list | `GET /api/v1/shops/me/memberships` | local read-ready (D-037); not merged |
 | Inventory search | `GET /api/v1/inventory/search` | read-ready |
 | Inventory PATCH / CSV / checkout / intake commit / resticker / Shopify | existing write routes | write-disabled |
 | Card-resolution | merged, flag off | 503 / locked |

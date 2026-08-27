@@ -369,6 +369,175 @@ def test_invalid_bearer_fail_closed(monkeypatch):
     assert res.status_code == 401
 
 
+def _memberships_url():
+    return "/api/v1/shops/me/memberships"
+
+
+def test_memberships_missing_bearer_is_401(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url())
+    assert res.status_code == 401
+
+
+def test_memberships_invalid_token_is_401(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer invalid"})
+    assert res.status_code == 401
+
+
+def test_memberships_spoofed_user_header_without_token_is_401(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"X-Clerk-User-Id": "user-a"})
+    assert res.status_code == 401
+
+
+def test_memberships_no_memberships_returns_empty(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-z"})
+    assert res.status_code == 200
+    assert res.json() == {"shops": []}
+
+
+def test_memberships_one_membership(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-b"})
+    assert res.status_code == 200
+    assert res.json() == {
+        "shops": [{"id": "shop-b", "name": "B", "role": "owner"}]
+    }
+
+
+def test_memberships_several_authorized_shops_and_roles(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-a"})
+    assert res.status_code == 200
+    shops = res.json()["shops"]
+    assert shops == [
+        {"id": "shop-a", "name": "A", "role": "owner"},
+        {"id": "shop-b", "name": "B", "role": "staff"},
+    ]
+
+
+def test_memberships_exclude_other_users_shops(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-b"})
+    ids = {row["id"] for row in res.json()["shops"]}
+    assert ids == {"shop-b"}
+    assert "shop-a" not in ids
+
+
+def test_memberships_spoofed_header_does_not_change_jwt_user(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(
+        _memberships_url(),
+        headers={
+            "Authorization": "Bearer user-b",
+            "X-Clerk-User-Id": "user-a",
+        },
+    )
+    assert res.status_code == 200
+    assert [row["id"] for row in res.json()["shops"]] == ["shop-b"]
+
+
+def test_memberships_stale_shop_hint_cannot_add_or_hide(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    hidden = client.get(
+        _memberships_url(),
+        headers={"Authorization": "Bearer user-b", "X-Shop-Id": "shop-a"},
+    )
+    assert hidden.status_code == 200
+    assert [row["id"] for row in hidden.json()["shops"]] == ["shop-b"]
+    unhidden = client.get(
+        _memberships_url(),
+        headers={"Authorization": "Bearer user-a", "X-Shop-Id": "missing-shop"},
+    )
+    assert unhidden.status_code == 200
+    assert [row["id"] for row in unhidden.json()["shops"]] == ["shop-a", "shop-b"]
+
+
+def test_memberships_deterministic_ordering(monkeypatch):
+    db = _session()
+    db.add(Shop(id="shop-z", name="zeta", slug="zeta"))
+    db.add(Shop(id="shop-m", name="  Alpha ", slug="alpha-extra"))
+    db.add(ShopMember(id=new_uuid(), shop_id="shop-z", clerk_user_id="user-e", role="staff"))
+    db.add(ShopMember(id=new_uuid(), shop_id="shop-m", clerk_user_id="user-e", role="owner"))
+    db.commit()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-e"})
+    assert res.status_code == 200
+    assert [row["id"] for row in res.json()["shops"]] == ["shop-m", "shop-z"]
+    assert [row["name"] for row in res.json()["shops"]] == ["  Alpha ", "zeta"]
+
+
+def test_memberships_response_only_id_name_role(monkeypatch):
+    db = _session()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-a"})
+    body = res.json()
+    assert set(body.keys()) == {"shops"}
+    for row in body["shops"]:
+        assert set(row.keys()) == {"id", "name", "role"}
+        assert "slug" not in row
+        assert "clerk_org_id" not in row
+
+
+def test_memberships_performs_no_writes(monkeypatch):
+    db = _session()
+    shops_before = db.query(Shop).count()
+    members_before = db.query(ShopMember).count()
+    client = _client(db, monkeypatch)
+    res = client.get(_memberships_url(), headers={"Authorization": "Bearer user-a"})
+    assert res.status_code == 200
+    db.expire_all()
+    assert db.query(Shop).count() == shops_before
+    assert db.query(ShopMember).count() == members_before
+
+
+def test_memberships_corrupt_duplicate_shop_fails_closed():
+    from app.auth.identity import compose_caller_membership_shops
+
+    members = [
+        ShopMember(id="1", shop_id="shop-a", clerk_user_id="user-a", role="owner"),
+        ShopMember(id="2", shop_id="shop-a", clerk_user_id="user-a", role="staff"),
+    ]
+    shops = {"shop-a": Shop(id="shop-a", name="A", slug="a")}
+    with pytest.raises(HTTPException) as caught:
+        compose_caller_membership_shops(members, shops)
+    assert caught.value.status_code == 403
+    assert "uq_" not in str(caught.value.detail).lower()
+    assert "sqlite" not in str(caught.value.detail).lower()
+
+
+def test_memberships_missing_shop_fails_closed():
+    from app.auth.identity import compose_caller_membership_shops
+
+    members = [ShopMember(id="1", shop_id="missing", clerk_user_id="user-a", role="owner")]
+    with pytest.raises(HTTPException) as caught:
+        compose_caller_membership_shops(members, {})
+    assert caught.value.status_code == 403
+    assert "missing" not in str(caught.value.detail).lower()
+
+
+def test_memberships_invalid_role_fails_closed():
+    from app.auth.identity import compose_caller_membership_shops
+
+    members = [ShopMember(id="1", shop_id="shop-a", clerk_user_id="user-a", role="admin")]
+    shops = {"shop-a": Shop(id="shop-a", name="A", slug="a")}
+    with pytest.raises(HTTPException) as caught:
+        compose_caller_membership_shops(members, shops)
+    assert caught.value.status_code == 403
+    assert "admin" not in str(caught.value.detail).lower()
+
+
 def test_me_requires_shop_hint_when_multi_member(monkeypatch):
     db = _session()
     client = _client(db, monkeypatch)
