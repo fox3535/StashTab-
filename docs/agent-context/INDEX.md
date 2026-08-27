@@ -48,7 +48,9 @@ task points to it.
   (checkpoint `671f663`). Intake/abstention **merged on `main` `6a266b1`**
   (D-034 / PR #13): not deployed, feature off. F0 exit **passed for
   frontend recovery** (D-035). F1 slice-01 owner decisions recorded
-  (D-036); implementation awaiting named unlock. Frozen `GATES.md` is
+  (D-036). My-shop memberships read **completed locally** (D-037), not
+  merged, not deployed. Frontend slice-01 still awaits a named unlock.
+  Frozen `GATES.md` is
   unchanged; live
   status is `GATES-POINTER-SLICE-03.md` plus
   `GATES-POINTER-CARD-RESOLUTION-SLICE-01.md`.

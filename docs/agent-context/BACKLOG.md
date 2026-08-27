@@ -205,12 +205,15 @@ routes, worker, Shopify, and notifications remain off.
 ## frontend-recovery-v1
 
 **Status:** `SLICE-01 APPROVED — IMPLEMENTATION AWAITING NAMED UNLOCK`
-**Source:** `PLAN.md` F1; D-035; `docs/frontend-recovery-v1/`
+**Source:** `PLAN.md` F1; D-035; D-036; D-037; `docs/frontend-recovery-v1/`
 
-Slice-00 inventory recorded. First code slice approved:
-`slice-01-authenticated-shell-and-readonly-inventory`. Implementation
-awaits a named unlock. Do not bulk-copy a dirty legacy tree over `main`.
-Do not revive Convex. Writes stay visibly not-ready.
+Slice-00 inventory recorded. Prerequisite
+`prerequisite-my-shop-memberships-read-v1` is **COMPLETED LOCALLY —
+NOT MERGED — NOT DEPLOYED** (D-037). First frontend code slice approved:
+`slice-01-authenticated-shell-and-readonly-inventory`. Frontend
+implementation still awaits a named unlock after this prerequisite
+merges. Do not bulk-copy a dirty legacy tree over `main`. Do not revive
+Convex. Writes stay visibly not-ready.
 
 ## master-plan-reconciliation
 

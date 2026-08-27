@@ -24,3 +24,5 @@
 - Frontend recovery does not require hosted write smoke, live push, or
   production restore drills. Authenticated read contracts and fail-closed
   writes are enough to start UI work. Source: D-035.
+- `GET /shops/me` returns one selected shop, not a membership list. A
+  multi-shop selector needs `GET /shops/me/memberships`. Source: D-037.

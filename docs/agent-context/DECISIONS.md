@@ -600,3 +600,18 @@ Does not start implementation, deploy, or enable writes.
 
 Evidence: `docs/frontend-recovery-v1/OWNER-DECISIONS.md`.
 
+## D-037 — my-shop memberships read accepted locally
+
+Approved by named human owner 2026-08-27.
+
+`frontend-recovery-v1 / prerequisite-my-shop-memberships-read-v1` is
+**COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED**.
+
+`GET /api/v1/shops/me/memberships` lists the verified Clerk user’s shops
+as `{id, name, role}` only. Bearer token is required. Shop headers cannot
+change the set. Empty memberships return `200` with an empty list.
+`GET /api/v1/shops/me` is unchanged. No schema or writes. Frontend
+slice-01 stays locked.
+
+Evidence: `docs/frontend-recovery-v1/ACCEPTANCE-PREREQUISITE-MY-SHOP-MEMBERSHIPS.md`.
+

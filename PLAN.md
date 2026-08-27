@@ -9,9 +9,10 @@
 > card-resolution intake/abstention merged on `main` `6a266b1` (PR #13,
 > D-034), feature off, not deployed; F0 exit passed for frontend recovery
 > (D-035); F1 slice-01 (authenticated shell + read-only inventory) approved
-> (D-036), implementation awaiting named unlock. Writes, notifications,
-> Shopify, payments, Watch, and Web Push remain off. This is not
-> production approval.
+> (D-036); my-shop memberships read completed locally (D-037), not merged,
+> not deployed. Frontend implementation still awaits a named unlock.
+> Writes, notifications, Shopify, payments, Watch, and Web Push remain
+> off. This is not production approval.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
@@ -114,8 +115,9 @@ against read-ready APIs and explicit not-ready write states.
 F0 exit passed for frontend recovery (D-035). Slice-00 inventory is
 recorded. First code slice is approved (D-036):
 `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`.
-Implementation still requires a named unlock. Do not start frontend
-code from this plan.
+The shop-memberships list prerequisite is accepted locally (D-037) and
+is not merged. Frontend implementation still requires a named unlock.
+Do not start frontend code from this plan.
 
 Owner rules for slice-01:
 

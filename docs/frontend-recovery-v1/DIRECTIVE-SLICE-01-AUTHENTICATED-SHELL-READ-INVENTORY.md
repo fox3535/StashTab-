@@ -19,8 +19,8 @@ When a later named unlock is given, implement only:
 4. Locked actions (Shopify, POS sell, intake commit, resticker, CSV,
    notifications, payments, Watch) explain “not ready”. They must not
    look successful or do nothing silently.
-5. Optional read-only memberships list endpoint if `GET /api/v1/shops/me`
-   cannot feed the selector.
+5. Shop selector uses `GET /api/v1/shops/me/memberships` (D-037, local
+   only until merged). Do not invent a second list route.
 6. Tests for the flows above. No Convex. No Neon from the browser.
 
 Do not implement until that named unlock. Do not enable writes or deploy.
