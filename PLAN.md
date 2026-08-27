@@ -4,8 +4,9 @@
 > current state in `docs/agent-context/CURRENT.md` and the relevant frozen
 > contract. Chat is for decisions; it is not durable project memory.
 >
-> **Last reconciled:** 2026-08-26 — staging identity accepted, Convex removed,
-> canonical workspace created, partner/frontend preservation plan added.
+> **Last reconciled:** 2026-08-27 — staging identity accepted, Convex removed,
+> inventory schema applied (D-028), inventory read smoke accepted (D-029);
+> writes still off.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
@@ -39,8 +40,10 @@ Convex is not part of the architecture. FastAPI + Neon own application data.
 | Fail-closed Clerk/shop identity | Built; staging smoke accepted |
 | Staging API and Neon roles | Running in isolated staging |
 | Base identity schema | `shops` and `shop_members` on staging |
+| Inventory live + truth schema | Applied to staging Neon only (D-028); tables empty |
+| Inventory read-only search | Authenticated empty-table smoke accepted on staging (D-029); writes off |
 | Mobile POS, admin, Shopify, reports, show/P&L | Existing foundations; preserve and optimize |
-| Inventory truth receive/outbound/adjust slices | Accepted code on `main`; staging schema/cutover incomplete |
+| Inventory truth receive/outbound/adjust slices | Accepted code on `main`; staging schema applied; cutover/routes incomplete |
 | Notification backend 1.1.2 | Accepted code on `main`; staging schema, worker, and live push off |
 | Card-resolution workflow | Frozen planning; core implementation gated |
 | Frontend | Substantial current and legacy work; cohesive recovery/redesign pending |
@@ -61,16 +64,21 @@ card resolution, notification mechanics, and staging operations before broad UI
 redesign or production rollout.
 
 1. **Identity and isolated staging** — completed and accepted on staging.
-2. **Inventory schema rehearsal** — current proposed slice; reconcile required
-   live/base tables with frozen inventory-truth migrators on synthetic staging.
-3. **Inventory truth staging proof** — after a named unlock, prove
-   receive/outbound/adjust behavior, tenant isolation, privileges, rollback,
-   idempotency, and reconciliation without production data.
-4. **Card-resolution core** — deterministic matching, confidence/evidence,
-   budgeted default-off JustTCG fallback, human review, and verified promotion.
-5. **Notification staging mechanics** — schema/worker rehearsal with delivery
+2. **Inventory schema rehearsal** — completed and applied to staging Neon only
+   (D-028). Tables empty. Routes not enabled.
+3. **Inventory read-only search** — completed and accepted on staging
+   (D-029). Empty-table search only. Writes stay off.
+4. **Card-resolution intake/abstention** — planning approved (D-030);
+   implementation locked. Local accept/abstain/reject without JustTCG or
+   inventory writes.
+   Packet: `docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`.
+5. **Inventory truth staging proof** — after a named **write** unlock,
+   prove receive/outbound/adjust, isolation, privileges, rollback,
+   idempotency, and reconciliation. Do not seed merely to finish D-029
+   PATCH/checkout/intake probes.
+6. **Notification staging mechanics** — schema/worker rehearsal with delivery
    disabled; live Web Push and its frontend UX remain separate gates.
-6. **Minimum security/operations baseline** — staging runbooks, audit evidence,
+7. **Minimum security/operations baseline** — staging runbooks, audit evidence,
    restore proof, break-glass, and closure of relevant foundation P0/P1 issues.
 
 The full SOC 2 program, payments, Watch, production deployment, live Shopify,

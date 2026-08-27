@@ -401,6 +401,135 @@ Approved by named human owner 2026-08-26. Binding interpretation for
 Creating all remaining live tables is rejected: this slice proves the
 inventory-truth parent chain only. Packet:
 `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`.
-Local implementation still requires named approval of
-`DIRECTIVE-SLICE-02-IMPLEMENTATION.md`.
+Local implementation was later approved, merged as PR #12, and applied to
+staging Neon (D-028).
+
+## D-028 — Staging inventory schema apply accepted (approved)
+
+Approved by named human owner 2026-08-27 from verified staging evidence.
+`staging-readiness-v1 / slice-02-inventory-schema-rehearsal` is
+**COMPLETED, APPLIED TO STAGING ONLY**. Code on `main` is
+`d49eca9fc31298847bd07abf42347ab691b4f974`. Neon `stashtab_staging` has
+exactly 13 public tables: identity `shops` and `shop_members`; live
+`inventory_item`, `purchase_record`, `sale`; truth `acquisition_lot`,
+`inventory_event`, `inventory_truth_cutover`,
+`inventory_channel_observation`, `refund_record`, `return_record`,
+`inventory_exception`, `inventory_adjustment`. Both migrators were
+idempotent. New tables are owned by `stashtab_migrator`. `stashtab_api`
+has SELECT only. Worker, readonly, and PUBLIC have no privileges on the
+new tables. Cross-shop lot insert failed. Two shops and two owners
+unchanged. Inventory tables empty. Rollback not required. Railway was not
+contacted. Inventory, intake, POS, adjust, CSV, Shopify, worker,
+notifications, payments, Watch, and production remain off.
+Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-02.md`.
+Next proposed checkpoint was read-only search. That smoke later executed
+and was accepted as D-029.
+
+## D-029 — Staging authenticated inventory read smoke accepted (approved)
+
+Approved by named human owner 2026-08-27 from verified staging evidence.
+`staging-readiness-v1 / slice-03-authenticated-inventory-read-smoke` is
+**COMPLETED, STAGING ONLY**. Staging API SHA
+`0dd8f00b8d510b82e3d717a9570c0bc387e0479b`. Health and ready 200. Exact
+13-table set. Inventory tables empty. API SELECT allowed and INSERT
+denied. Worker/readonly grants rest on D-028 because they were not
+visible to `stashtab_api`. No token and spoofed headers 401. Each owner
+200 empty on own shop. Cross-shop 403. CSV quantity controlled 503.
+PATCH and checkout write guards were not fully proven (no item/SKU).
+Intake unused because its extra live table is absent. No data changed;
+background and external features stayed off.
+Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-03.md`.
+PATCH, checkout, and intake remain future write-enablement gates. Do not
+seed to finish them.
+Planning for the next checkpoint was later approved as D-030.
+Implementation remains locked.
+
+## D-030 — Card-resolution intake/abstention planning approved
+
+Approved by named human owner 2026-08-27 as **planning only**.
+Slice `card-resolution-core-v1 / slice-01-intake-abstention`. Packet:
+`docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`.
+Pinned `main` `d49eca9fc31298847bd07abf42347ab691b4f974`.
+
+This does **not** unlock implementation, staging DDL, JustTCG, credits,
+inventory writes, or promotion of resolved cards. Existing
+`/admin/intake/lookup` and `/admin/intake/staging` stay unused for this
+slice. Identity `accepted` is not inventory commit.
+Correction/review: `docs/card-resolution-workflow/reviews/SLICE-01-PLAN-REVIEW.md`.
+
+## D-031 — Partner brain snapshot retained; no unlicensed port
+
+Approved by named human owner 2026-08-27.
+
+1. Keep `vendor/mimir-partner/` at existing `b798bf0`.
+2. Do not copy or port upstream code until a license or written permission
+   is recorded.
+3. Upstream `df280478f09a179fcffb1842d89bcf8f1d86e03b` is **audited
+   reference only**.
+4. Upstream TCGCSV and JustTCG work is catalog pricing/variants, not a
+   safe identity-resolution fallback.
+5. RapidFuzz ≥80 is **not** verified identity.
+6. FastAPI, shop scope, abstention, human review, and inventory gates stay
+   StashTab’s authority. Do not replace them with upstream behavior.
+7. Python snapshot refresh is deferred until permission/license is recorded.
+8. TCGCSV and JustTCG adapters are deferred to later market-data/provider
+   slices. JustTCG stays disabled; no credits.
+
+Evidence: `docs/card-resolution-workflow/PARTNER-BRAIN-AUDIT-2026-08-27.md`.
+Scoring-policy work may resume; implementation remains locked.
+
+## D-032 — Intake identity scoring policy (owner-recorded, not contract-frozen)
+
+Approved by named human owner 2026-08-27 as scoring policy for
+`card-resolution-core-v1 / slice-01-intake-abstention`. Does **not** freeze
+the contract or unlock implementation.
+
+1. Required winner margin is 0.10.
+2. Omitted printing always abstains.
+3. A named printing may make other printings ineligible only through an
+   explicit, versioned canonical printing map—not fuzzy text, price, or
+   inference.
+4. Diagnostic weights: game 0.15, set 0.20, collector number 0.20,
+   normalized name 0.25, language 0.10, printing 0.10.
+5. Initial allowed-game registry is Pokémon only.
+6. Caller must supply game. Missing or unsupported game is rejected; no
+   silent Pokémon default.
+7. Auto-accept requires all six mandatory fields present and exact, total
+   score 1.00, exactly one eligible canonical identity, and margin ≥ 0.10.
+8. If two database records match all six fields, abstain (duplicate or
+   ambiguous canonical identity).
+9. The weighted score is diagnostic and auditable. It cannot fill in a
+   missing or conflicting mandatory field.
+10. Normalization for name, set, collector number, language, and printing
+    is explicit and versioned. It may standardize formatting only; it must
+    not treat fuzzy similarity as equality.
+11. Margin is `winner_score - runner_up_score >= 0.10`. Use integer
+    hundredths to avoid float ties.
+12. Price and market data stay out of identity eligibility and scoring.
+
+Packet: `docs/card-resolution-workflow/SCORING-POLICY-INTAKE-ABSTENTION.md`.
+Policy freeze applied as D-033 (`identity-score-v0`). Contract remains 1.0.0.
+Implementation remains locked.
+
+## D-033 — identity-score-v0 frozen under contract §16
+
+Approved by named human owner 2026-08-27.
+
+`identity-score-v0` is frozen **policy detail** under
+`STASHTAB-CARD-RESOLUTION-001` v1.0.0 §16. No contract amendment.
+Manifest `docs/card-resolution-workflow/freezes/FREEZE-IDENTITY-SCORE-v0.json`
+does not hash itself.
+
+Locked: D-032 integer formula, six mandatory fields, `norm-v0` maps,
+Pokémon-only registry, exact-match accept at 100, margin 10 hundredths,
+accept/abstain/reject outcomes.
+
+Contract §§1, 5, 6, 7, 8, 13.1, 15 already authorize unique exact local
+accept without an external request. The earlier planning remark about an
+amendment applied only to **ambiguous-band** auto-accept without JustTCG.
+
+This freeze does **not** unlock implementation, staging/production schema,
+external APIs, JustTCG credits, TCGCSV ingest, inventory writes, AI
+identity confidence, fuzzy auto-accept, extra games, or
+notification/frontend work.
 
