@@ -44,9 +44,11 @@ task points to it.
   read smoke **COMPLETED, STAGING ONLY** (D-029,
   `ACCEPTANCE-SLICE-03.md`). Card-resolution intake/abstention **planning
   approved** (D-030); partner snapshot **D-031** (`b798bf0`); scoring
-  **D-033 `identity-score-v0` frozen** under contract 1.0.0 §16.
-  Implementation locked. Frozen `GATES.md` is unchanged;
-  live status is `GATES-POINTER-SLICE-03.md`.
+  **D-033 `identity-score-v0` frozen** under contract 1.0.0 §16
+  (checkpoint `671f663`). Local intake/abstention **accepted locally**
+  (D-034): not merged, not deployed, feature off. Frozen `GATES.md` is
+  unchanged; live status is `GATES-POINTER-SLICE-03.md` plus
+  `GATES-POINTER-CARD-RESOLUTION-SLICE-01.md`.
 - Convex is not in the target architecture (D-024 in `DECISIONS.md`). Frozen
   staging text that said “Convex deferred” is historical and superseded.
 

@@ -1,14 +1,15 @@
 # Planning packet — card-resolution intake/abstention
 
-**Slice:** `card-resolution-core-v1 / slice-01-intake-abstention`  
-**Status:** `PLANNING APPROVED (D-030); POLICY FROZEN (D-033) — IMPLEMENTATION LOCKED`  
-**Pinned `main`:** `d49eca9fc31298847bd07abf42347ab691b4f974`  
-**Frozen contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0  
-**Amendments:** 1.1.0 proposed (notifications, delivery off); 1.1.1 and 1.1.2 frozen for notification backend only  
+**Slice:** `card-resolution-core-v1 / slice-01-intake-abstention`
+**Status:** `PLANNING APPROVED (D-030); POLICY FROZEN (D-033); LOCAL IMPLEMENTATION ACCEPTED (D-034) — NOT MERGED, NOT DEPLOYED, FEATURE OFF`
+**Pinned `main`:** `d49eca9fc31298847bd07abf42347ab691b4f974`
+**Frozen contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0
+**Amendments:** 1.1.0 proposed (notifications, delivery off); 1.1.1 and 1.1.2 frozen for notification backend only
 **This file is not in freeze hashes.** Do not edit the frozen contract.
 
-Planning only. Do not implement, commit, push, deploy, migrate, seed,
-call JustTCG, spend credits, or write inventory.
+This planning packet is historical. Local implementation was later accepted
+as D-034: not merged, not deployed, feature off. Do not enable staging
+or production from this file.
 
 ## 1. Why this slice
 

@@ -39,6 +39,6 @@ are not passed. Do not seed inventory merely to finish those probes.
 
 ## Next proposed checkpoint (planning only)
 
-`card-resolution-core-v1 / slice-01-intake-abstention`  
-See `docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`.
-Not approved, not unlocked, not implemented.
+`card-resolution-core-v1 / intake-abstention-local-v0` later accepted
+locally as D-034: not merged, not deployed, feature off. See
+`docs/card-resolution-workflow/ACCEPTANCE-SLICE-01-INTAKE-ABSTENTION.md`.

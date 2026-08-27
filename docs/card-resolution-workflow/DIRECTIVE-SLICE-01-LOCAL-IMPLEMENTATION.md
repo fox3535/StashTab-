@@ -1,11 +1,11 @@
-# Prepared directive — slice-01 local intake/abstention (NOT AUTHORIZED)
+# Directive — slice-01 local intake/abstention
 
-**Status:** `PREPARED — DO NOT EXECUTE`  
-**Frozen policy:** `identity-score-v0`  
-**Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0  
-**This document is not an implementation unlock.**
+**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF`
+**Frozen policy:** `identity-score-v0`
+**Contract:** `STASHTAB-CARD-RESOLUTION-001` v1.0.0
+**Unlock `intake-abstention-local-v0` was given. Local implementation is accepted as D-034. It is not merged, not deployed, and the feature stays off.**
 
-When a later named unlock is given, the smallest first code slice is:
+The executed local slice is:
 
 1. Authenticated, shop-scoped intake endpoint in FastAPI (JWT + membership;
    `X-Shop-Id` is a hint only).
@@ -19,5 +19,5 @@ When a later named unlock is given, the smallest first code slice is:
 5. Tests against **disposable local PostgreSQL** only. No staging Neon
    DDL. Replay same `intake_id` is idempotent.
 
-Stop after tests pass. Do not commit, push, deploy, or migrate unless
-that later unlock explicitly allows it.
+Do not merge, deploy, migrate staging/production, or enable the flag
+without a later named unlock.

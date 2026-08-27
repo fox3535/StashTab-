@@ -19,7 +19,8 @@ Still open:
   payments / Watch
 - Inventory-truth receive/outbound/adjust **staging proof** (code on
   `main`; needs a later write unlock; do not seed merely to probe)
-- `card-resolution-core-v1` intake/abstention (D-033 `identity-score-v0`
-  frozen under contract 1.0.0 §16; implementation locked)
+- `card-resolution-core-v1` intake/abstention **accepted locally, not
+  merged, not deployed, feature off** (D-034; see
+  `GATES-POINTER-CARD-RESOLUTION-SLICE-01.md`)
 - Production gates (`CSV-COST-FEEDBACK-GATE`, production recon,
   `PRODUCTION-VAPID-GATE`, second production owner)

@@ -17,3 +17,7 @@
   proposed amendment 1.1.0, invariant 5.
 - RapidFuzz ≥80 is not verified identity. Upstream JustTCG/TCGCSV catalog
   price sync is not an identity fallback. Source: D-031.
+- A combined PostgreSQL pytest run can fail from harness setup (wrong
+  role or a dead port) without being a product defect. Keep the record
+  and rerun suites separately. Source: D-034;
+  `reviews/SUPERSEDED-COMBINED-PG-HARNESS.md`.

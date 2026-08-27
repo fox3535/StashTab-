@@ -2,22 +2,24 @@
 
 ## card-resolution-core-v1
 
-**Status:** QUEUED — PLANNING ALLOWED, BUILD BLOCKED
-**Entry gate:** named human implementation unlock. Notification backend
-overlap is closed (D-021). Frontend notification settings, service worker,
-and live Web Push remain separate gates.
+**Status:** COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF
+**Entry gate:** named unlock `intake-abstention-local-v0` was used.
+Local slice accepted as D-034. Merge, staging/production schema, and flag
+enablement remain blocked. Notification backend overlap is closed (D-021).
+Frontend notification settings, service worker, and live Web Push remain
+separate gates.
 
 ### Planned slices
 
-0. **D-033 `identity-score-v0` frozen** under contract 1.0.0 §16.
-   Implementation locked until a named unlock. Prepared directive:
-   `DIRECTIVE-SLICE-01-LOCAL-IMPLEMENTATION.md` (not authorized).
-1. Workflow state and audit schema with `shop_id` and idempotency constraints.
-2. Versioned deterministic local candidate scoring with component evidence.
-3. State-transition service and reconciliation accounting.
-4. Cached, budgeted, disabled-by-default JustTCG adapter.
-5. Human-review API and queue UI.
-6. Transactional staging/inventory promotion after separate acceptance evidence.
+0. **D-033 `identity-score-v0` frozen** at `671f663`.
+1. Local authenticated intake/abstain/reject **accepted locally** (D-034).
+   Not merged. Not deployed. Feature off.
+2. Workflow state and audit schema with `shop_id` and idempotency constraints.
+3. Versioned deterministic local candidate scoring with component evidence.
+4. State-transition service and reconciliation accounting.
+5. Cached, budgeted, disabled-by-default JustTCG adapter.
+6. Human-review API and queue UI.
+7. Transactional staging/inventory promotion after separate acceptance evidence.
 
 ### Exit evidence
 

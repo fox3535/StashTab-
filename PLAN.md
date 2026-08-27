@@ -6,7 +6,11 @@
 >
 > **Last reconciled:** 2026-08-27 — staging identity accepted, Convex removed,
 > inventory schema applied (D-028), inventory read smoke accepted (D-029);
-> writes still off.
+> local card-resolution intake/abstention accepted, not merged, not
+> deployed, feature off (D-034); writes still off.
+> inventory schema applied (D-028), inventory read smoke accepted (D-029);
+> local card-resolution intake/abstention accepted, not merged, not
+> deployed, feature off (D-034); writes still off.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
@@ -45,7 +49,7 @@ Convex is not part of the architecture. FastAPI + Neon own application data.
 | Mobile POS, admin, Shopify, reports, show/P&L | Existing foundations; preserve and optimize |
 | Inventory truth receive/outbound/adjust slices | Accepted code on `main`; staging schema applied; cutover/routes incomplete |
 | Notification backend 1.1.2 | Accepted code on `main`; staging schema, worker, and live push off |
-| Card-resolution workflow | Frozen planning; core implementation gated |
+| Card-resolution workflow | Local intake/abstention accepted, not merged, not deployed, feature off |
 | Frontend | Substantial current and legacy work; cohesive recovery/redesign pending |
 | Payments/accounting | Labels/foundations only; real capture and subledger not built |
 | Portfolio/Market Watch | Product direction/contracts only; not built |
@@ -69,8 +73,9 @@ redesign or production rollout.
 3. **Inventory read-only search** — completed and accepted on staging
    (D-029). Empty-table search only. Writes stay off.
 4. **Card-resolution intake/abstention** — planning approved (D-030);
-   implementation locked. Local accept/abstain/reject without JustTCG or
-   inventory writes.
+   scoring frozen (D-033). Local accept/abstain/reject **accepted** as
+   `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF` (D-034).
+   JustTCG off. No inventory writes. Staging/production off.
    Packet: `docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`.
 5. **Inventory truth staging proof** — after a named **write** unlock,
    prove receive/outbound/adjust, isolation, privileges, rollback,

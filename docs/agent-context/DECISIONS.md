@@ -533,3 +533,30 @@ external APIs, JustTCG credits, TCGCSV ingest, inventory writes, AI
 identity confidence, fuzzy auto-accept, extra games, or
 notification/frontend work.
 
+## D-034 — local intake/abstention accepted, not merged, not deployed
+
+Approved by named human owner 2026-08-27.
+
+`card-resolution-core-v1 / intake-abstention-local-v0` is **accepted
+locally** as `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF`.
+
+Evidence: 242 SQLite/API tests; 14 scoring and 16 HTTP tests; card-
+resolution PostgreSQL 16 passed twice on fresh containers (3 tests);
+live-schema rehearsal 15; inventory-truth and notification PostgreSQL 46;
+306 unique tests plus the three-test clean rerun. Freeze, contract,
+context, compile, secret, and artifact checks passed. Six migrator-owned
+tables only. Runtime grants and append-only enforcement verified.
+Shop-scoped references and cross-shop denial verified. Intake/review
+concurrency serialized. No provider or model path. No inventory or
+pricing mutation. Rollback preserves identity and all 13 rehearsal
+tables. Staging and production remain fail-closed.
+
+An earlier combined PostgreSQL invocation failed because rehearsal ran
+under the wrong role and older suites targeted an unavailable port. That
+is superseded harness evidence, not a product defect. Keep the record.
+
+This decision does **not** authorize merge, staging/production schema,
+flag enablement, provider calls, inventory writes, or cloud action.
+
+Evidence: `docs/card-resolution-workflow/ACCEPTANCE-SLICE-01-INTAKE-ABSTENTION.md`.
+

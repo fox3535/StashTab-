@@ -2,7 +2,7 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-27
-**Branch:** `main` `d49eca9fc31298847bd07abf42347ab691b4f974`
+**Branch:** `feature/card-resolution-intake-abstention-local-v0` (from `main` `d49eca9`; freeze checkpoint `671f663`)
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
@@ -18,9 +18,9 @@
 **Slice-01 identity: COMPLETED, STAGING ONLY (D-025).**
 **Slice-02 inventory schema: COMPLETED, APPLIED TO STAGING ONLY (D-028).**
 **Slice-03 inventory read smoke: COMPLETED, STAGING ONLY (D-029).**
-Exact 13 tables. Inventory empty. API SELECT only; INSERT denied.
-Worker/readonly grants from D-028. Search 200 empty / cross-shop 403.
-CSV quantity 503. PATCH/checkout/intake write guards not fully proven.
+**Card-resolution local intake/abstention: COMPLETED — NOT MERGED — NOT
+DEPLOYED — FEATURE OFF (D-034).**
+Exact 13 staging tables. Inventory empty. API SELECT only; INSERT denied.
 Writes, worker, Shopify, notifications, Watch remain off.
 
 Production schema apply remains blocked. Convex is out (D-024).
@@ -38,15 +38,14 @@ Production schema apply remains blocked. Convex is out (D-024).
 2. Inventory schema on staging: **closed** (D-028).
 3. Inventory read smoke: **closed** (D-029). Writes still off.
 4. Production schema apply blocked.
-5. `card-resolution-core-v1` implementation blocked. Intake/abstention
-   planning D-030; snapshot D-031; scoring **D-033 frozen** as
-   `identity-score-v0` under contract 1.0.0 §16. No amendment.
+5. Local card-resolution intake/abstention: **accepted locally** (D-034).
+   Not merged. Not deployed. Feature off. Staging/production remain off.
 6. F1 frontend recovery blocked until the F0 exit gate.
 
 ## Next queued phases
 
-1. Named **implementation unlock** for local intake/abstention
-   (`DIRECTIVE-SLICE-01-LOCAL-IMPLEMENTATION.md`, not authorized).
+1. Draft PR review for the local intake/abstention branch. Merge only after
+   a separate owner instruction.
 2. Later F0: inventory-truth staging proof (write unlock), notification
    staging mechanics, minimum security/ops.
 3. F1 frontend recovery after the F0 exit gate.
