@@ -583,3 +583,20 @@ notification staging apply, production restore drill.
 
 Evidence: `docs/staging-readiness-v1/ACCEPTANCE-F0-EXIT.md`.
 
+## D-036 — F1 slice-01 owner decisions
+
+Approved by named human owner 2026-08-27.
+
+First frontend slice is authenticated shell plus read-only inventory
+search. FastAPI membership is shop authority. Stored shop ID is a
+preference only. One membership auto-selects; several show a selector;
+stale preference is discarded. No caller user headers. No silent
+development shop fallback. Explicit sign-out on desktop and mobile.
+Landing stays public. Shopify, POS sell, intake commit, resticker, CSV
+quantity, notification settings/service worker, payments, and Watch
+stay deferred and visibly not-ready.
+
+Does not start implementation, deploy, or enable writes.
+
+Evidence: `docs/frontend-recovery-v1/OWNER-DECISIONS.md`.
+

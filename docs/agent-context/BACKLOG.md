@@ -204,12 +204,13 @@ routes, worker, Shopify, and notifications remain off.
 
 ## frontend-recovery-v1
 
-**Status:** `PLANNING UNLOCKED — IMPLEMENTATION AWAITING OWNER SLICE APPROVAL`
+**Status:** `SLICE-01 APPROVED — IMPLEMENTATION AWAITING NAMED UNLOCK`
 **Source:** `PLAN.md` F1; D-035; `docs/frontend-recovery-v1/`
 
-First planning slice: `slice-00-inventory-and-preservation`. Do not
-bulk-copy a dirty legacy tree over `main`. Do not move Python logic into
-React or revive Convex. Writes stay preview/disabled until a later unlock.
+Slice-00 inventory recorded. First code slice approved:
+`slice-01-authenticated-shell-and-readonly-inventory`. Implementation
+awaits a named unlock. Do not bulk-copy a dirty legacy tree over `main`.
+Do not revive Convex. Writes stay visibly not-ready.
 
 ## master-plan-reconciliation
 

@@ -47,7 +47,9 @@ task points to it.
   **D-033 `identity-score-v0` frozen** under contract 1.0.0 §16
   (checkpoint `671f663`). Intake/abstention **merged on `main` `6a266b1`**
   (D-034 / PR #13): not deployed, feature off. F0 exit **passed for
-  frontend recovery** (D-035). Frozen `GATES.md` is unchanged; live
+  frontend recovery** (D-035). F1 slice-01 owner decisions recorded
+  (D-036); implementation awaiting named unlock. Frozen `GATES.md` is
+  unchanged; live
   status is `GATES-POINTER-SLICE-03.md` plus
   `GATES-POINTER-CARD-RESOLUTION-SLICE-01.md`.
 - Convex is not in the target architecture (D-024 in `DECISIONS.md`). Frozen

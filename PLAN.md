@@ -8,8 +8,10 @@
 > inventory schema applied (D-028), inventory read smoke accepted (D-029);
 > card-resolution intake/abstention merged on `main` `6a266b1` (PR #13,
 > D-034), feature off, not deployed; F0 exit passed for frontend recovery
-> (D-035). Writes, notifications, Shopify, payments, Watch, and Web Push
-> remain off. This is not production approval.
+> (D-035); F1 slice-01 (authenticated shell + read-only inventory) approved
+> (D-036), implementation awaiting named unlock. Writes, notifications,
+> Shopify, payments, Watch, and Web Push remain off. This is not
+> production approval.
 >
 > **Partner repo (reference only, do not push there):** `https://github.com/OdinFury-D/Mimir.git`  
 > **Vendored brain in this repo:** `vendor/mimir-partner/` (Python reference snapshot)
@@ -107,10 +109,33 @@ This is not production approval. Writes, notifications, Shopify, payments,
 Watch, workers, and Web Push stay disabled. Frontend recovery may begin
 against read-ready APIs and explicit not-ready write states.
 
-### F1 — Frontend recovery and redesign (next after F0)
+### F1 — Frontend recovery and redesign (planning approved; code awaiting unlock)
 
-The owners want to resume and improve the frontend immediately after the
-backend-foundation exit gate.
+F0 exit passed for frontend recovery (D-035). Slice-00 inventory is
+recorded. First code slice is approved (D-036):
+`frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`.
+Implementation still requires a named unlock. Do not start frontend
+code from this plan.
+
+Owner rules for slice-01:
+
+- FastAPI shop membership is shop-context authority.
+- A stored/local shop ID is a selection preference only. It cannot grant
+  access and must match current memberships.
+- One membership auto-selects. Several memberships show an authorized
+  shop selector. Stale or unauthorized preference is discarded.
+- Never use caller-supplied user headers or a silent development shop
+  fallback.
+- Explicit sign-out in the authenticated desktop shell and mobile
+  navigation. Landing and public marketing stay public.
+- First live backend screen is read-only inventory search.
+- Shopify connection/sync, POS checkout/selling, intake commit, resticker
+  writes, CSV quantity writes, notification settings and service worker,
+  payments, and Watch stay deferred and visibly not-ready. Disabled
+  actions must explain that the feature is not ready; they must not look
+  successful or silently do nothing.
+
+Planning packet: `docs/frontend-recovery-v1/`.
 
 1. Inventory every current page and preserved legacy UI change, including its
    purpose, screenshots, data dependencies, and merge status.

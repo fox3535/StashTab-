@@ -41,13 +41,15 @@ Production schema apply remains blocked. Convex is out (D-024).
 4. Production schema apply blocked.
 5. Card-resolution intake/abstention: **merged, feature off** (D-034 / PR #13).
    Staging/production schema and flags remain off.
-6. F0 exit for frontend recovery: **passed** (D-035). F1 planning may begin.
+6. F0 exit for frontend recovery: **passed** (D-035). F1 slice-01 is
+   **approved** (D-036); implementation awaits a named unlock.
    Writes, notifications, Shopify, payments, Watch, workers, and Web Push
    stay disabled.
 
 ## Next queued phases
 
-1. Frontend recovery planning: `frontend-recovery-v1 / slice-00-inventory-and-preservation`.
+1. Frontend recovery: slice-00 inventory recorded; slice-01 shell +
+   read-only inventory approved, implementation awaiting named unlock.
 2. Later enablement, not F0: inventory write staging smoke, notification
    staging apply, production restore drill.
 3. Do not enable card-resolution, writes, or push without a named unlock.

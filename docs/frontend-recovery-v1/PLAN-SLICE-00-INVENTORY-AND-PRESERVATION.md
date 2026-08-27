@@ -1,7 +1,7 @@
 # Frontend recovery — slice-00 inventory and preservation
 
 **Slice:** `frontend-recovery-v1 / slice-00-inventory-and-preservation`  
-**Status:** `PLANNING — AWAITING OWNER DECISIONS`  
+**Status:** `PLANNING COMPLETE — SLICE-01 APPROVED, IMPLEMENTATION AWAITING NAMED UNLOCK`  
 **Pinned `main`:** `6a266b10639df2931e1bd37d4040b49a0efd0bd2`  
 **Depends on:** D-035 F0 exit passed for frontend recovery  
 **This packet is planning only.** Do not implement frontend code from this file
@@ -30,16 +30,11 @@ authenticated shell plus read-only inventory.
 3. Smallest first implementation proposal (`SLICE-01-PROPOSAL.md`).
 4. Bounded review and one correction pass.
 
-## Owner decisions needed before implementation
+## Owner decisions
 
-1. Approve slice-01 as authenticated shell + read-only inventory.
-2. Confirm shop context comes from membership APIs, not
-   `NEXT_PUBLIC_DEV_SHOP_ID` in production-like flows.
-3. Confirm sign-out must be an explicit control in the shell (currently
-   missing from canonical UI; Clerk profile is used instead).
-4. Confirm landing/marketing pages stay public and out of the first slice.
-5. Confirm Shopify, POS checkout, intake commit, and notification settings
-   stay deferred.
+Recorded in `OWNER-DECISIONS.md`. Slice-01 is approved as the first code
+slice. Implementation still requires a named unlock. Do not start code
+from this packet.
 
 ## Explicit exclusions
 

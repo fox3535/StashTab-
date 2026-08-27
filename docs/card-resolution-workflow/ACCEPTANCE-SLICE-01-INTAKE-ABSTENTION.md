@@ -1,7 +1,7 @@
 # Slice-01 local intake/abstention — acceptance
 
 **Slice:** `card-resolution-core-v1 / intake-abstention-local-v0`  
-**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF`  
+**Status:** `MERGED ON main 6a266b1 via PR #13 — NOT DEPLOYED — FEATURE OFF`  
 **Decision:** D-034  
 **Accepted:** named human owner 2026-08-27  
 **Freeze checkpoint:** `671f663`  

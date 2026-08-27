@@ -15,13 +15,21 @@ Convex is forbidden. The browser must not talk to Neon.
 
 ## Identity and shop context
 
-- Clerk signs the user in.
-- Protected app routes use Clerk middleware.
+Owner decisions (2026-08-27): FastAPI membership is shop authority. A
+stored/local shop ID is only a preference and must match current
+memberships. One membership auto-selects. Several memberships show a
+selector. Stale preference is discarded. No caller-supplied user
+headers. No silent development shop fallback.
+
+- Clerk signs the user in. Explicit sign-out is required in desktop
+  shell and mobile nav.
+- Protected app routes use Clerk middleware. Landing stays public.
 - FastAPI calls send `Authorization: Bearer <token>`.
-- `X-Shop-Id` is a hint only. Membership on the server is identity.
+- `X-Shop-Id` is a hint only, and only after membership validation.
 - Do not send `X-Clerk-User-Id` as identity.
 - Session expiry: 401 → sign-in. 403 → no access / wrong shop. 409 →
-  conflict. 503 `FEATURE_NOT_READY` → explicit disabled/preview state.
+  shop selection required. 503 `FEATURE_NOT_READY` → explicit disabled
+  state with explanation, never fake success.
 
 ## Application shells
 
@@ -52,6 +60,7 @@ Convex is forbidden. The browser must not talk to Neon.
 
 - Auth header contract tests (already present).
 - Screen tests: signed-out redirect, session expired, empty inventory,
-  search results, 403 cross-shop, 503 feature-not-ready.
-- Responsive checks at desktop and a phone viewport.
+  search results, 403 cross-shop, 409 shop selection, 503
+  feature-not-ready, zero memberships, stale shop preference discarded.
+- Responsive checks at desktop, tablet, and phone viewports.
 - No Convex. No secret leakage in client bundles.
