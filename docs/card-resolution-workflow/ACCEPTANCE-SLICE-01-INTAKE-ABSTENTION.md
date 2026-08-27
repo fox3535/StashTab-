@@ -46,7 +46,13 @@ PostgreSQL runs above. Do not delete it.
 
 See `reviews/SUPERSEDED-COMBINED-PG-HARNESS.md`.
 
+## Later merge addendum
+
+PR #13 merged to `main` as `6a266b10639df2931e1bd37d4040b49a0efd0bd2` on
+2026-08-27. The original local-acceptance evidence above is unchanged.
+Feature remains off. Staging and production schema and flags remain off.
+
 ## Remaining gates
 
-Draft PR review. Merge only after a separate owner instruction. Staging
-and production remain off until later named unlocks.
+Staging/production schema and flag enablement. JustTCG/TCGCSV, inventory
+promotion, and review UI remain later unlocks.

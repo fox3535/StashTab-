@@ -39,6 +39,7 @@ are not passed. Do not seed inventory merely to finish those probes.
 
 ## Next proposed checkpoint (planning only)
 
-`card-resolution-core-v1 / intake-abstention-local-v0` later accepted
-locally as D-034: not merged, not deployed, feature off. See
-`docs/card-resolution-workflow/ACCEPTANCE-SLICE-01-INTAKE-ABSTENTION.md`.
+`card-resolution-core-v1 / intake-abstention-local-v0` later merged on
+`main` `6a266b1` via PR #13 (D-034): feature off, not deployed. F0 exit
+passed for frontend recovery (D-035). See
+`docs/staging-readiness-v1/ACCEPTANCE-F0-EXIT.md`.
