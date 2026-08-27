@@ -162,12 +162,14 @@ rehearsal is **not** unlocked.
 
 ## staging-readiness-v1 / slice-02-inventory-schema-rehearsal
 
-**Status:** `PROPOSED — PLANNING ONLY, NOT UNLOCKED`
-**Source:** `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`
+**Status:** `LOCAL IMPLEMENTATION COMPLETE — DRAFT PR AWAITING ACCEPTANCE`
+**Source:** D-027; `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`;
+`docs/staging-readiness-v1/DIRECTIVE-SLICE-02-IMPLEMENTATION.md`
 
-Inventory-truth migrator rehearsal on synthetic staging only, if later
-approved. Do not apply schema or enable inventory routes until a named
-unlock.
+Owner locked the table set to `inventory_item`, `purchase_record`, and
+`sale`, then inventory-truth tables. Local PostgreSQL 16 implementation
+is approved. Neon stays locked. API SELECT only. Do not enable inventory
+routes. Do not apply hosted schema.
 
 ## staging-readiness-v1 / slice-00-isolated-api-code
 

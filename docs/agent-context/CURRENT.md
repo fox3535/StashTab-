@@ -2,7 +2,7 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-26
-**Branch:** `docs/reconcile-master-agent-plan` based on `main` `1ad2b709e55cebb2fb1bcab132419fa7e796a3b9`
+**Branch:** `feature/staging-inventory-schema-rehearsal` based on `main` `d81e7c81aa03d72c1a236c481638808e9d05d759`
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
@@ -30,8 +30,12 @@ production activity. Convex is out of architecture (D-024).
 
 Production schema apply remains blocked. Slice-00 isolated API code is
 on `main` via later merges; staging is the only live deploy.
-Master plan and agent instructions were reconciled against this main
-(D-026). That docs change does not unlock later slices.
+Master plan and agent instructions were reconciled on this main (D-026).
+Slice-02 inventory schema rehearsal planning is **closed** under D-027.
+Local implementation is on `feature/staging-inventory-schema-rehearsal`:
+explicit live parents `inventory_item`, `purchase_record`, `sale`, then
+committed truth migrator; disposable PostgreSQL 16 proofs passed; API
+SELECT only. Neon, hosted apply, and inventory routes stay locked.
 
 ## Approved boundaries
 
@@ -57,8 +61,9 @@ Master plan and agent instructions were reconciled against this main
 
 ## Next queued phases
 
-1. **Proposed only:** `staging-readiness-v1 / slice-02-inventory-schema-rehearsal`
-   (`PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`). Not approved, not unlocked.
+1. **Local implementation complete, hosted apply locked:**
+   `staging-readiness-v1 / slice-02-inventory-schema-rehearsal` (D-027).
+   Draft PR against `main` for acceptance. Neon locked.
 2. Remaining F0 items after that named unlock: inventory-truth staging proof,
    card-resolution core, notification staging mechanics, minimum security/ops.
 3. F1 frontend recovery after the F0 exit gate. Not started.

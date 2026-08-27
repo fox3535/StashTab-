@@ -374,3 +374,33 @@ being changed. This decision does not unlock slice-02, production,
 payments, Watch, live Web Push, worker, Shopify, migrations, or deploy.
 The PR stays draft until acceptance.
 
+## D-027 — Inventory rehearsal table set and privileges (approved)
+
+Approved by named human owner 2026-08-26. Binding interpretation for
+`staging-readiness-v1 / slice-02-inventory-schema-rehearsal`:
+
+1. A separate explicit live/base schema migrator must precede
+   inventory-truth DDL.
+2. Do not create all remaining live application tables.
+3. Create only `inventory_item`, `purchase_record`, and `sale`. Add
+   another table only when a current foreign-key dependency makes it
+   unavoidable. Each added dependency must be cited by model, column,
+   constraint, and test. Convenience is not a dependency.
+4. Add verified `shop_id → shops.id` foreign keys and the shop-scoped
+   unique keys required by the frozen same-shop design.
+5. First execution proof is disposable local PostgreSQL 16 only. Neon
+   remains locked.
+6. API receives SELECT only on rehearsal tables. No INSERT, UPDATE,
+   DELETE, TRUNCATE, DDL, ownership, or migrator membership. Worker and
+   readonly receive no access to those tables.
+7. Rollback preserves `shops`, `shop_members`, database roles, and
+   identity rows. Receive, POS, adjust, CSV quantity, Shopify, worker,
+   notifications, Web Push, payments, Watch, and production remain
+   unavailable.
+
+Creating all remaining live tables is rejected: this slice proves the
+inventory-truth parent chain only. Packet:
+`docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`.
+Local implementation still requires named approval of
+`DIRECTIVE-SLICE-02-IMPLEMENTATION.md`.
+
