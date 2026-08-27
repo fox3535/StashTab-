@@ -302,6 +302,25 @@ notifications off, no VAPID, worker not running, Shopify absent, inventory
 cutover off, no production credentials. Never run local seed against
 staging. Details: `docs/staging-readiness-v1/OWNER-DECISIONS.md`.
 
+## D-025 — Staging slice-01 identity smoke accepted on staging only (approved)
+
+Approved by named human owner 2026-08-26.
+`staging-readiness-v1 / slice-01-base-schema-and-identity-smoke` is
+**COMPLETED, DEPLOYED TO STAGING ONLY**. Railway API deploy
+`17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA
+`0dd8f00b8d510b82e3d717a9570c0bc387e0479b`. Current `main` is
+`fe3b2cfb9903050eef45bcf434ef8a0ddafdb3e8`. Neon has only `shops` and
+`shop_members`, plus two synthetic shops with two distinct Clerk owners.
+Identity smoke: anonymous and spoofed-header requests rejected; shop and
+owner membership committed together; duplicate slug rejected; user A and
+user B own-shop 200 / other-shop 403; duplicate membership 409 without
+database detail; health and ready 200. No Shopify, inventory, notifications,
+worker, Web Push, payments, or production activity. Convex remains out
+under D-024. Frozen `GATES.md` was not rewritten; see
+`docs/staging-readiness-v1/GATES-POINTER-SLICE-01.md`.
+`slice-02-inventory-schema-rehearsal` is planning only and is not unlocked.
+Details: `docs/staging-readiness-v1/ACCEPTANCE-SLICE-01.md`.
+
 ## D-024 — Convex removed from the target architecture (approved)
 
 Approved by named human owner 2026-08-26. Convex is not part of StashTab.

@@ -140,6 +140,25 @@ remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
 deployment gates. Adjustment, production cutover, refund payments,
 manual-resolution UI, payments, and Watch remain outside this slice.
 
+## staging-readiness-v1 / slice-01-base-schema-and-identity-smoke
+
+**Status:** `COMPLETED, DEPLOYED TO STAGING ONLY (ACCEPTED 2026-08-26)`
+**Source:** `docs/staging-readiness-v1/ACCEPTANCE-SLICE-01.md`; D-025
+
+Identity kernel on staging Neon (`shops`, `shop_members` only). Railway
+deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238`. Clerk identity smoke passed
+for two synthetic shops. Production remains undeployed. Inventory schema
+rehearsal is **not** unlocked.
+
+## staging-readiness-v1 / slice-02-inventory-schema-rehearsal
+
+**Status:** `PROPOSED — PLANNING ONLY, NOT UNLOCKED`
+**Source:** `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`
+
+Inventory-truth migrator rehearsal on synthetic staging only, if later
+approved. Do not apply schema or enable inventory routes until a named
+unlock.
+
 ## staging-readiness-v1 / slice-00-isolated-api-code
 
 **Status:** `COMPLETED, NOT MERGED, NOT DEPLOYED (ACCEPTED 2026-08-25)`

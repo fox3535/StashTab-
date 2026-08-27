@@ -37,8 +37,10 @@ task points to it.
 - Inventory truth: `docs/inventory-truth-v1/CONTRACT.md` v1.2.0
   (`FROZEN; slices accepted, on main via c3647a4, not deployed`)
 - Staging readiness: `docs/staging-readiness-v1/` frozen at
-  `freezes/FREEZE-v1.json`; slice-00 isolated API code accepted 2026-08-25
-  (`COMPLETED, NOT MERGED, NOT DEPLOYED`)
+  `freezes/FREEZE-v1.json`; slice-00 isolated API code accepted 2026-08-25;
+  slice-01 identity smoke **COMPLETED, DEPLOYED TO STAGING ONLY** (D-025,
+  `ACCEPTANCE-SLICE-01.md`). Frozen `GATES.md` is unchanged; live status is
+  `GATES-POINTER-SLICE-01.md`.
 - Convex is not in the target architecture (D-024 in `DECISIONS.md`). Frozen
   staging text that said “Convex deferred” is historical and superseded.
 
