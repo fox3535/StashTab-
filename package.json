@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:api-auth": "node --test scripts/test_protected_api_headers.mjs"
+    "test:api-auth": "node --test scripts/test_protected_api_headers.mjs",
+    "test:slice01": "node --test scripts/test_protected_api_headers.mjs scripts/test_shop_session.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",
