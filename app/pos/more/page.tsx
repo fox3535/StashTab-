@@ -1,75 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { mimirApi, type SaleRecord } from "@/lib/mimir-api";
-import { usePos } from "../pos-context";
-import { SyncStatusBar } from "../components/sync-status-bar";
+import { SignOutButton } from "@/components/vendor/sign-out-button";
+import { FeatureNotReady } from "@/components/vendor/feature-not-ready";
+import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
+import { useState } from "react";
 
 export default function MorePage() {
-  const { shopId, apiOpts } = usePos();
-  const [sales, setSales] = useState<SaleRecord[]>([]);
-
-  useEffect(() => {
-    if (!shopId) return;
-    mimirApi.salesHistory({ ...apiOpts, limit: 10 }).then((data) => {
-      setSales(data.sales);
-    }).catch(() => setSales([]));
-  }, [shopId, apiOpts]);
+  const { selectedShop, shops, selectShop } = useVendorShop();
+  const [locked, setLocked] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col gap-4 p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-6 lg:p-8">
+    <div className="flex w-full max-w-full flex-col gap-4 overflow-x-hidden p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-6 lg:p-8">
       <header>
         <h1 className="font-display text-xl font-bold tracking-tight text-foreground">More</h1>
-        <p className="text-sm text-steel">Settings & history</p>
+        <p className="text-sm text-steel">Account and shop. Selling and Shopify are not ready.</p>
       </header>
 
-      <SyncStatusBar />
+      {selectedShop ? (
+        <p className="font-mono text-xs text-steel">Shop: {selectedShop.name}</p>
+      ) : null}
+
+      {shops.length > 1 ? (
+        <label className="block text-sm">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-steel">Shop</span>
+          <select
+            className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            value={selectedShop?.id ?? ""}
+            onChange={(event) => selectShop(event.target.value)}
+            aria-label="Authorized shop"
+          >
+            {shops.map((shop) => (
+              <option key={shop.id} value={shop.id}>
+                {shop.name} ({shop.role})
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       <div className="space-y-2">
         <Link
-          href="/admin/dashboard"
-          className="block rounded-lg border border-border bg-gunmetal px-4 py-3 text-sm text-foreground transition-all duration-200 hover:border-neon/40 hover:shadow-[0_0_16px_rgba(139,92,246,0.12)]"
+          href="/admin/inventory"
+          className="block rounded-lg border border-border bg-gunmetal px-4 py-3 text-sm text-foreground hover:border-neon/40"
         >
-          Admin Dashboard →
+          Inventory search →
         </Link>
-        <Link
-          href="/onboarding"
-          className="block rounded-lg border border-border bg-gunmetal px-4 py-3 text-sm text-foreground transition-all duration-200 hover:border-neon/40 hover:shadow-[0_0_16px_rgba(139,92,246,0.12)]"
+        <button
+          type="button"
+          className="block w-full rounded-lg border border-border bg-gunmetal px-4 py-3 text-left text-sm text-steel"
+          onClick={() => setLocked("Shopify")}
         >
-          Shop Setup →
-        </Link>
+          Shopify connection — not ready
+        </button>
+        <button
+          type="button"
+          className="block w-full rounded-lg border border-border bg-gunmetal px-4 py-3 text-left text-sm text-steel"
+          onClick={() => setLocked("Notifications")}
+        >
+          Notification settings — not ready
+        </button>
       </div>
 
-      <section>
-        <p className="mb-2 font-mono text-xs font-medium uppercase tracking-[0.18em] text-steel">Recent sales</p>
-        {sales.length === 0 ? (
-          <p className="text-sm text-steel/70">No sales yet</p>
-        ) : (
-          <div className="space-y-2">
-            {sales.map((sale) => (
-              <div
-                key={sale.id}
-                className="rounded-lg border border-border bg-gunmetal px-3 py-2 text-sm"
-              >
-                <div className="flex justify-between">
-                  <span className="truncate font-medium text-foreground">{sale.item_name}</span>
-                  <span className="font-mono font-semibold text-neon">
-                    ${(sale.sold_price ?? 0).toFixed(2)}
-                  </span>
-                </div>
-                <p className="font-mono text-xs text-steel">
-                  {sale.sku} · {sale.transaction_type}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {locked ? (
+        <FeatureNotReady
+          title={`${locked} is not ready`}
+          detail="This setting is deferred. It will not enable sync, push, or payments."
+        />
+      ) : null}
 
-      <p className="text-center font-mono text-xs text-steel/60">
-        StashTab · Dev shop {shopId ? shopId.slice(0, 8) + "…" : "not set"}
-      </p>
+      <SignOutButton />
     </div>
   );
 }

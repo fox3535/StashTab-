@@ -3,6 +3,11 @@ import {
   SessionExpiredError,
   type ProtectedApiAuth,
 } from "@/lib/protected-api-headers";
+import {
+  VendorApiError,
+  messageForKind,
+  vendorErrorFromResponse,
+} from "@/lib/vendor-api-error";
 
 const API_BASE = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
 const API_PREFIX = "/api/v1";
@@ -80,6 +85,8 @@ export type ShowSession = {
 type RequestOptions = {
   shopId?: string;
   authToken?: string;
+  omitShopHeader?: boolean;
+  signal?: AbortSignal;
 };
 
 type MimirAuthProvider = () => Promise<ProtectedApiAuth>;
@@ -91,13 +98,16 @@ export function setMimirAuthProvider(provider: MimirAuthProvider | null) {
 
 async function resolveMimirAuth(options: RequestOptions): Promise<ProtectedApiAuth> {
   if (options.authToken && options.authToken.trim()) {
-    return { authToken: options.authToken, shopId: options.shopId };
+    return {
+      authToken: options.authToken,
+      shopId: options.omitShopHeader ? undefined : options.shopId,
+    };
   }
   if (mimirAuthProvider) {
     const provided = await mimirAuthProvider();
     return {
       authToken: provided.authToken,
-      shopId: options.shopId || provided.shopId,
+      shopId: options.omitShopHeader ? undefined : options.shopId || provided.shopId,
     };
   }
   throw new SessionExpiredError();
@@ -114,14 +124,24 @@ async function mimirFetch<T>(
     ...buildProtectedApiHeaders(resolved),
   };
 
-  const res = await fetch(`${API_BASE}${API_PREFIX}${path}`, {
-    ...init,
-    headers: { ...headers, ...(init?.headers as Record<string, string>) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${API_PREFIX}${path}`, {
+      ...init,
+      signal: options.signal ?? init?.signal,
+      headers: { ...headers, ...(init?.headers as Record<string, string>) },
+    });
+  } catch (err) {
+    if (options.signal?.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+      throw err;
+    }
+    throw new VendorApiError(0, messageForKind("network", ""), "network");
+  }
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `API error ${res.status}`);
+    if (res.status === 401) throw new SessionExpiredError();
+    throw vendorErrorFromResponse(res.status, body || `API error ${res.status}`);
   }
 
   return res.json() as Promise<T>;
@@ -163,6 +183,12 @@ export const mimirApi = {
 
   getMyShop: (opts: RequestOptions = {}) =>
     mimirFetch<ShopRecord>("/shops/me", opts),
+
+  listMyMemberships: (opts: RequestOptions = {}) =>
+    mimirFetch<{ shops: { id: string; name: string; role: string }[] }>(
+      "/shops/me/memberships",
+      { ...opts, omitShopHeader: true }
+    ),
 
   searchInventory: (
     q: string,
