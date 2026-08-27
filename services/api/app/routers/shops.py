@@ -3,12 +3,13 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.auth.identity import list_caller_membership_shops
 from app.database import get_db
 from app.deps import ShopContext, get_authenticated_user, get_shop_context
 from app.identity_schema.conflicts import identity_conflict_http
 from app.models import Shop, ShopMember
 from app.models.base import new_uuid
-from app.schemas import ShopCreate, ShopOut
+from app.schemas import MembershipShopOut, MyShopMembershipsOut, ShopCreate, ShopOut
 
 router = APIRouter(prefix="/shops", tags=["shops"])
 
@@ -122,6 +123,18 @@ def get_my_shop(
     if not shop:
         raise HTTPException(status_code=404, detail="Shop not found")
     return shop
+
+
+@router.get("/me/memberships", response_model=MyShopMembershipsOut)
+def list_my_shop_memberships(
+    db: Session = Depends(get_db),
+    clerk_user_id: str = Depends(get_authenticated_user),
+) -> MyShopMembershipsOut:
+    """Read-only authorized shops for the verified Clerk user. Shop headers are ignored."""
+    rows = list_caller_membership_shops(db, clerk_user_id)
+    return MyShopMembershipsOut(
+        shops=[MembershipShopOut(id=shop_id, name=name, role=role) for shop_id, name, role in rows]
+    )
 
 
 @router.get("/{shop_id}", response_model=ShopOut)

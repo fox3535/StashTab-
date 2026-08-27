@@ -114,3 +114,17 @@ class ShopOut(BaseModel):
     slug: str
 
     model_config = {"from_attributes": True}
+
+
+class MembershipShopOut(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    id: str
+    name: str
+    role: str
+
+
+class MyShopMembershipsOut(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    shops: list[MembershipShopOut]
