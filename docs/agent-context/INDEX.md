@@ -48,8 +48,9 @@ task points to it.
   (checkpoint `671f663`). Intake/abstention **merged on `main` `6a266b1`**
   (D-034 / PR #13): not deployed, feature off. F0 exit **passed for
   frontend recovery** (D-035). F1 slice-01 owner decisions recorded
-  (D-036). My-shop memberships read **completed locally** (D-037), not
-  merged, not deployed. Frontend slice-01 still awaits a named unlock.
+  (D-036). My-shop memberships read **merged on `main` via PR #15**
+  (D-037), not deployed. F1 slice-01 shell + read inventory **completed
+  locally** (D-038), not merged, not deployed; live staging smoke pending.
   Frozen `GATES.md` is
   unchanged; live
   status is `GATES-POINTER-SLICE-03.md` plus

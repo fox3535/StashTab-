@@ -1,0 +1,101 @@
+<!doctype html>
+<!-- LOCAL TEST FIXTURE only. Not a Next.js route. Not under app/ or public/. Not a production product screen. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LOCAL TEST FIXTURE — slice-01 visual states</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #05050a; color: #f5f5f5; }
+      .banner { background: #3f1d0f; color: #ffd7b0; padding: 10px 16px; font: 12px/1.4 ui-monospace, monospace; }
+      main { display: grid; gap: 16px; padding: 16px; }
+      section { border: 1px solid #27272a; background: #09090b; border-radius: 10px; padding: 16px; }
+      h1, h2 { font-family: ui-sans-serif, system-ui; }
+      h2 { font-size: 16px; margin: 0 0 8px; }
+      p { color: #b4b4bd; font-size: 14px; }
+      label { display: block; font-size: 12px; margin-top: 8px; }
+      select, button, input { min-height: 44px; min-width: 44px; font-size: 14px; }
+      button:focus, select:focus, input:focus { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+      table { width: 100%; border-collapse: collapse; }
+      td, th { border-bottom: 1px solid #27272a; padding: 8px; text-align: left; }
+      .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+      @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+      .pulse { height: 48px; background: #18181b; animation: pulse 1.4s ease-in-out infinite; }
+      @keyframes pulse { 50% { opacity: .5; } }
+    </style>
+  </head>
+  <body>
+    <p class="banner">LOCAL TEST FIXTURE — not live inventory, not staging, not a membership API proof.</p>
+    <main>
+      <section>
+        <h2>Loading memberships</h2>
+        <p role="status">Loading shop access…</p>
+        <div class="pulse"></div>
+      </section>
+      <section>
+        <h2>No memberships</h2>
+        <p role="status">Your account is signed in, but it is not a member of any shop.</p>
+        <button type="button">Sign out</button>
+      </section>
+      <section>
+        <h2>One membership</h2>
+        <p>Eastside Cards selected automatically.</p>
+        <button type="button">Sign out</button>
+      </section>
+      <section>
+        <h2>Multi-shop selector</h2>
+        <label for="shop">Authorized shops</label>
+        <select id="shop" aria-label="Authorized shop">
+          <option>Eastside Cards (owner)</option>
+          <option>Convention Booth (staff)</option>
+        </select>
+      </section>
+      <section>
+        <h2>Stale preference recovery</h2>
+        <p>Saved shop is no longer authorized. Choose a shop you can access.</p>
+        <select aria-label="Authorized shop"><option>Convention Booth (staff)</option></select>
+      </section>
+      <section>
+        <h2>Empty inventory</h2>
+        <p>No in-stock cards matched this search. This is an empty result, not a failed write.</p>
+      </section>
+      <section>
+        <h2>Populated test inventory</h2>
+        <p>LOCAL TEST FIXTURE rows only.</p>
+        <table>
+          <thead><tr><th>SKU</th><th>Name</th><th>Stock</th></tr></thead>
+          <tbody>
+            <tr><td>FIX-1</td><td>Fixture Charizard</td><td>2</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section>
+        <h2>Session expired</h2>
+        <p role="alert">Session expired. Sign in again.</p>
+        <button type="button">Sign out</button>
+      </section>
+      <section>
+        <h2>Forbidden</h2>
+        <p role="alert">You do not have access to this shop.</p>
+      </section>
+      <section>
+        <h2>Feature not ready</h2>
+        <p role="status">POS checkout and selling are not ready.</p>
+      </section>
+      <section>
+        <h2>Network / general error</h2>
+        <p role="alert">Network error. Check your connection and try again.</p>
+      </section>
+      <section>
+        <h2>Desktop sign-out</h2>
+        <button type="button" aria-label="Sign out">Sign out</button>
+      </section>
+      <section>
+        <h2>Mobile sign-out</h2>
+        <button type="button" aria-label="Sign out">Sign out</button>
+      </section>
+      <p class="sr" aria-live="polite">Status changes are announced in this live region.</p>
+    </main>
+  </body>
+</html>

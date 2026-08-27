@@ -3,6 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { ProductShell } from "@/components/product/product-shell";
 import { OnlineSaleAlerts } from "./components/online-sale-alerts";
 import { PosProvider } from "./pos-context";
+import { VendorShopProvider } from "@/components/vendor/vendor-shop-provider";
+import { ShopAccessGate } from "@/components/vendor/shop-access-gate";
 
 export const metadata: Metadata = {
   title: "StashTab POS",
@@ -25,14 +27,18 @@ export const viewport: Viewport = {
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   return (
-    <PosProvider>
-      <ProductShell variant="full">
-        <div className="flex min-h-[calc(100svh-var(--header-height))] w-full flex-1 flex-col bg-obsidian text-foreground">
-          <OnlineSaleAlerts />
-          {children}
-        </div>
-      </ProductShell>
+    <VendorShopProvider>
+      <ShopAccessGate>
+        <PosProvider>
+          <ProductShell variant="full">
+            <div className="flex min-h-[calc(100svh-var(--header-height))] w-full flex-1 flex-col bg-obsidian text-foreground">
+              <OnlineSaleAlerts />
+              {children}
+            </div>
+          </ProductShell>
+        </PosProvider>
+      </ShopAccessGate>
       <Toaster position="top-center" richColors />
-    </PosProvider>
+    </VendorShopProvider>
   );
 }

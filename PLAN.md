@@ -9,8 +9,9 @@
 > card-resolution intake/abstention merged on `main` `6a266b1` (PR #13,
 > D-034), feature off, not deployed; F0 exit passed for frontend recovery
 > (D-035); F1 slice-01 (authenticated shell + read-only inventory) approved
-> (D-036); my-shop memberships read completed locally (D-037), not merged,
-> not deployed. Frontend implementation still awaits a named unlock.
+> (D-036); my-shop memberships read merged on `main` via PR #15 (D-037),
+> not deployed. F1 slice-01 shell + read-only inventory completed locally
+> (D-038), not merged, not deployed; live staging smoke pending.
 > Writes, notifications, Shopify, payments, Watch, and Web Push remain
 > off. This is not production approval.
 >
@@ -115,8 +116,9 @@ against read-ready APIs and explicit not-ready write states.
 F0 exit passed for frontend recovery (D-035). Slice-00 inventory is
 recorded. First code slice is approved (D-036):
 `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`.
-The shop-memberships list prerequisite is accepted locally (D-037) and
-is not merged. Frontend implementation still requires a named unlock.
+The shop-memberships list prerequisite is on `main` (D-037 / PR #15)
+and is not deployed. Frontend implementation still requires a named
+unlock. Shop selection must use `GET /api/v1/shops/me/memberships`.
 Do not start frontend code from this plan.
 
 Owner rules for slice-01:

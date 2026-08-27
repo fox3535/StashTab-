@@ -2,8 +2,8 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-27
-**Branch:** `feature/prerequisite-my-shop-memberships-read-v1` from `main`
-`09c1e6aba03f4a075159cdbdbddf61aa85157340`
+**Branch:** `feature/slice-01-authenticated-shell-read-inventory` from `main`
+`af72bac501cd9c42b70cd0347f778db388c8c943`
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
@@ -15,17 +15,12 @@
 
 ## Current phase
 
-`backend-foundation / staging-readiness-v1` (**PLAN.md F0**)
-**F0 exit: PASSED FOR FRONTEND RECOVERY (D-035).** Not production approval.
-**Slice-01 identity: COMPLETED, STAGING ONLY (D-025).**
-**Slice-02 inventory schema: COMPLETED, APPLIED TO STAGING ONLY (D-028).**
-**Slice-03 inventory read smoke: COMPLETED, STAGING ONLY (D-029).**
-**Card-resolution intake/abstention: MERGED ON `main` `6a266b1` via PR #13
-(D-034). FEATURE OFF. Not deployed. Not migrated on staging.**
-Exact 13 staging tables. Inventory empty. API SELECT only; INSERT denied.
-Writes, worker, Shopify, notifications, Watch remain off.
+`frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`
+**Status:** `COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING` (D-038).
+F0 exit remains passed for frontend recovery (D-035). Memberships read is
+on `main` via PR #15 (D-037), not deployed to staging hosting.
 
-Production schema apply remains blocked. Convex is out (D-024).
+Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
 
 ## Approved boundaries
 
@@ -41,19 +36,15 @@ Production schema apply remains blocked. Convex is out (D-024).
 3. Inventory read smoke: **closed** (D-029). Writes still off.
 4. Production schema apply blocked.
 5. Card-resolution intake/abstention: **merged, feature off** (D-034 / PR #13).
-   Staging/production schema and flags remain off.
-6. F0 exit for frontend recovery: **passed** (D-035). F1 slice-01 is
-   **approved** (D-036); implementation awaits a named unlock.
-7. My-shop memberships read: **completed locally** (D-037). Not merged.
-   Not deployed. Frontend slice-01 stays locked.
-   Writes, notifications, Shopify, payments, Watch, workers, and Web Push
-   stay disabled.
+6. F0 exit for frontend recovery: **passed** (D-035).
+7. My-shop memberships read: **merged on `main` via PR #15** (D-037). Not hosted on staging.
+8. F1 slice-01 shell + read inventory: **completed locally** (D-038). Not merged.
+   Later staging-smoke: real Clerk memberships, live staging inventory, full
+   keyboard walkthrough.
 
 ## Next queued phases
 
-1. Frontend recovery: memberships-read prerequisite accepted locally
-   (D-037), not merged; slice-01 shell + read-only inventory still awaits
-   a named unlock after this prerequisite merges.
+1. Review/merge slice-01 draft PR, then a separate staging API deploy and smoke.
 2. Later enablement, not F0: inventory write staging smoke, notification
    staging apply, production restore drill.
 3. Do not enable card-resolution, writes, or push without a named unlock.

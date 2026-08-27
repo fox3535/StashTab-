@@ -204,16 +204,16 @@ routes, worker, Shopify, and notifications remain off.
 
 ## frontend-recovery-v1
 
-**Status:** `SLICE-01 APPROVED — IMPLEMENTATION AWAITING NAMED UNLOCK`
+**Status:** `SLICE-01 COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING`
 **Source:** `PLAN.md` F1; D-035; D-036; D-037; `docs/frontend-recovery-v1/`
 
-Slice-00 inventory recorded. Prerequisite
-`prerequisite-my-shop-memberships-read-v1` is **COMPLETED LOCALLY —
-NOT MERGED — NOT DEPLOYED** (D-037). First frontend code slice approved:
-`slice-01-authenticated-shell-and-readonly-inventory`. Frontend
-implementation still awaits a named unlock after this prerequisite
-merges. Do not bulk-copy a dirty legacy tree over `main`. Do not revive
-Convex. Writes stay visibly not-ready.
+Slice-00 inventory recorded. Prerequisite memberships read is on `main`
+(D-037 / PR #15), not hosted on staging. Slice-01 shell + read-only
+inventory is **completed locally** (D-038). Not merged. Not deployed.
+Later staging-smoke gates: real Clerk memberships, live staging
+inventory read, full authenticated-shell keyboard walkthrough. Do not
+bulk-copy a dirty legacy tree over `main`. Do not revive Convex. Writes
+stay visibly not-ready.
 
 ## master-plan-reconciliation
 

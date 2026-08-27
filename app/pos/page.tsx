@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { itemSellPrice, mimirApi, type InventoryItem } from "@/lib/mimir-api";
 import { adminApi } from "@/lib/admin-api";
 import { usePos } from "./pos-context";
+import { FeatureNotReady } from "@/components/vendor/feature-not-ready";
 import { SyncStatusBar } from "./components/sync-status-bar";
 import { ApiStatusBar } from "./components/api-status-bar";
 import { CardThumbnail } from "./components/card-thumbnail";
@@ -132,6 +133,15 @@ function CartTotals({ cartTotal, placeholderCost }: { cartTotal: number; placeho
 /* ------------------------------------------------------------------ */
 
 export default function SellPage() {
+  return (
+    <FeatureNotReady
+      title="POS checkout and selling"
+      detail="Checkout and selling are not ready. Use Find or Inventory for read-only search."
+    />
+  );
+}
+
+function DeferredSellWorkbench() {
   const {
     shopId,
     apiOpts,

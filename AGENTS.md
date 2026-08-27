@@ -70,6 +70,35 @@ than guessing. Chat transcripts are not durable project memory.
 - Use bounded review/correction/finalization paths. A timeout or repeated review
   is not success and must not create an endless gate loop.
 
+## Lean execution protocol
+
+- Use one builder agent for a slice. Other agents may perform one bounded
+  specialist review, but must not repeat the full implementation workflow.
+- Read only `PLAN.md`, `docs/agent-context/INDEX.md` and `CURRENT.md`, the active
+  slice directive, and contracts directly relevant to the changed subsystem.
+  Do not reload historical reviews or chat transcripts without a concrete need.
+- Routine frontend and documentation work may run as one continuous sequence:
+  inspect, implement, test, review once, correct once, commit, push, and open a
+  draft PR. A named slice unlock authorizes these reversible local steps.
+- Normal backend work uses one short plan, one implementation pass, relevant
+  tests, one bounded review, and one correction pass.
+- Reserve freeze/amendment packets and separate approval gates for high-risk
+  changes: authentication/authorization, tenant isolation, database schema,
+  payments, production, secrets, external delivery, paid providers, and frozen
+  contract behavior.
+- Always require separate human approval for merge, deploy, migration, enabling
+  external or paid features, production credentials, and destructive actions.
+- Stop only for a genuine owner decision, conflicting contract, unsafe or
+  destructive action, missing authority/credential, P0/P1 finding, or failed
+  acceptance criterion that cannot be corrected within the named slice.
+- Do not stop for facts discoverable from the repository, reversible local
+  edits inside scope, routine tests, or already-approved implementation details.
+- Keep status reports concise: outcome, changed files, tests/evidence, genuine
+  blockers, next action, and one terminal status line. Store detailed evidence
+  in repository files instead of repeating it in chat.
+- Keep the exit path finite. Deferred production, provider, compliance, and
+  product work must not silently become blockers for an accepted local slice.
+
 ## Planning and context hygiene
 
 - Pin implementation and review work to an exact Git commit.

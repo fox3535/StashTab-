@@ -6,7 +6,6 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_MIMIR_API_URL ?? "http://localhost:8001";
 const API_PREFIX = "/api/v1";
-const DEFAULT_SHOP_ID = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
 
 export type AdminAuth = ProtectedApiAuth;
 
@@ -19,13 +18,13 @@ export function setAdminAuthProvider(provider: AdminAuthProvider | null) {
 
 async function resolveAdminAuth(auth: AdminAuth = {}): Promise<ProtectedApiAuth> {
   if (auth.authToken && auth.authToken.trim()) {
-    return { authToken: auth.authToken, shopId: auth.shopId || DEFAULT_SHOP_ID };
+    return { authToken: auth.authToken, shopId: auth.shopId };
   }
   if (adminAuthProvider) {
     const provided = await adminAuthProvider();
     return {
       authToken: provided.authToken,
-      shopId: auth.shopId || provided.shopId || DEFAULT_SHOP_ID,
+      shopId: auth.shopId || provided.shopId,
     };
   }
   throw new SessionExpiredError();
@@ -298,7 +297,7 @@ export const adminApi = {
   },
 
   listMembers: async (auth?: AdminAuth) => {
-    const shopId = auth?.shopId || DEFAULT_SHOP_ID;
+    const shopId = auth?.shopId;
     if (!shopId) return [];
     const res = await adminFetch(`/shops/${shopId}/members`, undefined, auth);
     if (!res.ok) throw new Error(await res.text());
@@ -309,7 +308,7 @@ export const adminApi = {
     payload: { clerk_user_id: string; role?: string },
     auth?: AdminAuth
   ) => {
-    const shopId = auth?.shopId || DEFAULT_SHOP_ID;
+    const shopId = auth?.shopId;
     if (!shopId) throw new Error("Missing shop ID");
     const res = await adminFetch(`/shops/${shopId}/members`, {
       method: "POST",

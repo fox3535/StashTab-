@@ -1,7 +1,7 @@
 # Slice-01 — authenticated shell and read-only inventory
 
 **Slice:** `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`  
-**Status:** `OWNER-APPROVED FOR PLANNING — IMPLEMENTATION AWAITING NAMED UNLOCK`  
+**Status:** `COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING`  
 **Pinned `main`:** `6a266b10639df2931e1bd37d4040b49a0efd0bd2`  
 **Decisions:** `OWNER-DECISIONS.md`  
 **Directive (prepared, not authorized):**
@@ -117,7 +117,7 @@ Partner: floor find speed and barcode intent; not desktop Python UI.
 | Need | Contract | Class |
 |---|---|---|
 | Current shop | `GET /api/v1/shops/me` | read-ready |
-| Membership list | `GET /api/v1/shops/me/memberships` | local read-ready (D-037); not merged |
+| Membership list | `GET /api/v1/shops/me/memberships` | read-ready on `main` (D-037 / PR #15); not deployed |
 | Inventory search | `GET /api/v1/inventory/search` | read-ready |
 | Inventory PATCH / CSV / checkout / intake commit / resticker / Shopify | existing write routes | write-disabled |
 | Card-resolution | merged, flag off | 503 / locked |

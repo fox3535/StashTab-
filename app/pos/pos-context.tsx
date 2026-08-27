@@ -13,11 +13,10 @@ import { useAuth } from "@clerk/nextjs";
 import {
   itemSellPrice,
   mimirApi,
-  setMimirAuthProvider,
   type InventoryItem,
   type PlaceholderTrade,
 } from "@/lib/mimir-api";
-import { SessionExpiredError } from "@/lib/protected-api-headers";
+import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 
 export type CartLine = InventoryItem & { cartQty: number };
 
@@ -42,24 +41,15 @@ type PosContextValue = {
 const PosContext = createContext<PosContextValue | null>(null);
 
 export function PosProvider({ children }: { children: ReactNode }) {
-  const devShopId = process.env.NEXT_PUBLIC_DEV_SHOP_ID ?? "";
   const { userId, getToken } = useAuth();
-  const [shopId, setShopId] = useState("");
-  const [shopReady, setShopReady] = useState(false);
+  const { selectedShop } = useVendorShop();
+  const shopId = selectedShop?.id ?? "";
+  const shopReady = Boolean(selectedShop);
   const [authToken, setAuthToken] = useState<string | undefined>();
   const [sessionError, setSessionError] = useState<string | undefined>();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [placeholderTrades, setPlaceholderTrades] = useState<PlaceholderTrade[]>([]);
   const [activeShowId, setActiveShowId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMimirAuthProvider(async () => {
-      const token = await getToken();
-      if (!token) throw new SessionExpiredError();
-      return { authToken: token, shopId: shopId || devShopId || undefined };
-    });
-    return () => setMimirAuthProvider(null);
-  }, [getToken, shopId, devShopId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,33 +66,6 @@ export function PosProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [getToken, userId]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function resolveShop() {
-      const token = await getToken();
-      if (!token) {
-        if (!cancelled) {
-          setSessionError("Sign in required. Your session expired or you are not signed in.");
-          setShopReady(true);
-        }
-        return;
-      }
-      try {
-        const shop = await mimirApi.getMyShop({ authToken: token });
-        if (!cancelled) setShopId(shop.id);
-      } catch {
-        if (!cancelled && devShopId) setShopId(devShopId);
-      }
-      if (!cancelled) setShopReady(true);
-    }
-
-    resolveShop();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, devShopId, getToken]);
 
   const apiOpts = useMemo(
     () => ({
