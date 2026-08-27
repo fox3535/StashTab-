@@ -3,8 +3,9 @@
 ## card-resolution-core-v1
 
 **Status:** QUEUED — PLANNING ALLOWED, BUILD BLOCKED
-**Entry gate:** current notification/checkpoint PR passes automated tests,
-independent reviews are resolved, and a human approves build start.
+**Entry gate:** named human implementation unlock. Notification backend
+overlap is closed (D-021). Frontend notification settings, service worker,
+and live Web Push remain separate gates.
 
 ### Planned slices
 
@@ -66,6 +67,8 @@ security contract, while the status contains `IMPLEMENTATION BLOCKED`.
 
 ### Dependency order
 
+Product-direction order from the strategy file, unchanged:
+
 1. Current notification and contract gates.
 2. `card-resolution-core-v1` identity/state foundation.
 3. Inventory truth (`inventory-truth-v1` **frozen**; blocked by
@@ -74,6 +77,12 @@ security contract, while the status contains `IMPLEMENTATION BLOCKED`.
 5. Licensed point-in-time market-data foundation.
 6. Deterministic Portfolio/Market Watch.
 7. Governed advisory agents and outcome evaluation.
+
+Current operational sequence is PLAN.md F0 then F1 (D-026): staging
+identity (accepted) → inventory schema rehearsal (proposed) → inventory
+truth staging proof → card-resolution core → notification staging
+mechanics → minimum security/ops; then frontend recovery. This overlay
+does not rewrite the strategy file or unlock implementation.
 
 ### Reuse gate
 
@@ -129,16 +138,17 @@ and break-glass procedure.
 
 ## inventory-truth-v1 / slice-02-outbound-events
 
-**Status:** `COMPLETED — NOT MERGED — NOT DEPLOYED (ACCEPTED 2026-08-24)`
+**Status:** `COMPLETED — ON main VIA c3647a4 — NOT DEPLOYED (ACCEPTED 2026-08-24)`
 **Source:** `docs/inventory-truth-v1/ACCEPTANCE-SLICE-02.md`;
 `docs/inventory-truth-v1/DIRECTIVE-SLICE-02.md` (v3, frozen);
 `docs/inventory-truth-v1/amendments/AMENDMENT-1.1.0.md` (APPROVED)
 
-Isolated implementation accepted 2026-08-24. Merge and deployment remain
-blocked by **NOTIFICATION-INTEGRATION-GATE**. Production schema application
-remains blocked by **MIGRATOR-ROLE-PROVISIONING-GATE** plus standing
-deployment gates. Adjustment, production cutover, refund payments,
-manual-resolution UI, payments, and Watch remain outside this slice.
+Isolated implementation accepted 2026-08-24. Merge completed via D-021 /
+PR #1. **NOTIFICATION-INTEGRATION-GATE** is closed for backend overlap only.
+Production schema application remains blocked by
+**MIGRATOR-ROLE-PROVISIONING-GATE** plus standing deployment gates.
+Adjustment, production cutover, refund payments, manual-resolution UI,
+payments, and Watch remain outside this slice.
 
 ## staging-readiness-v1 / slice-01-base-schema-and-identity-smoke
 
@@ -161,14 +171,32 @@ unlock.
 
 ## staging-readiness-v1 / slice-00-isolated-api-code
 
-**Status:** `COMPLETED, NOT MERGED, NOT DEPLOYED (ACCEPTED 2026-08-25)`
+**Status:** `COMPLETED — ON main VIA LATER MERGES — STAGING API DEPLOYED FOR IDENTITY ONLY (ACCEPTED 2026-08-25)`
 **Source:** `docs/staging-readiness-v1/ACCEPTANCE-SLICE-00.md`; planning
-checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`
+checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`; D-023; PR #2
 
-Isolated API safety code accepted. No Railway, Neon, Clerk, Vercel,
-or Shopify resources created. Convex is out of architecture (D-024), not
-a later staging item. Deployment and schema apply remain blocked. Cloud
-provision needs a later named unlock.
+Isolated API safety code accepted and later merged. Staging currently
+runs the identity kernel only (D-025). Production remains undeployed.
+Convex is out of architecture (D-024), not a later staging item. Inventory
+schema, worker, Shopify, and notifications are not unlocked.
+
+## frontend-recovery-f1
+
+**Status:** `QUEUED — PLANNING ALLOWED, IMPLEMENTATION BLOCKED ON F0 EXIT`
+**Source:** `PLAN.md` F1; D-026
+
+Inventory, recover, and redesign current plus preserved legacy UI after
+the backend-foundation exit gate. Do not bulk-copy a dirty legacy tree
+over `main`. Do not move Python logic into React or revive Convex.
+
+## master-plan-reconciliation
+
+**Status:** `PROPOSED — DOCS ONLY, AWAITING ACCEPTANCE`
+**Source:** D-026; `PLAN.md`; `AGENTS.md`
+
+Documentation alignment of the master plan and mutable agent context.
+Does not unlock slice-02, production, payments, Watch, Web Push, worker,
+or Shopify.
 
 ## backend-notification-integration-v1
 
