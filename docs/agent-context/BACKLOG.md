@@ -2,19 +2,24 @@
 
 ## card-resolution-core-v1
 
-**Status:** QUEUED — PLANNING ALLOWED, BUILD BLOCKED
-**Entry gate:** named human implementation unlock. Notification backend
-overlap is closed (D-021). Frontend notification settings, service worker,
-and live Web Push remain separate gates.
+**Status:** COMPLETED — NOT MERGED — NOT DEPLOYED — FEATURE OFF
+**Entry gate:** named unlock `intake-abstention-local-v0` was used.
+Local slice accepted as D-034. Merge, staging/production schema, and flag
+enablement remain blocked. Notification backend overlap is closed (D-021).
+Frontend notification settings, service worker, and live Web Push remain
+separate gates.
 
 ### Planned slices
 
-1. Workflow state and audit schema with `shop_id` and idempotency constraints.
-2. Versioned deterministic local candidate scoring with component evidence.
-3. State-transition service and reconciliation accounting.
-4. Cached, budgeted, disabled-by-default JustTCG adapter.
-5. Human-review API and queue UI.
-6. Transactional staging/inventory promotion after separate acceptance evidence.
+0. **D-033 `identity-score-v0` frozen** at `671f663`.
+1. Local authenticated intake/abstain/reject **accepted locally** (D-034).
+   Not merged. Not deployed. Feature off.
+2. Workflow state and audit schema with `shop_id` and idempotency constraints.
+3. Versioned deterministic local candidate scoring with component evidence.
+4. State-transition service and reconciliation accounting.
+5. Cached, budgeted, disabled-by-default JustTCG adapter.
+6. Human-review API and queue UI.
+7. Transactional staging/inventory promotion after separate acceptance evidence.
 
 ### Exit evidence
 
@@ -78,11 +83,13 @@ Product-direction order from the strategy file, unchanged:
 6. Deterministic Portfolio/Market Watch.
 7. Governed advisory agents and outcome evaluation.
 
-Current operational sequence is PLAN.md F0 then F1 (D-026): staging
-identity (accepted) → inventory schema rehearsal (proposed) → inventory
-truth staging proof → card-resolution core → notification staging
-mechanics → minimum security/ops; then frontend recovery. This overlay
-does not rewrite the strategy file or unlock implementation.
+Current operational sequence is PLAN.md F0 then F1 (D-026, D-028, D-029):
+staging identity (accepted) → inventory schema (applied) → inventory
+read smoke (accepted) → proposed card-resolution intake/abstention
+(planning) → inventory-truth staging proof (later write unlock) →
+notification staging mechanics → minimum security/ops; then frontend
+recovery. This overlay does not rewrite the strategy file or unlock
+implementation.
 
 ### Reuse gate
 
@@ -155,21 +162,36 @@ payments, and Watch remain outside this slice.
 **Status:** `COMPLETED, DEPLOYED TO STAGING ONLY (ACCEPTED 2026-08-26)`
 **Source:** `docs/staging-readiness-v1/ACCEPTANCE-SLICE-01.md`; D-025
 
-Identity kernel on staging Neon (`shops`, `shop_members` only). Railway
-deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238`. Clerk identity smoke passed
-for two synthetic shops. Production remains undeployed. Inventory schema
-rehearsal is **not** unlocked.
+Identity kernel on staging Neon. Railway deploy
+`17aeb85f-053f-4e5a-8d68-6d040d03c238`. Clerk identity smoke passed for two
+synthetic shops. Production remains undeployed. Inventory schema later
+applied under D-028.
 
 ## staging-readiness-v1 / slice-02-inventory-schema-rehearsal
 
-**Status:** `LOCAL IMPLEMENTATION COMPLETE — DRAFT PR AWAITING ACCEPTANCE`
-**Source:** D-027; `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`;
-`docs/staging-readiness-v1/DIRECTIVE-SLICE-02-IMPLEMENTATION.md`
+**Status:** `COMPLETED, APPLIED TO STAGING ONLY (ACCEPTED 2026-08-27)`
+**Source:** D-027; D-028; `docs/staging-readiness-v1/ACCEPTANCE-SLICE-02.md`;
+PR #12 merged as `d49eca9fc31298847bd07abf42347ab691b4f974`
 
-Owner locked the table set to `inventory_item`, `purchase_record`, and
-`sale`, then inventory-truth tables. Local PostgreSQL 16 implementation
-is approved. Neon stays locked. API SELECT only. Do not enable inventory
-routes. Do not apply hosted schema.
+Staging Neon has 13 tables: identity plus three live parents and eight
+truth tables. API SELECT only. Inventory tables empty. Routes remain off.
+
+## staging-readiness-v1 / slice-03-inventory-readonly-search
+
+**Status:** `COMPLETED, STAGING ONLY (ACCEPTED 2026-08-27)`
+**Source:** D-029; `docs/staging-readiness-v1/ACCEPTANCE-SLICE-03.md`
+
+Authenticated empty-table search accepted on staging. CSV quantity 503.
+PATCH, checkout, and intake write guards were not fully proven and remain
+future write-enablement gates. Do not seed to finish them.
+
+## card-resolution-core-v1 / slice-01-intake-abstention
+
+**Status:** `PLANNING APPROVED (D-030) — IMPLEMENTATION LOCKED`
+**Source:** `docs/card-resolution-workflow/PLAN-SLICE-01-INTAKE-ABSTENTION.md`; D-030; D-031; `SCORING-POLICY-INTAKE-ABSTENTION.md`
+
+Smallest remaining F0 exit-gate path: local shop-scoped accept/abstain/reject
+without JustTCG, Pokemon TCG API, inventory writes, or staging DDL.
 
 ## staging-readiness-v1 / slice-00-isolated-api-code
 
@@ -178,9 +200,9 @@ routes. Do not apply hosted schema.
 checkpoint `131bc1eed01f3e9b732e41cde039de6c15cea707`; D-023; PR #2
 
 Isolated API safety code accepted and later merged. Staging currently
-runs the identity kernel only (D-025). Production remains undeployed.
-Convex is out of architecture (D-024), not a later staging item. Inventory
-schema, worker, Shopify, and notifications are not unlocked.
+runs the identity kernel (D-025) plus inventory schema (D-028). Production
+remains undeployed. Convex is out of architecture (D-024). Inventory
+routes, worker, Shopify, and notifications remain off.
 
 ## frontend-recovery-f1
 
@@ -197,7 +219,8 @@ over `main`. Do not move Python logic into React or revive Convex.
 **Source:** D-026; `PLAN.md`; `AGENTS.md`
 
 Documentation alignment of the master plan and mutable agent context.
-Does not unlock slice-02, production, payments, Watch, Web Push, worker,
+Slice-02 schema apply later accepted as D-028. This item still does not
+unlock inventory routes, production, payments, Watch, Web Push, worker,
 or Shopify.
 
 ## backend-notification-integration-v1

@@ -1,0 +1,35 @@
+{
+  "contract_id": "STASHTAB-CARD-RESOLUTION-001",
+  "contract_version": "1.0.0",
+  "policy_id": "identity-score-v0",
+  "freeze_status": "FROZEN",
+  "freeze_timestamp": "2026-08-27T06:20:00Z",
+  "authority": "CONTRACT.md section 16; sections 1, 5, 6, 7, 8, 13.1, 15",
+  "algorithm": "SHA-256",
+  "canonical_bytes": "git-lf-text-bytes",
+  "human_vote": "APPROVE",
+  "does_not_amend_contract": true,
+  "implementation_unlocked": false,
+  "files": [
+    {
+      "path": "docs/card-resolution-workflow/CONTRACT.md",
+      "sha256": "4bbc8651b42e5807591d1f6d40e4030afb1231de2a760795228c457c2d5edf89"
+    },
+    {
+      "path": "docs/card-resolution-workflow/SCORING-POLICY-INTAKE-ABSTENTION.md",
+      "sha256": "da8d1f06b6e67e0d195dc8d45d8b161bde58e72b6c5f8bd7c5cc5c4c24e67efe"
+    },
+    {
+      "path": "docs/card-resolution-workflow/freezes/IDENTITY-SCORE-v0.md",
+      "sha256": "f815bca6916480e16b6bde0765987b379d54e6b8d9d104da1504aa4a81c736fe"
+    },
+    {
+      "path": "docs/card-resolution-workflow/reviews/DETERMINISTIC-ACCEPT-AUTHORITY-CHECK.md",
+      "sha256": "cd5fe94b81c392f9e9bb3c28cff5f4e870772b3c1076bf44ab83bda7893297ca"
+    },
+    {
+      "path": "docs/card-resolution-workflow/freezes/FREEZE-CHECK-IDENTITY-SCORE-v0.md",
+      "sha256": "a4e2a56942a98c45703ea70906790b8d410a2fdc4c9bd069940c4c535ec1b6e8"
+    }
+  ]
+}

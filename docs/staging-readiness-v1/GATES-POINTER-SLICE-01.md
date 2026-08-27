@@ -5,10 +5,12 @@ Frozen `GATES.md` is unchanged. This pointer records later owner evidence.
 **Identity + shop-isolation smoke:** **closed on staging** 2026-08-26.  
 Evidence: `ACCEPTANCE-SLICE-01.md`.
 
-Still open (unchanged from the freeze):
+Later evidence (does not rewrite this freeze): inventory live+truth schema
+apply closed on staging 2026-08-27. See `GATES-POINTER-SLICE-02.md` and
+`ACCEPTANCE-SLICE-02.md`.
 
-- Inventory-truth / notification schema rehearsal and migrator apply
+Still open from this freeze's remaining list:
+
 - Worker, Shopify, notifications, Web Push
 - Production gates (`CSV-COST-FEEDBACK-GATE`, production recon, `PRODUCTION-VAPID-GATE`, second production owner)
-
-`slice-02-inventory-schema-rehearsal` remains a proposed checkpoint only. It does not close inventory migrator gates until a later named unlock.
+- Inventory *route* enablement (search planning only; not unlocked)

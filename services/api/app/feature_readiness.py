@@ -88,4 +88,22 @@ def prohibited_feature_reasons() -> list[str]:
         flags.append("debug")
     if settings.stashtab_allow_dev_identity and env in ("staging", "production"):
         flags.append("dev_identity_bypass")
+    if getattr(settings, "card_resolution_intake_enabled", False) and env in (
+        "staging",
+        "production",
+    ):
+        flags.append("card_resolution_intake")
     return flags
+
+
+def card_resolution_intake_available() -> bool:
+    if settings.parsed_app_env not in ("local", "test"):
+        return False
+    return bool(getattr(settings, "card_resolution_intake_enabled", False))
+
+
+def ensure_card_resolution_intake_ready(db: Session | None = None) -> None:
+    if not card_resolution_intake_available():
+        raise FeatureNotReadyError("card_resolution_intake")
+    if db is not None and not table_exists(db, "card_resolution_intake"):
+        raise FeatureNotReadyError("card_resolution_intake")

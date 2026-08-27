@@ -1,71 +1,51 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-08-26
-**Branch:** `feature/staging-inventory-schema-rehearsal` based on `main` `d81e7c81aa03d72c1a236c481638808e9d05d759`
+**Last verified:** 2026-08-27
+**Branch:** `feature/card-resolution-intake-abstention-local-v0` (from `main` `d49eca9`; freeze checkpoint `671f663`)
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
 
-- `STASHTAB-CARD-RESOLUTION-001` v1.0.0. AMENDMENT-1.1.0 unchanged
-  product-policy record. AMENDMENT-1.1.1 **FROZEN** 2026-08-24
-  (`freezes/FREEZE-1.1.1.json`). AMENDMENT-1.1.2 **FROZEN** 2026-08-24
-  (`docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2.json`).
-  Web Push disabled. Local 1.1.2 backend **ACCEPTED 2026-08-25**;
-  merged to `main` as `c3647a4`; not deployed to production.
-- `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — FROZEN 2026-08-24
-  (AMENDMENT-1.2.0 applied; hashes in `freezes/FREEZE-1.2.0.json`).
-  Slices 01–03 accepted and included in `c3647a4`; not deployed to production.
+- `STASHTAB-CARD-RESOLUTION-001` v1.0.0. AMENDMENT-1.1.1 and 1.1.2 frozen.
+  Web Push off. Local 1.1.2 backend on `main` as `c3647a4`; not in production.
+- `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — frozen. Slices 01–03 on `main`
+  via `c3647a4`. Staging schema applied 2026-08-27 (D-028). Not production.
 
 ## Current phase
 
 `backend-foundation / staging-readiness-v1` (**PLAN.md F0**)
-**Slice-01 identity schema and identity smoke: COMPLETED, DEPLOYED TO STAGING ONLY (D-025).**
-Neon application tables: `shops`, `shop_members` only. Two synthetic shops
-with two distinct Clerk owners. Identity smoke passed (own 200 / other 403
-both users; duplicate membership 409; anonymous and spoofed headers
-rejected; duplicate slug rejected; atomic shop+owner; health/ready 200).
-No Shopify, inventory, notifications, worker, Web Push, payments, or
-production activity. Convex is out of architecture (D-024).
+**Slice-01 identity: COMPLETED, STAGING ONLY (D-025).**
+**Slice-02 inventory schema: COMPLETED, APPLIED TO STAGING ONLY (D-028).**
+**Slice-03 inventory read smoke: COMPLETED, STAGING ONLY (D-029).**
+**Card-resolution local intake/abstention: COMPLETED — NOT MERGED — NOT
+DEPLOYED — FEATURE OFF (D-034).**
+Exact 13 staging tables. Inventory empty. API SELECT only; INSERT denied.
+Writes, worker, Shopify, notifications, Watch remain off.
 
-Production schema apply remains blocked. Slice-00 isolated API code is
-on `main` via later merges; staging is the only live deploy.
-Master plan and agent instructions were reconciled on this main (D-026).
-Slice-02 inventory schema rehearsal planning is **closed** under D-027.
-Local implementation is on `feature/staging-inventory-schema-rehearsal`:
-explicit live parents `inventory_item`, `purchase_record`, `sale`, then
-committed truth migrator; disposable PostgreSQL 16 proofs passed; API
-SELECT only. Neon, hosted apply, and inventory routes stay locked.
+Production schema apply remains blocked. Convex is out (D-024).
 
 ## Approved boundaries
 
 - Python/FastAPI owns business logic; tenant data uses `shop_id`.
 - Identity: signed token + membership. Shop header is an untrusted hint.
-- Local identity bypass only when `APP_ENV` is `local` or `test` and
-  `STASHTAB_ALLOW_DEV_IDENTITY` is set.
-- Partner Python lives in `vendor/mimir-partner/`; inspect and test it,
-  do not copy blindly or rewrite it in TypeScript.
-- Existing and legacy frontend work is preserved until the F0 exit gate.
-- Humans approve production writes, contract changes, Web Push, payments,
-  Watch, inventory-truth unlock, and later staging slices.
+- Partner Python is `vendor/mimir-partner/`; inspect, do not copy blindly.
+- Humans approve writes, Web Push, payments, Watch, and later slices.
 
 ## Active gates
 
-1. Identity smoke on staging: **closed** (D-025).
-2. Production schema apply still blocked (migrator role, recon, human
-   approval, CSV cost feedback, production VAPID).
-3. `card-resolution-core-v1` build blocked.
-4. `security-assurance-v1` implementation blocked.
-5. Worker, Shopify, notifications, Web Push remain off on staging.
-6. F1 frontend recovery blocked until the PLAN.md F0 exit gate is recorded.
+1. Identity smoke: **closed** (D-025).
+2. Inventory schema on staging: **closed** (D-028).
+3. Inventory read smoke: **closed** (D-029). Writes still off.
+4. Production schema apply blocked.
+5. Local card-resolution intake/abstention: **accepted locally** (D-034).
+   Not merged. Not deployed. Feature off. Staging/production remain off.
+6. F1 frontend recovery blocked until the F0 exit gate.
 
 ## Next queued phases
 
-1. **Local implementation complete, hosted apply locked:**
-   `staging-readiness-v1 / slice-02-inventory-schema-rehearsal` (D-027).
-   Draft PR against `main` for acceptance. Neon locked.
-2. Remaining F0 items after that named unlock: inventory-truth staging proof,
-   card-resolution core, notification staging mechanics, minimum security/ops.
-3. F1 frontend recovery after the F0 exit gate. Not started.
-4. Remaining frontend notification settings / production gates.
-5. `card-resolution-core-v1` — planning allowed, build blocked.
+1. Draft PR review for the local intake/abstention branch. Merge only after
+   a separate owner instruction.
+2. Later F0: inventory-truth staging proof (write unlock), notification
+   staging mechanics, minimum security/ops.
+3. F1 frontend recovery after the F0 exit gate.
