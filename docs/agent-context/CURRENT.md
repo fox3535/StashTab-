@@ -2,7 +2,7 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-26
-**Branch:** `main` `d81e7c81aa03d72c1a236c481638808e9d05d759`
+**Branch:** `feature/staging-inventory-schema-rehearsal` based on `main` `d81e7c81aa03d72c1a236c481638808e9d05d759`
 **Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
 
 ## Frozen contracts
@@ -32,10 +32,10 @@ Production schema apply remains blocked. Slice-00 isolated API code is
 on `main` via later merges; staging is the only live deploy.
 Master plan and agent instructions were reconciled on this main (D-026).
 Slice-02 inventory schema rehearsal planning is **closed** under D-027.
-Local implementation of `DIRECTIVE-SLICE-02-IMPLEMENTATION.md` is approved:
-live parents `inventory_item`, `purchase_record`, `sale` only, then truth
-tables; disposable PostgreSQL 16; API SELECT only. Neon and inventory
-routes stay locked.
+Local implementation is on `feature/staging-inventory-schema-rehearsal`:
+explicit live parents `inventory_item`, `purchase_record`, `sale`, then
+committed truth migrator; disposable PostgreSQL 16 proofs passed; API
+SELECT only. Neon, hosted apply, and inventory routes stay locked.
 
 ## Approved boundaries
 
@@ -61,10 +61,9 @@ routes stay locked.
 
 ## Next queued phases
 
-1. **Local implementation approved, hosted apply locked:**
-   `staging-readiness-v1 / slice-02-inventory-schema-rehearsal` (D-027;
-   `DIRECTIVE-SLICE-02-IMPLEMENTATION.md`). Live parents then truth tables
-   on disposable PostgreSQL 16. Neon locked.
+1. **Local implementation complete, hosted apply locked:**
+   `staging-readiness-v1 / slice-02-inventory-schema-rehearsal` (D-027).
+   Draft PR against `main` for acceptance. Neon locked.
 2. Remaining F0 items after that named unlock: inventory-truth staging proof,
    card-resolution core, notification staging mechanics, minimum security/ops.
 3. F1 frontend recovery after the F0 exit gate. Not started.

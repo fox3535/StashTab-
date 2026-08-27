@@ -162,7 +162,7 @@ rehearsal is **not** unlocked.
 
 ## staging-readiness-v1 / slice-02-inventory-schema-rehearsal
 
-**Status:** `APPROVED FOR LOCAL IMPLEMENTATION — HOSTED APPLY LOCKED`
+**Status:** `LOCAL IMPLEMENTATION COMPLETE — DRAFT PR AWAITING ACCEPTANCE`
 **Source:** D-027; `docs/staging-readiness-v1/PLAN-SLICE-02-INVENTORY-SCHEMA-REHEARSAL.md`;
 `docs/staging-readiness-v1/DIRECTIVE-SLICE-02-IMPLEMENTATION.md`
 
