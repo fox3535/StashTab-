@@ -4,55 +4,112 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { itemSellPrice, mimirApi, type InventoryItem } from "@/lib/mimir-api";
 import { classifyVendorError } from "@/lib/vendor-api-error";
 import { shouldApplyShopResult } from "@/lib/shop-session";
+import {
+  FIND_PAGE_SIZE,
+  classifyFindResponse,
+  findPageWindow,
+  offsetForPage,
+  pageAfterReset,
+} from "@/lib/pos-find";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { FeatureNotReady } from "@/components/vendor/feature-not-ready";
 
+/** Mobile/tablet-fallback card. Mirrors the table row data, never writes. */
+function InventoryCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
+  return (
+    <div
+      className={
+        exact
+          ? "rounded-lg border border-neon/50 bg-neon/5 p-4"
+          : "rounded-lg border border-border bg-gunmetal p-4"
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="min-w-0 flex-1 text-sm font-medium text-foreground">{item.name}</p>
+        {exact ? (
+          <Badge className="border-neon/40 bg-neon/10 font-mono text-neon">
+            Exact SKU match
+          </Badge>
+        ) : null}
+      </div>
+      <p className="mt-1 font-mono text-xs text-steel">
+        {item.sku} · {item.set_name ?? "—"}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-4 font-mono text-sm">
+        <span className="font-semibold text-neon">${itemSellPrice(item).toFixed(2)}</span>
+        <Badge variant="outline" className="border-border font-mono text-steel">
+          {item.stock} qty
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminInventoryPage() {
   const { selectedShop, reportApiError } = useVendorShop();
-  const [q, setQ] = useState("");
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<"idle" | "empty" | "results" | "error">("idle");
-  const [errorText, setErrorText] = useState("");
-  const [writeHint, setWriteHint] = useState(false);
   const shopId = selectedShop?.id ?? null;
   const shopIdRef = useRef(shopId);
-  const queryRef = useRef(q);
   shopIdRef.current = shopId;
-  queryRef.current = q;
+  const epochRef = useRef(0);
 
-  const load = useCallback(
-    async (signal?: AbortSignal) => {
+  const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [errorText, setErrorText] = useState("");
+  const [writeHint, setWriteHint] = useState(false);
+
+  const runSearch = useCallback(
+    async (q: string, targetPage: number, signal?: AbortSignal) => {
       if (!shopId) return;
+      // A new request supersedes every earlier one; its response must never
+      // land after a newer search or a shop switch.
+      epochRef.current += 1;
+      const myEpoch = epochRef.current;
       const requestedShopId = shopId;
       setLoading(true);
       setErrorText("");
       try {
-        const data = await mimirApi.searchInventory(queryRef.current, {
+        const data = await mimirApi.searchInventory(q, {
           shopId: requestedShopId,
-          limit: 100,
+          limit: FIND_PAGE_SIZE,
+          offset: offsetForPage(targetPage, FIND_PAGE_SIZE),
           signal,
         });
-        if (!shouldApplyShopResult(requestedShopId, shopIdRef.current) || signal?.aborted) return;
-        const rows = data.items ?? [];
-        setItems(rows);
-        setTotal(data.total);
-        setStatus(rows.length === 0 ? "empty" : "results");
+        if (
+          myEpoch !== epochRef.current ||
+          !shouldApplyShopResult(requestedShopId, shopIdRef.current) ||
+          signal?.aborted
+        ) {
+          return;
+        }
+        setItems(data.items ?? []);
+        setTotal(typeof data.total === "number" ? data.total : data.items?.length ?? 0);
+        setPage(targetPage);
+        setSubmittedQuery(q);
+        setLoaded(true);
       } catch (err) {
         if (signal?.aborted) return;
+        if (myEpoch !== epochRef.current) return;
         if (!shouldApplyShopResult(requestedShopId, shopIdRef.current)) return;
         const classified = classifyVendorError(err);
         reportApiError(err);
         setItems([]);
         setTotal(0);
-        setStatus("error");
         setErrorText(classified.message);
       } finally {
-        if (!signal?.aborted && shouldApplyShopResult(requestedShopId, shopIdRef.current)) {
+        if (
+          !signal?.aborted &&
+          myEpoch === epochRef.current &&
+          shouldApplyShopResult(requestedShopId, shopIdRef.current)
+        ) {
           setLoading(false);
         }
       }
@@ -60,17 +117,35 @@ export default function AdminInventoryPage() {
     [reportApiError, shopId]
   );
 
+  function submitSearch() {
+    // A new query always restarts pagination at page 0.
+    void runSearch(query, pageAfterReset());
+  }
+
   useEffect(() => {
+    // A shop switch resets to a fresh page-0 browse and aborts/discards any
+    // in-flight response from the previous shop.
     const controller = new AbortController();
+    setQuery("");
+    setSubmittedQuery("");
     setItems([]);
     setTotal(0);
+    setLoaded(false);
+    setPage(pageAfterReset());
     setErrorText("");
-    setStatus("idle");
     setWriteHint(false);
-    if (shopId) void load(controller.signal);
+    if (shopId) void runSearch("", pageAfterReset(), controller.signal);
     else setLoading(false);
     return () => controller.abort();
-  }, [shopId, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopId]);
+
+  const mode = classifyFindResponse(submittedQuery, total, items[0]?.sku);
+  const windowInfo = findPageWindow(total, offsetForPage(page, FIND_PAGE_SIZE), FIND_PAGE_SIZE);
+  const searched = submittedQuery.trim().length > 0;
+  const emptyText = searched
+    ? "No in-stock cards matched this search. This is an empty result, not a failed write."
+    : "No in-stock cards are listed for this shop yet. This is an empty result, not a failed write.";
 
   return (
     <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6">
@@ -80,11 +155,21 @@ export default function AdminInventoryPage() {
             Inventory
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-steel">
-            Read-only search for {selectedShop?.name}. Edits, labels, and imports are not ready.
+            Read-only browse and search for {selectedShop?.name}. Edits, labels, and imports are
+            not ready.
           </p>
         </div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel">
-          <span className="text-neon">{total}</span> in-stock rows
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel" role="status">
+          {errorText ? (
+            <span>total unavailable</span>
+          ) : !loaded ? (
+            <span>counting…</span>
+          ) : (
+            <>
+              <span className="text-neon">{total}</span>{" "}
+              {searched ? (total === 1 ? "in-stock match" : "in-stock matches") : "in-stock rows"}
+            </>
+          )}
         </p>
       </div>
 
@@ -92,13 +177,13 @@ export default function AdminInventoryPage() {
         <Input
           placeholder="Search name, SKU, or set…"
           className="min-h-11 border-border bg-surface font-mono text-sm focus-visible:border-neon"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void load()}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submitSearch()}
           aria-label="Search inventory"
         />
         <Button
-          onClick={() => void load()}
+          onClick={submitSearch}
           className="min-h-11 bg-neon font-display font-bold text-white hover:bg-neon/90"
           disabled={loading}
         >
@@ -110,61 +195,139 @@ export default function AdminInventoryPage() {
       <div aria-live="polite" className="sr-only">
         {loading
           ? "Loading inventory"
-          : status === "empty"
-            ? "No in-stock cards matched"
-            : `${items.length} results`}
+          : errorText
+            ? errorText
+            : `${items.length} rows on this page, ${total} total`}
       </div>
 
-      {status === "error" ? (
-        <p className="mb-4 rounded-md border border-border bg-gunmetal p-3 text-sm text-steel" role="alert">
+      {errorText ? (
+        <p
+          className="mb-4 rounded-md border border-border bg-gunmetal p-3 text-sm text-steel"
+          role="alert"
+        >
           {errorText}
         </p>
       ) : null}
 
       {loading ? (
-        <div className="h-40 animate-pulse rounded-lg bg-gunmetal motion-reduce:animate-none" role="status">
+        <div
+          className="h-40 animate-pulse rounded-lg bg-gunmetal p-3 font-mono text-sm text-steel motion-reduce:animate-none"
+          role="status"
+        >
           Loading inventory…
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-gunmetal">
-                <th className="p-3 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-steel">SKU</th>
-                <th className="p-3 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Name</th>
-                <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Stock</th>
-                <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.sku} className="border-b border-border/60">
-                  <td className="p-3 font-mono text-xs text-steel">{item.sku}</td>
-                  <td className="p-3 text-foreground">{item.name}</td>
-                  <td className="p-3 text-right font-mono">{item.stock}</td>
-                  <td className="p-3 text-right font-mono text-neon">${itemSellPrice(item).toFixed(2)}</td>
+        <>
+          {/* Desktop/tablet table */}
+          <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-gunmetal">
+                  <th className="p-3 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-steel">SKU</th>
+                  <th className="p-3 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Name</th>
+                  <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Stock</th>
+                  <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Price</th>
                 </tr>
-              ))}
-              {status === "empty" ? (
-                <tr>
-                  <td colSpan={4} className="p-10 text-center font-mono text-sm text-steel">
-                    No in-stock cards matched this search. This is an empty result, not a failed write.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const exact = mode === "exact" && item.sku === items[0]?.sku;
+                  return (
+                    <tr
+                      key={item.sku}
+                      className={
+                        exact
+                          ? "border-b border-border/60 bg-neon/5"
+                          : "border-b border-border/60"
+                      }
+                    >
+                      <td className="p-3 font-mono text-xs text-steel">
+                        <span className="flex flex-wrap items-center gap-2">
+                          {item.sku}
+                          {exact ? (
+                            <Badge className="border-neon/40 bg-neon/10 font-mono text-neon">
+                              Exact SKU match
+                            </Badge>
+                          ) : null}
+                        </span>
+                      </td>
+                      <td className="p-3 text-foreground">{item.name}</td>
+                      <td className="p-3 text-right font-mono">{item.stock}</td>
+                      <td className="p-3 text-right font-mono text-neon">
+                        ${itemSellPrice(item).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {items.length === 0 && !errorText ? (
+                  <tr>
+                    <td colSpan={4} className="p-10 text-center font-mono text-sm text-steel">
+                      {emptyText}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <section className="space-y-2 md:hidden" aria-label="Inventory rows">
+            {items.map((item) => (
+              <InventoryCard
+                key={item.sku}
+                item={item}
+                exact={mode === "exact" && item.sku === items[0]?.sku}
+              />
+            ))}
+            {items.length === 0 && !errorText ? (
+              <p className="py-8 text-center font-mono text-sm text-steel">{emptyText}</p>
+            ) : null}
+          </section>
+        </>
       )}
 
+      {!loading && !errorText && total > 0 ? (
+        <nav aria-label="Result pages" className="mt-4 flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            className="min-h-11 border-border font-mono text-sm"
+            onClick={() => void runSearch(submittedQuery, page - 1)}
+            disabled={!windowInfo.hasPrev}
+            aria-label="Previous results page"
+          >
+            ← Previous
+          </Button>
+          <span className="font-mono text-sm text-steel">
+            {windowInfo.from}–{windowInfo.to} of {total}
+          </span>
+          <Button
+            variant="outline"
+            className="min-h-11 border-border font-mono text-sm"
+            onClick={() => void runSearch(submittedQuery, page + 1)}
+            disabled={!windowInfo.hasNext}
+            aria-label="Next results page"
+          >
+            Next →
+          </Button>
+          {windowInfo.endOfResults ? (
+            <span className="font-mono text-xs text-steel/80">End of results.</span>
+          ) : null}
+        </nav>
+      ) : null}
+
       <div className="mt-4">
-        <Button type="button" variant="outline" className="min-h-11" onClick={() => setWriteHint(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11"
+          onClick={() => setWriteHint(true)}
+        >
           Edit stock / print labels
         </Button>
         {writeHint ? (
           <FeatureNotReady
             title="Inventory writes are not ready"
-            detail="Stock edits, QR labels, resticker, and CSV quantity changes are deferred."
+            detail="Stock edits, adjustments, QR labels, resticker, CSV imports, intake, Shopify sync, notifications, payments, and Watch are deferred. This screen is read-only."
           />
         ) : null}
       </div>
