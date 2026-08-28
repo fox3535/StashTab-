@@ -630,7 +630,31 @@ stays public. No Convex/Svix and no backend contract change.
 
 Later staging-smoke gates, not local blockers: real Clerk membership
 loading, live staging inventory read, full authenticated-shell keyboard
-walkthrough.
+walkthrough. These gates were later closed by D-039.
+
+Evidence: `docs/frontend-recovery-v1/ACCEPTANCE-SLICE-01-AUTHENTICATED-SHELL-READ-INVENTORY.md`.
+
+## D-039 — F1 slice-01 accepted: merged and staging smoke passed
+
+Approved by named human owner 2026-08-27.
+
+`frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`
+is **ACCEPTED — MERGED ON `main` — STAGING SMOKE PASSED — FRONTEND NOT
+DEPLOYED**.
+
+Recorded facts: frontend code merged on `main` `3c3ca33`; staging API
+deploy `9c47945a`; frontend tested locally at `http://localhost:3001`,
+not deployed; real Clerk membership loaded; Smoke Shop B auto-selected;
+read-only inventory returned an honest empty state; sign-out and
+re-sign-in passed; keyboard and mobile checks passed; deferred features
+remained locked; no schema or data writes occurred.
+
+Bare `/admin/shopify` 404 is recorded as a non-blocking UX backlog item
+(no visible navigation links to it); it becomes an honest Not Ready route
+in a later navigation/deferred-routes cleanup.
+
+This does not approve frontend deploy, writes, Shopify, notifications,
+payments, Watch, or production.
 
 Evidence: `docs/frontend-recovery-v1/ACCEPTANCE-SLICE-01-AUTHENTICATED-SHELL-READ-INVENTORY.md`.
 

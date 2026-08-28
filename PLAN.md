@@ -10,8 +10,9 @@
 > D-034), feature off, not deployed; F0 exit passed for frontend recovery
 > (D-035); F1 slice-01 (authenticated shell + read-only inventory) approved
 > (D-036); my-shop memberships read merged on `main` via PR #15 (D-037),
-> not deployed. F1 slice-01 shell + read-only inventory completed locally
-> (D-038), not merged, not deployed; live staging smoke pending.
+> hosted on staging via deploy `9c47945a`. F1 slice-01 shell + read-only
+> inventory merged on `main` `3c3ca33` and accepted after a passed staging
+> smoke (D-038, D-039); frontend not deployed.
 > Writes, notifications, Shopify, payments, Watch, and Web Push remain
 > off. This is not production approval.
 >
