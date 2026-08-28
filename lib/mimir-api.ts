@@ -192,11 +192,12 @@ export const mimirApi = {
 
   searchInventory: (
     q: string,
-    opts: RequestOptions & { game?: string; limit?: number }
+    opts: RequestOptions & { game?: string; limit?: number; offset?: number }
   ) => {
     const params = new URLSearchParams({ q });
     if (opts.game) params.set("game", opts.game);
     if (opts.limit) params.set("limit", String(opts.limit));
+    if (opts.offset) params.set("offset", String(opts.offset));
     return mimirFetch<{ items: InventoryItem[]; total: number }>(
       `/inventory/search?${params}`,
       opts
