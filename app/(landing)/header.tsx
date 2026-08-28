@@ -139,8 +139,8 @@ export const HeroHeader = () => {
                                                 size="sm"
                                                 className="border border-neon/40 bg-neon/10 text-neon hover:bg-neon/20 hover:shadow-[0_0_18px_rgba(139,92,246,0.35)]"
                                             >
-                                                <Link href="/pos">
-                                                    <span>Open POS</span>
+                                                <Link href="/pos/find">
+                                                    <span>Open POS Find</span>
                                                 </Link>
                                             </Button>
                                             <Button asChild size="sm" variant="outline">
