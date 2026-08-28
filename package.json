@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:api-auth": "node --test scripts/test_protected_api_headers.mjs",
     "test:slice01": "node --test scripts/test_protected_api_headers.mjs scripts/test_shop_session.mjs",
-    "test:landing-billing": "node --test scripts/test_landing_billing.mjs"
+    "test:landing-billing": "node --test scripts/test_landing_billing.mjs",
+    "test:slice02": "node --test scripts/test_dashboard_cleanup.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",
