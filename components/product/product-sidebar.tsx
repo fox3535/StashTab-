@@ -55,7 +55,7 @@ const showFloorNav: NavItem[] = [
 
 const backOfficeNav: NavItem[] = [
   { href: "/admin/inventory", label: "Inventory", icon: Package },
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, locked: true },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/intake", label: "Intake", icon: PlusCircle, locked: true },
   { href: "/admin/staging", label: "Staging", icon: Layers, locked: true },
   { href: "/admin/resticker", label: "Resticker", icon: Sticker, locked: true },

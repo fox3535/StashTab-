@@ -9,12 +9,14 @@ const LOCKED_PREFIXES = [
   "/admin/staging",
   "/admin/resticker",
   "/admin/import",
-  "/admin/shopify",
+  // Bare /admin/shopify renders its own honest FeatureNotReady page;
+  // only the functional subroutes stay gate-locked.
+  "/admin/shopify/sync",
+  "/admin/shopify/review",
   "/admin/settings",
   "/admin/reconciliation",
   "/admin/paperweight",
   "/admin/reports",
-  "/admin/dashboard",
   "/pos/pulls",
   "/pos/stats",
 ];
