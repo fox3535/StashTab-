@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { mimirApi } from "@/lib/mimir-api";
 import { classifyVendorError } from "@/lib/vendor-api-error";
 import { parseMembershipsPayload, clearShopPreference, writeShopPreference } from "@/lib/shop-session";
+import { VendorStatePanel } from "@/components/vendor/vendor-patterns";
 import {
   decideOnboardingScreen,
   messageForCreateFailure,
@@ -142,13 +143,16 @@ export default function OnboardingPage() {
         ) : null}
 
         {screen === "session" ? (
-          <section className="mt-6" role="alert">
-            <h2 className="font-display text-lg font-semibold text-foreground">Session expired</h2>
-            <p className="mt-2 text-sm text-steel">Session expired. Sign in again.</p>
+          <VendorStatePanel
+            role="alert"
+            className="m-0 mt-6"
+            title="Session expired"
+            detail="Session expired. Sign in again."
+          >
             <div className="mt-4">
               <OnboardingSignOut />
             </div>
-          </section>
+          </VendorStatePanel>
         ) : null}
 
         {screen === "enter" ? (
@@ -158,11 +162,12 @@ export default function OnboardingPage() {
         ) : null}
 
         {screen === "error" ? (
-          <section className="mt-6" role="alert">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Shop access unavailable
-            </h2>
-            <p className="mt-2 text-sm text-steel">{membershipsError}</p>
+          <VendorStatePanel
+            role="alert"
+            className="m-0 mt-6"
+            title="Shop access unavailable"
+            detail={membershipsError}
+          >
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -174,7 +179,7 @@ export default function OnboardingPage() {
               </Button>
               <OnboardingSignOut />
             </div>
-          </section>
+          </VendorStatePanel>
         ) : null}
 
         {screen === "form" ? (

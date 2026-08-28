@@ -17,6 +17,12 @@ import {
   pageAfterReset,
 } from "@/lib/pos-find";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
+import {
+  BrowsePagination,
+  PageHeader,
+  VendorErrorBanner,
+  VendorLoadingBlock,
+} from "@/components/vendor/vendor-patterns";
 import { CardThumbnail } from "../components/card-thumbnail";
 
 function ResultCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
@@ -131,12 +137,10 @@ function FindInner() {
 
   return (
     <div className="flex w-full max-w-full flex-col gap-4 overflow-x-hidden p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-6 lg:p-8">
-      <header>
-        <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Find</h1>
-        <p className="text-sm text-steel">
-          Read-only booth lookup for {selectedShop?.name}. Selling is not ready.
-        </p>
-      </header>
+      <PageHeader
+        title="Find"
+        subtitle={`Read-only booth lookup for ${selectedShop?.name}. Selling is not ready.`}
+      />
 
       <div className="flex gap-2">
         <Input
@@ -157,11 +161,7 @@ function FindInner() {
         </Button>
       </div>
 
-      {errorText ? (
-        <p className="rounded-md border border-border bg-gunmetal p-3 text-sm text-steel" role="alert">
-          {errorText}
-        </p>
-      ) : null}
+      {errorText ? <VendorErrorBanner message={errorText} /> : null}
 
       <div aria-live="polite" className="sr-only">
         {loading ? "Searching" : `${results.length} results on this page`}
@@ -174,9 +174,7 @@ function FindInner() {
       ) : null}
 
       {loading ? (
-        <div className="h-24 animate-pulse rounded-lg bg-gunmetal motion-reduce:animate-none" role="status">
-          Searching…
-        </div>
+        <VendorLoadingBlock label="Searching…" className="h-24 p-3 font-mono text-sm text-steel" />
       ) : (
         <section className="space-y-2" aria-label="Search results">
           {mode === "exact" && results[0] ? (
@@ -193,32 +191,14 @@ function FindInner() {
       )}
 
       {hasSearched && mode === "list" && total > 0 && !loading ? (
-        <nav aria-label="Result pages" className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            className="min-h-12 border-border font-mono text-sm"
-            onClick={() => void runSearch(submittedQuery, page - 1)}
-            disabled={!windowInfo.hasPrev || loading}
-            aria-label="Previous results page"
-          >
-            ← Previous
-          </Button>
-          <span className="font-mono text-sm text-steel">
-            {windowInfo.from}–{windowInfo.to} of {total}
-          </span>
-          <Button
-            variant="outline"
-            className="min-h-12 border-border font-mono text-sm"
-            onClick={() => void runSearch(submittedQuery, page + 1)}
-            disabled={!windowInfo.hasNext || loading}
-            aria-label="Next results page"
-          >
-            Next →
-          </Button>
-          {windowInfo.endOfResults ? (
-            <span className="font-mono text-xs text-steel/80">End of results.</span>
-          ) : null}
-        </nav>
+        <BrowsePagination
+          windowInfo={windowInfo}
+          total={total}
+          onPrev={() => void runSearch(submittedQuery, page - 1)}
+          onNext={() => void runSearch(submittedQuery, page + 1)}
+          disabled={loading}
+          buttonClassName="min-h-12"
+        />
       ) : null}
     </div>
   );

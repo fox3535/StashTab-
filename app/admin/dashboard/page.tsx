@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Package, Search } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
+import { PageHeader } from "@/components/vendor/vendor-patterns";
 
 type ReadyCard = {
   href: string;
@@ -45,15 +46,11 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6">
-      <header className="mb-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Dashboard
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-steel">
-          Vendor home for {selectedShop?.name}. Live tools are read-only;
-          deferred tools explain themselves. Metrics arrive with their own slices.
-        </p>
-      </header>
+      <PageHeader
+        className="mb-6"
+        title="Dashboard"
+        subtitle={`Vendor home for ${selectedShop?.name}. Live tools are read-only; deferred tools explain themselves. Metrics arrive with their own slices.`}
+      />
 
       <section aria-label="Ready tools" className="mb-8">
         <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-steel/70">

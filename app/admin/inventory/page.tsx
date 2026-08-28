@@ -17,6 +17,12 @@ import {
 } from "@/lib/pos-find";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { FeatureNotReady } from "@/components/vendor/feature-not-ready";
+import {
+  BrowsePagination,
+  PageHeader,
+  VendorErrorBanner,
+  VendorLoadingBlock,
+} from "@/components/vendor/vendor-patterns";
 
 /** Mobile/tablet-fallback card. Mirrors the table row data, never writes. */
 function InventoryCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
@@ -149,29 +155,25 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-            Inventory
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-steel">
-            Read-only browse and search for {selectedShop?.name}. Edits, labels, and imports are
-            not ready.
+      <PageHeader
+        className="mb-5"
+        title="Inventory"
+        subtitle={`Read-only browse and search for ${selectedShop?.name}. Edits, labels, and imports are not ready.`}
+        trailing={
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel" role="status">
+            {errorText ? (
+              <span>total unavailable</span>
+            ) : !loaded ? (
+              <span>counting…</span>
+            ) : (
+              <>
+                <span className="text-neon">{total}</span>{" "}
+                {searched ? (total === 1 ? "in-stock match" : "in-stock matches") : "in-stock rows"}
+              </>
+            )}
           </p>
-        </div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel" role="status">
-          {errorText ? (
-            <span>total unavailable</span>
-          ) : !loaded ? (
-            <span>counting…</span>
-          ) : (
-            <>
-              <span className="text-neon">{total}</span>{" "}
-              {searched ? (total === 1 ? "in-stock match" : "in-stock matches") : "in-stock rows"}
-            </>
-          )}
-        </p>
-      </div>
+        }
+      />
 
       <div className="mb-4 flex gap-2">
         <Input
@@ -200,22 +202,13 @@ export default function AdminInventoryPage() {
             : `${items.length} rows on this page, ${total} total`}
       </div>
 
-      {errorText ? (
-        <p
-          className="mb-4 rounded-md border border-border bg-gunmetal p-3 text-sm text-steel"
-          role="alert"
-        >
-          {errorText}
-        </p>
-      ) : null}
+      {errorText ? <VendorErrorBanner message={errorText} className="mb-4" /> : null}
 
       {loading ? (
-        <div
-          className="h-40 animate-pulse rounded-lg bg-gunmetal p-3 font-mono text-sm text-steel motion-reduce:animate-none"
-          role="status"
-        >
-          Loading inventory…
-        </div>
+        <VendorLoadingBlock
+          label="Loading inventory…"
+          className="h-40 p-3 font-mono text-sm text-steel"
+        />
       ) : (
         <>
           {/* Desktop/tablet table */}
@@ -287,32 +280,13 @@ export default function AdminInventoryPage() {
       )}
 
       {!loading && !errorText && total > 0 ? (
-        <nav aria-label="Result pages" className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            className="min-h-11 border-border font-mono text-sm"
-            onClick={() => void runSearch(submittedQuery, page - 1)}
-            disabled={!windowInfo.hasPrev}
-            aria-label="Previous results page"
-          >
-            ← Previous
-          </Button>
-          <span className="font-mono text-sm text-steel">
-            {windowInfo.from}–{windowInfo.to} of {total}
-          </span>
-          <Button
-            variant="outline"
-            className="min-h-11 border-border font-mono text-sm"
-            onClick={() => void runSearch(submittedQuery, page + 1)}
-            disabled={!windowInfo.hasNext}
-            aria-label="Next results page"
-          >
-            Next →
-          </Button>
-          {windowInfo.endOfResults ? (
-            <span className="font-mono text-xs text-steel/80">End of results.</span>
-          ) : null}
-        </nav>
+        <BrowsePagination
+          windowInfo={windowInfo}
+          total={total}
+          onPrev={() => void runSearch(submittedQuery, page - 1)}
+          onNext={() => void runSearch(submittedQuery, page + 1)}
+          className="mt-4"
+        />
       ) : null}
 
       <div className="mt-4">

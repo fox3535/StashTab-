@@ -8,6 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const posFindSrc = readFileSync(join(root, "lib/pos-find.ts"), "utf8");
 const pageSrc = readFileSync(join(root, "app/pos/find/page.tsx"), "utf8");
 const mimirSrc = readFileSync(join(root, "lib/mimir-api.ts"), "utf8");
+const patternsSrc = readFileSync(join(root, "components/vendor/vendor-patterns.tsx"), "utf8");
 const schemaSrc = readFileSync(join(root, "services/api/app/schemas.py"), "utf8");
 
 // --- Behavioural mirrors of lib/pos-find.ts (kept in lockstep by the
@@ -83,7 +84,8 @@ test("page boundaries track the honest total", () => {
   assert.equal(empty.from, 0);
   assert.equal(empty.hasNext, false);
   assert.equal(posFindSrc.includes("endOfResults: safeOffset + pageSize >= safeTotal"), true);
-  assert.equal(pageSrc.includes("End of results."), true);
+  assert.equal(patternsSrc.includes("End of results."), true);
+  assert.equal(pageSrc.includes("BrowsePagination"), true);
 });
 
 test("a new query or shop switch resets pagination to page 0", () => {
@@ -149,7 +151,8 @@ test("empty results stay an honest empty state, not an error", () => {
 
 test("errors surface classified states and clear results", () => {
   assert.equal(pageSrc.includes("classifyVendorError(err)"), true);
-  assert.equal(pageSrc.includes('role="alert"'), true);
+  assert.equal(patternsSrc.includes('role="alert"'), true);
+  assert.equal(pageSrc.includes("VendorErrorBanner"), true);
   assert.equal(pageSrc.includes("setTotal(0)"), true);
 });
 
