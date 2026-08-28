@@ -32,9 +32,9 @@ test("Clerk protection and redirect intent are preserved", () => {
 });
 
 test("onboarding success and skip enter the vendor dashboard, never locked /pos", () => {
-  assert.equal(onboardingSrc.includes('router.push("/admin/dashboard")'), true);
+  assert.equal(onboardingSrc.includes('router.replace("/admin/dashboard")'), true);
   assert.equal(onboardingSrc.includes('router.push("/pos")'), false);
-  assert.equal(onboardingSrc.includes("Finish & open dashboard"), true);
+  assert.equal(onboardingSrc.includes('href="/pos"'), false);
 });
 
 test("public landing stays public and its signed-in CTA avoids locked /pos", () => {
