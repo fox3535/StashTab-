@@ -1,8 +1,8 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-08-27
-**Branch:** `main` at `3c3ca33` (slice-01 PR #16 + landing billing fix PR #17 merged)
+**Last verified:** 2026-08-28
+**Branch:** `main` at `aaac4e4` (slice-06 PR #23 merged); `feature/f1-vendor-core-recovery-batch` in draft review
 **Staging API:** Railway deploy `9c47945a` of `main` (staging smoke passed, D-039)
 
 ## Frozen contracts
@@ -45,9 +45,13 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
 
 ## Next queued phases
 
-1. Frontend recovery continuation: next slice planning per
+1. Owner review of the F1 vendor-core batch draft PR
+   (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`): onboarding recovery,
+   vendor-core pattern consolidation, regression suite. Not merged,
+   not deployed.
+2. Frontend recovery continuation: next slice planning per
    `docs/frontend-recovery-v1/`; navigation/deferred-routes cleanup item for
    bare `/admin/shopify` 404 (non-blocking UX backlog).
-2. Later enablement, not F0: inventory write staging smoke, notification
+3. Later enablement, not F0: inventory write staging smoke, notification
    staging apply, production restore drill.
-3. Do not enable card-resolution, writes, or push without a named unlock.
+4. Do not enable card-resolution, writes, or push without a named unlock.

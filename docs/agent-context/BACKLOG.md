@@ -223,6 +223,13 @@ starter-route cleanup track is closed by slice-04
 `/dashboard/payment-gated` corrected, no remaining reachable link presents
 a locked route as operational.
 
+Slices 02–06 merged on `main` (slice-06 via PR #23, merge `aaac4e4`).
+The F1 vendor-core recovery batch (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`,
+branch `feature/f1-vendor-core-recovery-batch`, draft PR pending owner
+review) recovered `/onboarding` on accepted contracts only, consolidated
+duplicated vendor-core patterns, and added the vendor-core regression
+suite. Frontend still never deployed; writes stay visibly not-ready.
+
 ## master-plan-reconciliation
 
 **Status:** `PROPOSED — DOCS ONLY, AWAITING ACCEPTANCE`

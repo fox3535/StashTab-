@@ -4,7 +4,7 @@
 > current state in `docs/agent-context/CURRENT.md` and the relevant frozen
 > contract. Chat is for decisions; it is not durable project memory.
 >
-> **Last reconciled:** 2026-08-27 — staging identity accepted, Convex removed,
+> **Last reconciled:** 2026-08-28 — staging identity accepted, Convex removed,
 > inventory schema applied (D-028), inventory read smoke accepted (D-029);
 > card-resolution intake/abstention merged on `main` `6a266b1` (PR #13,
 > D-034), feature off, not deployed; F0 exit passed for frontend recovery
@@ -12,7 +12,10 @@
 > (D-036); my-shop memberships read merged on `main` via PR #15 (D-037),
 > hosted on staging via deploy `9c47945a`. F1 slice-01 shell + read-only
 > inventory merged on `main` `3c3ca33` and accepted after a passed staging
-> smoke (D-038, D-039); frontend not deployed.
+> smoke (D-038, D-039); frontend not deployed. Frontend-recovery slices
+> 02–06 merged on `main` (slice-06 via PR #23, merge `aaac4e4`); the F1
+> vendor-core recovery batch (onboarding recovery, vendor-core pattern
+> consolidation, regression suite) is in draft PR review, not merged.
 > Writes, notifications, Shopify, payments, Watch, and Web Push remain
 > off. This is not production approval.
 >
