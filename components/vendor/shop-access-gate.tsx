@@ -3,6 +3,7 @@
 import { SignOutButton } from "@/components/vendor/sign-out-button";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { LockedRouteGate } from "@/components/vendor/locked-route-gate";
+import { VendorStatePanel } from "@/components/vendor/vendor-patterns";
 
 export function ShopAccessGate({ children }: { children: React.ReactNode }) {
   const { shops, selectedShop, phase, message, selectShop } = useVendorShop();
@@ -18,46 +19,40 @@ export function ShopAccessGate({ children }: { children: React.ReactNode }) {
 
   if (phase === "session") {
     return (
-      <section className="m-4 rounded-lg border border-border bg-gunmetal p-6" role="alert">
-        <h2 className="font-display text-lg font-semibold">Session expired</h2>
-        <p className="mt-2 text-sm text-steel">{message || "Session expired. Sign in again."}</p>
+      <VendorStatePanel role="alert" title="Session expired" detail={message || "Session expired. Sign in again."}>
         <div className="mt-4">
           <SignOutButton />
         </div>
-      </section>
+      </VendorStatePanel>
     );
   }
 
   if (phase === "empty") {
     return (
-      <section className="m-4 rounded-lg border border-border bg-gunmetal p-6" role="status">
-        <h2 className="font-display text-lg font-semibold">No shop access</h2>
-        <p className="mt-2 text-sm text-steel">
-          Your account is signed in, but it is not a member of any shop.
-        </p>
+      <VendorStatePanel
+        title="No shop access"
+        detail="Your account is signed in, but it is not a member of any shop."
+      >
         <div className="mt-4">
           <SignOutButton />
         </div>
-      </section>
+      </VendorStatePanel>
     );
   }
 
   if (phase === "error") {
     return (
-      <section className="m-4 rounded-lg border border-border bg-gunmetal p-6" role="alert">
-        <h2 className="font-display text-lg font-semibold">Shop access unavailable</h2>
-        <p className="mt-2 text-sm text-steel">{message}</p>
+      <VendorStatePanel role="alert" title="Shop access unavailable" detail={message}>
         <div className="mt-4">
           <SignOutButton />
         </div>
-      </section>
+      </VendorStatePanel>
     );
   }
 
   if (phase === "choose") {
     return (
-      <section className="m-4 max-w-lg rounded-lg border border-border bg-gunmetal p-6">
-        <h2 className="font-display text-lg font-semibold">Choose a shop</h2>
+      <VendorStatePanel title="Choose a shop" className="max-w-lg">
         <p className="mt-2 text-sm text-steel" id="shop-select-help">
           {message || "Select a shop you are authorized to use."}
         </p>
@@ -85,7 +80,7 @@ export function ShopAccessGate({ children }: { children: React.ReactNode }) {
         <div className="mt-4">
           <SignOutButton />
         </div>
-      </section>
+      </VendorStatePanel>
     );
   }
 

@@ -10,6 +10,7 @@ const pageSrc = readFileSync(join(root, "app/admin/inventory/page.tsx"), "utf8")
 const layoutSrc = readFileSync(join(root, "app/admin/layout.tsx"), "utf8");
 const mimirSrc = readFileSync(join(root, "lib/mimir-api.ts"), "utf8");
 const vendorErrorSrc = readFileSync(join(root, "lib/vendor-api-error.ts"), "utf8");
+const patternsSrc = readFileSync(join(root, "components/vendor/vendor-patterns.tsx"), "utf8");
 const schemaSrc = readFileSync(join(root, "services/api/app/schemas.py"), "utf8");
 
 // --- Behavioural mirrors of lib/pos-find.ts (the shared slice-05 browse
@@ -102,10 +103,11 @@ test("page boundaries track the honest total", () => {
   const empty = findPageWindow(0, 0, FIND_PAGE_SIZE);
   assert.equal(empty.from, 0);
   assert.equal(empty.hasNext, false);
-  assert.equal(pageSrc.includes("End of results."), true);
-  assert.equal(pageSrc.includes("{windowInfo.from}–{windowInfo.to} of {total}"), true);
-  assert.equal(pageSrc.includes("disabled={!windowInfo.hasPrev}"), true);
-  assert.equal(pageSrc.includes("disabled={!windowInfo.hasNext}"), true);
+  assert.equal(patternsSrc.includes("End of results."), true);
+  assert.equal(patternsSrc.includes("{windowInfo.from}–{windowInfo.to} of {total}"), true);
+  assert.equal(patternsSrc.includes("disabled={!windowInfo.hasPrev || disabled}"), true);
+  assert.equal(patternsSrc.includes("disabled={!windowInfo.hasNext || disabled}"), true);
+  assert.equal(pageSrc.includes("BrowsePagination"), true);
 });
 
 test("a new query or shop switch resets pagination to page 0", () => {
@@ -169,7 +171,8 @@ test("loading, empty, and classified error states are present", () => {
   assert.equal(pageSrc.includes("Loading inventory…"), true);
   assert.equal(pageSrc.includes("This is an empty result, not a failed write."), true);
   assert.equal(pageSrc.includes("classifyVendorError(err)"), true);
-  assert.equal(pageSrc.includes('role="alert"'), true);
+  assert.equal(patternsSrc.includes('role="alert"'), true);
+  assert.equal(pageSrc.includes("VendorErrorBanner"), true);
   assert.equal(pageSrc.includes("setTotal(0)"), true);
   assert.equal(pageSrc.includes("reportApiError(err)"), true);
 });
