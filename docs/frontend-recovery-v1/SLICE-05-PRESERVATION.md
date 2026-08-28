@@ -17,10 +17,14 @@ already existed server-side.
 - Reset discipline: submitting a new query or switching shops restarts at
   page 0 and aborts/discards in-flight responses; an epoch counter rejects
   any response superseded by a newer search (`shouldApplyShopResult` kept).
-- Exact SKU/barcode fast path: when the contract returns `total=1` for a
-  case-insensitive exact SKU match, the card is rendered with an
-  "Exact SKU/barcode match" badge. Partial or ambiguous results remain the
-  normal list. USB barcode wedges work as keyboard input ending in Enter.
+- Exact SKU fast path: requires `total === 1` AND the normalized query
+  equal to the returned SKU; the card is rendered with an "Exact SKU
+  match" badge. The accepted response (`InventoryItemOut`) returns no
+  barcode field, so exact matching is SKU-only — verified, never
+  inferred. Scanned label values still reach the fast path because
+  labels encode the SKU, so a wedge scan equals SKU equality. Partial,
+  fuzzy, name, substring, or multi-result matches stay the normal list.
+  USB barcode wedges work as keyboard input ending in Enter.
 - States: loading, empty ("empty result, not a failed write"), error with
   classified session-expired / forbidden / feature-not-ready messages.
 - Read-only by construction: no checkout, sell, reserve, auto-select, or

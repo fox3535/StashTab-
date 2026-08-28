@@ -8,6 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const posFindSrc = readFileSync(join(root, "lib/pos-find.ts"), "utf8");
 const pageSrc = readFileSync(join(root, "app/pos/find/page.tsx"), "utf8");
 const mimirSrc = readFileSync(join(root, "lib/mimir-api.ts"), "utf8");
+const schemaSrc = readFileSync(join(root, "services/api/app/schemas.py"), "utf8");
 
 // --- Behavioural mirrors of lib/pos-find.ts (kept in lockstep by the
 // --- source-wiring assertions below).
@@ -105,16 +106,34 @@ test("stale responses from superseded searches are rejected by epoch", () => {
   assert.equal(pageSrc.includes("myEpoch !== epochRef.current"), true);
 });
 
-test("exact SKU/barcode input yields the fast-path item card", () => {
+test("exact SKU input yields the fast-path item card", () => {
   assert.equal(classifyFindResponse(FIXTURE_ITEMS[0].sku.toLowerCase(), 1, FIXTURE_ITEMS[0].sku), "exact");
   assert.equal(classifyFindResponse("  SV8-123  ", 1, "sv8-123"), "exact");
-  assert.equal(pageSrc.includes("Exact SKU/barcode match"), true);
+  assert.equal(pageSrc.includes("Exact SKU match"), true);
   assert.equal(pageSrc.includes('mode === "exact"'), true);
 });
 
-test("partial or ambiguous matches stay normal search results", () => {
+test("a single partial-name or substring-SKU result is never exact", () => {
+  // Only one result, but matched by name/partial text: stays a normal card.
+  assert.equal(classifyFindResponse("pika", 1, FIXTURE_ITEMS[0].sku), "list");
+  assert.equal(classifyFindResponse("SV8", 1, FIXTURE_ITEMS[0].sku), "list");
+  assert.equal(classifyFindResponse("sv8-12", 1, FIXTURE_ITEMS[0].sku), "list");
+});
+
+test("barcode identity is never inferred: no barcode field in the live response", () => {
+  // InventoryItemOut (the accepted search response) returns no barcode
+  // field, so exact matching is documented SKU-only. A barcode-shaped
+  // query that does not equal the returned SKU is not exact.
+  const outSchema = schemaSrc.slice(schemaSrc.indexOf("class InventoryItemOut"), schemaSrc.indexOf("class InventorySearchResponse"));
+  assert.equal(outSchema.includes("barcode"), false);
+  assert.equal(classifyFindResponse("8123456789012", 1, FIXTURE_ITEMS[0].sku), "list");
+  assert.equal(posFindSrc.includes("returns no barcode field"), true);
+  assert.equal(pageSrc.includes("Exact SKU/barcode"), false);
+});
+
+test("multiple results never use the exact card", () => {
+  assert.equal(classifyFindResponse("sv8-123", 2, FIXTURE_ITEMS[0].sku), "list");
   assert.equal(classifyFindResponse("sv8", 2, FIXTURE_ITEMS[0].sku), "list");
-  assert.equal(classifyFindResponse("sv8", 1, "SV8-999"), "list");
   assert.equal(pageSrc.includes("classifyFindResponse(submittedQuery, total, results[0]?.sku)"), true);
 });
 

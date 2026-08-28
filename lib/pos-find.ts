@@ -40,9 +40,12 @@ export function offsetForPage(page: number, pageSize: number): number {
 export type FindMode = "exact" | "list" | "empty";
 
 /**
- * The accepted search contract returns a single item with total=1 when the
- * query exactly matches an in-stock SKU/barcode. Only that shape is the
- * fast-path exact match; anything else stays a normal result list.
+ * Exact-match fast path. Requires total === 1 AND the normalized query
+ * equal to a returned SKU. The accepted GET /api/v1/inventory/search
+ * response (InventoryItemOut) returns no barcode field, so exact matching
+ * is SKU-only — verified, not inferred: scanned label values resolve to
+ * SKU equality because labels encode the SKU. A lone partial/fuzzy/name
+ * hit is never "exact".
  */
 export function classifyFindResponse(
   query: string,

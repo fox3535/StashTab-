@@ -28,7 +28,7 @@ function ResultCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
           <p className="font-medium text-foreground">{item.name}</p>
           {exact ? (
             <Badge className="border-neon/40 bg-neon/10 font-mono text-neon">
-              Exact SKU/barcode match
+              Exact SKU match
             </Badge>
           ) : null}
         </div>
