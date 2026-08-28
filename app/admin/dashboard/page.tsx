@@ -1,84 +1,107 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { adminRequest } from "@/lib/admin-api";
+import { Package, Search } from "lucide-react";
+import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 
-type Kpis = {
-  inventory_count: number;
-  inventory_value: number;
-  staging_count: number;
-  pending_sync: number;
-  total_revenue: number;
-  sale_count: number;
-  paperweight_units: number;
+type ReadyCard = {
+  href: string;
+  label: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
 };
 
-export default function AdminDashboardPage() {
-  const [kpis, setKpis] = useState<Kpis | null>(null);
+type DeferredCard = {
+  label: string;
+  detail: string;
+};
 
-  useEffect(() => {
-    adminRequest("/admin/dashboard", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setKpis)
-      .catch(() => setKpis(null));
-  }, []);
+const readyCards: ReadyCard[] = [
+  {
+    href: "/admin/inventory",
+    label: "Inventory",
+    detail: "Read-only search for in-stock cards. Edits, labels, and imports are not ready.",
+    icon: Package,
+  },
+  {
+    href: "/pos/find",
+    label: "POS Find",
+    detail: "Fast read-only booth lookup by SKU or barcode. Selling is not ready.",
+    icon: Search,
+  },
+];
+
+const deferredCards: DeferredCard[] = [
+  { label: "Intake", detail: "Card identification and intake commit are deferred." },
+  { label: "POS checkout", detail: "Selling and checkout are deferred. No sale can be taken." },
+  { label: "Shopify", detail: "Shopify connection and sync are deferred." },
+  { label: "Notifications", detail: "Notification settings and push are deferred." },
+  { label: "Payments", detail: "Payments are deferred. No billing is active." },
+  { label: "Watch", detail: "Market Watch is advisory and deferred. No trading actions." },
+];
+
+export default function AdminDashboardPage() {
+  const { selectedShop } = useVendorShop();
 
   return (
-    <div className="p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Shop overview</p>
-        </div>
-        <Link href="/admin/paperweight" className="text-sm text-primary">
-          Paperweight queue →
-        </Link>
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6">
+      <header className="mb-6">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          Dashboard
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm text-steel">
+          Vendor home for {selectedShop?.name}. Live tools are read-only;
+          deferred tools explain themselves. Metrics arrive with their own slices.
+        </p>
       </header>
 
-      {kpis ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Active SKUs", value: kpis.inventory_count },
-            {
-              label: "Inventory Value",
-              value: `$${Number(kpis.inventory_value).toFixed(0)}`,
-            },
-            { label: "Staging", value: kpis.staging_count },
-            { label: "Pending Sync", value: kpis.pending_sync },
-            {
-              label: "Total Revenue",
-              value: `$${Number(kpis.total_revenue).toFixed(2)}`,
-            },
-            { label: "Sales", value: kpis.sale_count },
-            {
-              label: "Paperweight Alert",
-              value: `${kpis.paperweight_units ?? 0} units`,
-              alert: (kpis.paperweight_units ?? 0) > 0,
-            },
-          ].map((kpi) => (
-            <div
-              key={kpi.label}
-              className={`rounded-lg border p-4 ${
-                "alert" in kpi && kpi.alert ? "border-destructive/50" : ""
-              }`}
+      <section aria-label="Ready tools" className="mb-8">
+        <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-steel/70">
+          Ready
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {readyCards.map(({ href, label, detail, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group rounded-lg border border-border bg-gunmetal p-5 transition-colors hover:border-neon/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon"
             >
-              <p className="text-sm text-muted-foreground">{kpi.label}</p>
-              <p
-                className={`text-2xl font-bold ${
-                  "alert" in kpi && kpi.alert ? "text-destructive" : ""
-                }`}
-              >
-                {kpi.value}
-              </p>
-            </div>
+              <div className="flex items-center gap-2">
+                <Icon className="size-4 text-neon" />
+                <span className="font-display font-semibold text-foreground">{label}</span>
+                <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-neon">
+                  Read-only
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-steel">{detail}</p>
+            </Link>
           ))}
         </div>
-      ) : (
-        <p className="text-muted-foreground">
-          Set NEXT_PUBLIC_DEV_SHOP_ID and ensure API is running
-        </p>
-      )}
+      </section>
+
+      <section aria-label="Deferred tools" className="mb-4">
+        <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-steel/70">
+          Deferred
+        </h2>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {deferredCards.map(({ label, detail }) => (
+            <li key={label} className="rounded-lg border border-border bg-gunmetal p-5">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-semibold text-foreground">{label}</span>
+                <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-steel/60">
+                  Not ready
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-steel">{detail}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p className="text-xs text-steel/70">
+        Revenue, inventory totals, alerts, and operational metrics are not shown
+        until their data slices are accepted. This page never invents numbers.
+      </p>
     </div>
   );
 }
