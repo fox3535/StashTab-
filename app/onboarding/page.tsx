@@ -80,7 +80,7 @@ export default function OnboardingPage() {
         });
         if (!res.ok) throw new Error(await res.text());
       }
-      router.push("/pos");
+      router.push("/admin/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save Shopify");
     } finally {
@@ -169,9 +169,9 @@ export default function OnboardingPage() {
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button className="w-full" disabled={loading} onClick={saveShopify}>
-                {loading ? "Saving…" : "Finish & open POS"}
+                {loading ? "Saving…" : "Finish & open dashboard"}
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => router.push("/pos")}>
+              <Button variant="ghost" className="w-full" onClick={() => router.push("/admin/dashboard")}>
                 Skip for now
               </Button>
             </div>

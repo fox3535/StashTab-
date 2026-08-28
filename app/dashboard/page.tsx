@@ -1,17 +1,9 @@
-import { ChartAreaInteractive } from "@/app/dashboard/chart-area-interactive"
-import { DataTable } from "@/app/dashboard/data-table"
-import { SectionCards } from "@/app/dashboard/section-cards"
+import { redirect } from "next/navigation";
 
-import data from "./data.json"
-
+// Slice-03: the starter/demo dashboard is retired from routing. Its
+// components remain in this folder (see SLICE-03-PRESERVATION.md).
+// /admin/dashboard is the sole authenticated vendor dashboard. Clerk
+// protection is preserved by middleware (auth.protect on /dashboard(.*)).
 export default function Page() {
-  return (
-    <>
-      <SectionCards />
-      <div className="px-4 lg:px-6">
-        <ChartAreaInteractive />
-      </div>
-      <DataTable data={data} />
-    </>
-  )
+  redirect("/admin/dashboard");
 }
