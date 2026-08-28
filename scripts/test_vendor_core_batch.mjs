@@ -178,6 +178,10 @@ test("shop setup validation only allows API-supported fields", () => {
   assert.equal(suggestSlug("My Card Shop", true, "custom-slug"), "custom-slug");
   assert.equal(onboardingPageSrc.includes("validateShopSetup"), true);
   assert.equal(onboardingPageSrc.includes("suggestSlug"), true);
+  // Submission must use the displayed (suggested) slug, not the raw state.
+  assert.equal(onboardingPageSrc.includes("const effectiveSlug = suggestSlug(name, slugEdited, slug);"), true);
+  assert.equal(onboardingPageSrc.includes("validateShopSetup(name, effectiveSlug)"), true);
+  assert.equal(onboardingPageSrc.includes("normalizeShopSlug(effectiveSlug)"), true);
   // POST /shops body stays name + slug only.
   assert.equal(mimirSrc.includes('body: JSON.stringify({ name, slug })'), true);
 });

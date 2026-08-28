@@ -174,7 +174,7 @@ function FindInner() {
       ) : null}
 
       {loading ? (
-        <VendorLoadingBlock label="Searching…" className="h-24 p-3 font-mono text-sm text-steel" />
+        <VendorLoadingBlock label="Searching…" className="h-24" />
       ) : (
         <section className="space-y-2" aria-label="Search results">
           {mode === "exact" && results[0] ? (

@@ -83,7 +83,9 @@ export default function OnboardingPage() {
   async function createShop() {
     // Double submission guard: state plus ref survive quick re-renders.
     if (inFlightRef.current || submitting) return;
-    const invalid = validateShopSetup(name, slug);
+    // The displayed value is the suggestion; submit what the vendor sees.
+    const effectiveSlug = suggestSlug(name, slugEdited, slug);
+    const invalid = validateShopSetup(name, effectiveSlug);
     if (invalid) {
       setValidationError(invalid);
       return;
@@ -98,7 +100,7 @@ export default function OnboardingPage() {
         setCreateError("Session expired. Sign in again.");
         return;
       }
-      const normalizedSlug = normalizeShopSlug(slug);
+      const normalizedSlug = normalizeShopSlug(effectiveSlug);
       // POST /shops derives identity from the Clerk bearer token only.
       const shop = await mimirApi.createShop(name.trim(), normalizedSlug, { authToken: token });
       // Refresh memberships, then store only the validated preference.
