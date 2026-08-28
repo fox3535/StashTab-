@@ -1,11 +1,11 @@
-# Slice-01 authenticated shell and read-only inventory — local acceptance
+# Slice-01 authenticated shell and read-only inventory — acceptance
 
 **Slice:** `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`  
-**Status:** `COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING`  
-**Decision:** D-038  
-**Accepted:** named human owner 2026-08-27  
-**Pinned `main`:** `af72bac501cd9c42b70cd0347f778db388c8c943`  
-**Branch:** `feature/slice-01-authenticated-shell-read-inventory`  
+**Status:** `ACCEPTED — MERGED ON main — STAGING SMOKE PASSED — FRONTEND NOT DEPLOYED`  
+**Decision:** D-038 (local acceptance), D-039 (final acceptance)  
+**Accepted:** named human owner 2026-08-27 (local); named human owner 2026-08-27 (live smoke)  
+**Frontend on `main`:** `3c3ca33` (slice-01 merged via PR #16, landing billing fix via PR #17)  
+**Staging API deploy:** Railway `9c47945a`  
 **This file is not in freeze hashes.** Frozen contracts were not rewritten.
 
 ## Accepted locally
@@ -25,12 +25,27 @@
 
 The visual harness is `scripts/slice-01-visual-harness.html`. It is not a Next.js route and is not a production product screen. `LOCAL_TEST_FIXTURE` data exists only in tests/harness files.
 
-## Later staging-smoke gates (not local blockers)
+## Live staging smoke — passed 2026-08-27 (D-039)
 
-- Real Clerk membership loading against staging
-- Live staging inventory read
-- Full keyboard walkthrough of the authenticated shell
+Recorded facts:
+
+- Frontend code merged on `main` `3c3ca33`.
+- Staging API deploy `9c47945a`.
+- Frontend tested locally at `http://localhost:3001`, not deployed.
+- Real Clerk membership loaded.
+- Smoke Shop B auto-selected.
+- Read-only inventory returned an honest empty state.
+- Sign-out and re-sign-in passed.
+- Keyboard and mobile checks passed.
+- Deferred features remained locked.
+- No schema or data writes occurred.
+
+Non-blocking UX backlog item: bare `/admin/shopify` renders a 404 instead of
+a Not Ready screen. No visible navigation links to that bare route (links
+target locked subroutes), so it is not a slice-01 blocker. It becomes an
+honest Not Ready route in a later navigation/deferred-routes cleanup.
 
 ## Explicitly not accepted
 
-Merge to `main`, deploy, migrate, write enablement, Shopify, notifications, payments, Watch, or a live staging smoke.
+Frontend deploy, migrate, write enablement, Shopify, notifications,
+payments, Watch, or any production approval.

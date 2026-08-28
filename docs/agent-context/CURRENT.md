@@ -2,9 +2,8 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-08-27
-**Branch:** `feature/slice-01-authenticated-shell-read-inventory` from `main`
-`af72bac501cd9c42b70cd0347f778db388c8c943`
-**Staging API:** Railway deploy `17aeb85f-053f-4e5a-8d68-6d040d03c238` at Git SHA `0dd8f00b8d510b82e3d717a9570c0bc387e0479b`
+**Branch:** `main` at `3c3ca33` (slice-01 PR #16 + landing billing fix PR #17 merged)
+**Staging API:** Railway deploy `9c47945a` of `main` (staging smoke passed, D-039)
 
 ## Frozen contracts
 
@@ -16,9 +15,10 @@
 ## Current phase
 
 `frontend-recovery-v1 / slice-01-authenticated-shell-and-readonly-inventory`
-**Status:** `COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING` (D-038).
+**Status:** `ACCEPTED — MERGED ON main — STAGING SMOKE PASSED — FRONTEND NOT DEPLOYED` (D-038, D-039).
 F0 exit remains passed for frontend recovery (D-035). Memberships read is
-on `main` via PR #15 (D-037), not deployed to staging hosting.
+hosted on staging via deploy `9c47945a`. Frontend was smoke-tested locally
+at `http://localhost:3001`, never deployed.
 
 Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
 
@@ -37,14 +37,17 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
 4. Production schema apply blocked.
 5. Card-resolution intake/abstention: **merged, feature off** (D-034 / PR #13).
 6. F0 exit for frontend recovery: **passed** (D-035).
-7. My-shop memberships read: **merged on `main` via PR #15** (D-037). Not hosted on staging.
-8. F1 slice-01 shell + read inventory: **completed locally** (D-038). Not merged.
-   Later staging-smoke: real Clerk memberships, live staging inventory, full
-   keyboard walkthrough.
+7. My-shop memberships read: **merged on `main` via PR #15** (D-037), hosted on staging via deploy `9c47945a`.
+8. F1 slice-01 shell + read inventory: **accepted** (D-038 local, D-039 live smoke).
+   Merged on `main` `3c3ca33`; staging smoke passed: real Clerk memberships,
+   live staging inventory read, full keyboard walkthrough, mobile, sign-out
+   and re-sign-in. No schema or data writes.
 
 ## Next queued phases
 
-1. Review/merge slice-01 draft PR, then a separate staging API deploy and smoke.
+1. Frontend recovery continuation: next slice planning per
+   `docs/frontend-recovery-v1/`; navigation/deferred-routes cleanup item for
+   bare `/admin/shopify` 404 (non-blocking UX backlog).
 2. Later enablement, not F0: inventory write staging smoke, notification
    staging apply, production restore drill.
 3. Do not enable card-resolution, writes, or push without a named unlock.

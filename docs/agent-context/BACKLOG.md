@@ -204,16 +204,21 @@ routes, worker, Shopify, and notifications remain off.
 
 ## frontend-recovery-v1
 
-**Status:** `SLICE-01 COMPLETED LOCALLY — NOT MERGED — NOT DEPLOYED — LIVE STAGING SMOKE PENDING`
-**Source:** `PLAN.md` F1; D-035; D-036; D-037; `docs/frontend-recovery-v1/`
+**Status:** `SLICE-01 ACCEPTED — MERGED ON main — STAGING SMOKE PASSED — FRONTEND NOT DEPLOYED`
+**Source:** `PLAN.md` F1; D-035; D-036; D-037; D-038; D-039; `docs/frontend-recovery-v1/`
 
-Slice-00 inventory recorded. Prerequisite memberships read is on `main`
-(D-037 / PR #15), not hosted on staging. Slice-01 shell + read-only
-inventory is **completed locally** (D-038). Not merged. Not deployed.
-Later staging-smoke gates: real Clerk memberships, live staging
-inventory read, full authenticated-shell keyboard walkthrough. Do not
-bulk-copy a dirty legacy tree over `main`. Do not revive Convex. Writes
-stay visibly not-ready.
+Slice-00 inventory recorded. Prerequisite memberships read is hosted on
+staging via deploy `9c47945a`. Slice-01 shell + read-only inventory is
+**accepted** (D-038 local, D-039 live smoke): merged on `main` `3c3ca33`,
+smoke-tested locally at `http://localhost:3001` against staging, frontend
+never deployed. No schema or data writes occurred. Do not bulk-copy a
+dirty legacy tree over `main`. Do not revive Convex. Writes stay visibly
+not-ready.
+
+UX backlog (non-blocking, not a slice-01 blocker): bare `/admin/shopify`
+renders a 404 instead of an honest Not Ready screen. No visible
+navigation links target that bare route. Fix in a later
+navigation/deferred-routes cleanup.
 
 ## master-plan-reconciliation
 
