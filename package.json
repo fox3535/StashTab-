@@ -12,7 +12,8 @@
     "test:landing-billing": "node --test scripts/test_landing_billing.mjs",
     "test:slice02": "node --test scripts/test_dashboard_cleanup.mjs",
     "test:slice03": "node --test scripts/test_entrypoint_consolidation.mjs",
-    "test:slice04": "node --test scripts/test_stale_links_cleanup.mjs"
+    "test:slice04": "node --test scripts/test_stale_links_cleanup.mjs",
+    "test:slice05": "node --test scripts/test_pos_find_browse.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",
