@@ -216,9 +216,12 @@ dirty legacy tree over `main`. Do not revive Convex. Writes stay visibly
 not-ready.
 
 UX backlog (non-blocking, not a slice-01 blocker): bare `/admin/shopify`
-renders a 404 instead of an honest Not Ready screen. No visible
-navigation links target that bare route. Fix in a later
-navigation/deferred-routes cleanup.
+rendered a 404 instead of an honest Not Ready screen. **Closed by
+slice-02** (PR #19, merged on `main` `ee27e7b`). The stale-link /
+starter-route cleanup track is closed by slice-04
+(`SLICE-04-PRESERVATION.md`, PR pending): landing footer and
+`/dashboard/payment-gated` corrected, no remaining reachable link presents
+a locked route as operational.
 
 ## master-plan-reconciliation
 
