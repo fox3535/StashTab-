@@ -23,9 +23,18 @@ import {
   VendorErrorBanner,
   VendorLoadingBlock,
 } from "@/components/vendor/vendor-patterns";
+import { VendorItemDetail } from "@/components/vendor/vendor-item-detail";
 import { CardThumbnail } from "../components/card-thumbnail";
 
-function ResultCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
+function ResultCard({
+  item,
+  exact,
+  onOpenDetail,
+}: {
+  item: InventoryItem;
+  exact?: boolean;
+  onOpenDetail: (sku: string) => void;
+}) {
   return (
     <div className="flex gap-3 rounded-lg border border-border bg-gunmetal p-4">
       <CardThumbnail item={item} />
@@ -41,11 +50,20 @@ function ResultCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
         <p className="font-mono text-xs text-steel">
           {item.sku} · {item.set_name ?? "—"}
         </p>
-        <div className="mt-2 flex flex-wrap gap-4 font-mono text-sm">
+        <div className="mt-2 flex flex-wrap items-center gap-4 font-mono text-sm">
           <span className="font-semibold text-neon">${itemSellPrice(item).toFixed(2)}</span>
           <Badge variant="outline" className="border-border font-mono text-steel">
             {item.stock} qty
           </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-12 border-border font-mono text-xs"
+            onClick={() => onOpenDetail(item.sku)}
+            aria-label={`View details for SKU ${item.sku}`}
+          >
+            Details
+          </Button>
         </div>
       </div>
     </div>
@@ -67,6 +85,7 @@ function FindInner() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [detailSku, setDetailSku] = useState("");
 
   async function runSearch(q: string, targetPage: number, signal?: AbortSignal) {
     if (!shopId) return;
@@ -125,6 +144,9 @@ function FindInner() {
     setTotal(0);
     setPage(pageAfterReset());
     setErrorText("");
+    // A query or shop change closes any open detail so no stale shop's
+    // record survives.
+    setDetailSku("");
     if (shopId && (initialQ || query)) void runSearch(initialQ || query, pageAfterReset(), controller.signal);
     else setLoading(false);
     return () => controller.abort();
@@ -142,6 +164,15 @@ function FindInner() {
         subtitle={`Read-only booth lookup for ${selectedShop?.name}. Selling is not ready.`}
       />
 
+      {detailSku ? (
+        <VendorItemDetail
+          sku={detailSku}
+          onBack={() => setDetailSku("")}
+          renderThumbnail={(item) => <CardThumbnail item={item} />}
+          backClassName="min-h-12"
+        />
+      ) : (
+        <>
       <div className="flex gap-2">
         <Input
           className="min-h-12 border-border bg-surface font-mono text-sm focus-visible:border-neon"
@@ -178,9 +209,9 @@ function FindInner() {
       ) : (
         <section className="space-y-2" aria-label="Search results">
           {mode === "exact" && results[0] ? (
-            <ResultCard item={results[0]} exact />
+            <ResultCard item={results[0]} exact onOpenDetail={setDetailSku} />
           ) : (
-            results.map((item) => <ResultCard key={item.sku} item={item} />)
+            results.map((item) => <ResultCard key={item.sku} item={item} onOpenDetail={setDetailSku} />)
           )}
           {!loading && submittedQuery && results.length === 0 && !errorText ? (
             <p className="py-8 text-center font-mono text-sm text-steel">
@@ -200,6 +231,8 @@ function FindInner() {
           buttonClassName="min-h-12"
         />
       ) : null}
+        </>
+      )}
     </div>
   );
 }

@@ -23,9 +23,18 @@ import {
   VendorErrorBanner,
   VendorLoadingBlock,
 } from "@/components/vendor/vendor-patterns";
+import { VendorItemDetail } from "@/components/vendor/vendor-item-detail";
 
 /** Mobile/tablet-fallback card. Mirrors the table row data, never writes. */
-function InventoryCard({ item, exact }: { item: InventoryItem; exact?: boolean }) {
+function InventoryCard({
+  item,
+  exact,
+  onOpenDetail,
+}: {
+  item: InventoryItem;
+  exact?: boolean;
+  onOpenDetail: (sku: string) => void;
+}) {
   return (
     <div
       className={
@@ -45,11 +54,20 @@ function InventoryCard({ item, exact }: { item: InventoryItem; exact?: boolean }
       <p className="mt-1 font-mono text-xs text-steel">
         {item.sku} · {item.set_name ?? "—"}
       </p>
-      <div className="mt-2 flex flex-wrap gap-4 font-mono text-sm">
+      <div className="mt-2 flex flex-wrap items-center gap-4 font-mono text-sm">
         <span className="font-semibold text-neon">${itemSellPrice(item).toFixed(2)}</span>
         <Badge variant="outline" className="border-border font-mono text-steel">
           {item.stock} qty
         </Badge>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 border-border font-mono text-xs"
+          onClick={() => onOpenDetail(item.sku)}
+          aria-label={`View details for SKU ${item.sku}`}
+        >
+          Details
+        </Button>
       </div>
     </div>
   );
@@ -71,6 +89,7 @@ export default function AdminInventoryPage() {
   const [loaded, setLoaded] = useState(false);
   const [errorText, setErrorText] = useState("");
   const [writeHint, setWriteHint] = useState(false);
+  const [detailSku, setDetailSku] = useState("");
 
   const runSearch = useCallback(
     async (q: string, targetPage: number, signal?: AbortSignal) => {
@@ -140,6 +159,9 @@ export default function AdminInventoryPage() {
     setPage(pageAfterReset());
     setErrorText("");
     setWriteHint(false);
+    // A shop switch closes any open detail so no stale shop's record
+    // survives.
+    setDetailSku("");
     if (shopId) void runSearch("", pageAfterReset(), controller.signal);
     else setLoading(false);
     return () => controller.abort();
@@ -175,6 +197,10 @@ export default function AdminInventoryPage() {
         }
       />
 
+      {detailSku ? (
+        <VendorItemDetail sku={detailSku} onBack={() => setDetailSku("")} />
+      ) : (
+        <>
       <div className="mb-4 flex gap-2">
         <Input
           placeholder="Search name, SKU, or set…"
@@ -236,7 +262,14 @@ export default function AdminInventoryPage() {
                     >
                       <td className="p-3 font-mono text-xs text-steel">
                         <span className="flex flex-wrap items-center gap-2">
-                          {item.sku}
+                          <button
+                            type="button"
+                            className="font-mono underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded-sm"
+                            onClick={() => setDetailSku(item.sku)}
+                            aria-label={`View details for SKU ${item.sku}`}
+                          >
+                            {item.sku}
+                          </button>
                           {exact ? (
                             <Badge className="border-neon/40 bg-neon/10 font-mono text-neon">
                               Exact SKU match
@@ -270,6 +303,7 @@ export default function AdminInventoryPage() {
                 key={item.sku}
                 item={item}
                 exact={mode === "exact" && item.sku === items[0]?.sku}
+                onOpenDetail={setDetailSku}
               />
             ))}
             {items.length === 0 && !errorText ? (
@@ -288,23 +322,27 @@ export default function AdminInventoryPage() {
           className="mt-4"
         />
       ) : null}
+        </>
+      )}
 
-      <div className="mt-4">
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-11"
-          onClick={() => setWriteHint(true)}
-        >
-          Edit stock / print labels
-        </Button>
-        {writeHint ? (
-          <FeatureNotReady
-            title="Inventory writes are not ready"
-            detail="Stock edits, adjustments, QR labels, resticker, CSV imports, intake, Shopify sync, notifications, payments, and Watch are deferred. This screen is read-only."
-          />
-        ) : null}
-      </div>
+      {!detailSku ? (
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            onClick={() => setWriteHint(true)}
+          >
+            Edit stock / print labels
+          </Button>
+          {writeHint ? (
+            <FeatureNotReady
+              title="Inventory writes are not ready"
+              detail="Stock edits, adjustments, QR labels, resticker, CSV imports, intake, Shopify sync, notifications, payments, and Watch are deferred. This screen is read-only."
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
