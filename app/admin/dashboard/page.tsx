@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Receipt, Search } from "lucide-react";
+import { ArrowLeftRight, Package, Receipt, Search } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -35,6 +35,12 @@ const readyCards: ReadyCard[] = [
     label: "Sales History",
     detail: "Read-only browse of recorded sales. Refunds, exports, and metrics are not ready.",
     icon: Receipt,
+  },
+  {
+    href: "/admin/reports",
+    label: "Recent Trades",
+    detail: "Read-only view of up to the newest 200 trade transactions. Exports and metrics are not ready.",
+    icon: ArrowLeftRight,
   },
 ];
 
