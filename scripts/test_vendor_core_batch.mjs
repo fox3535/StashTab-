@@ -221,8 +221,9 @@ test("dashboard only links the accepted read-only tools", () => {
   assert.equal(dashboardSrc.includes('href: "/admin/sales"'), true);
   assert.equal(dashboardSrc.includes('href: "/admin/reports"'), true);
   assert.equal(dashboardSrc.includes('href: "/admin/price-updates"'), true);
+  assert.equal(dashboardSrc.includes('href: "/admin/reconciliation"'), true);
   const hrefs = [...dashboardSrc.matchAll(/href: "([^"]+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(hrefs, ["/admin/inventory", "/admin/price-updates", "/admin/reports", "/admin/sales", "/pos/find"]);
+  assert.deepEqual(hrefs, ["/admin/inventory", "/admin/price-updates", "/admin/reconciliation", "/admin/reports", "/admin/sales", "/pos/find"]);
   assert.equal(dashboardSrc.includes("Read-only"), true);
   assert.equal(dashboardSrc.includes("This page never invents numbers."), true);
 });
@@ -236,7 +237,7 @@ test("deferred cards explain themselves and are not linked", () => {
   assert.equal(dashboardSrc.includes("No billing is active."), true);
   // Deferred cards render as plain list items, never links.
   assert.equal(dashboardSrc.includes("deferredCards.map(({ label, detail })"), true);
-  assert.equal(/href: "(?!\/admin\/inventory|\/pos\/find|\/admin\/sales|\/admin\/reports|\/admin\/price-updates)/.test(dashboardSrc), false);
+  assert.equal(/href: "(?!\/admin\/inventory|\/pos\/find|\/admin\/sales|\/admin\/reports|\/admin\/price-updates|\/admin\/reconciliation)/.test(dashboardSrc), false);
 });
 
 // --- all common error states ---

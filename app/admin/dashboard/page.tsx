@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftRight, BadgeDollarSign, Package, Receipt, Search } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Package, Receipt, Search, ShieldCheck } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -47,6 +47,12 @@ const readyCards: ReadyCard[] = [
     label: "Price Updates",
     detail: "Read-only review of inventory records with a pending/previous price update. Approving and repricing are not ready.",
     icon: BadgeDollarSign,
+  },
+  {
+    href: "/admin/reconciliation",
+    label: "Inventory Integrity",
+    detail: "Read-only cutover status and reconciliation check. It compares snapshots with event-derived truth and never repairs anything.",
+    icon: ShieldCheck,
   },
 ];
 

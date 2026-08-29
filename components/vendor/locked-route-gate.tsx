@@ -14,9 +14,10 @@ const LOCKED_PREFIXES = [
   "/admin/shopify/sync",
   "/admin/shopify/review",
   "/admin/settings",
-  "/admin/reconciliation",
+  // /admin/reconciliation ships the read-only Inventory Integrity screen
+  // (slice-11) and /admin/reports ships the read-only Recent Trade
+  // History screen (slice-09); both stay out of the lock list.
   "/admin/paperweight",
-  "/admin/reports",
   "/pos/pulls",
   "/pos/stats",
 ];

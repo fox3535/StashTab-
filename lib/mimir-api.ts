@@ -69,6 +69,23 @@ export type PlaceholderTrade = {
   status: string;
 };
 
+export type IntegrityMismatch = {
+  event_remaining: number;
+  snapshot_stock: number | null;
+};
+
+export type InventoryTruthStatus = {
+  shop_id: string;
+  cutover_status: string | null;
+  unaccounted: Record<string, IntegrityMismatch>;
+};
+
+export type InventoryTruthReconcile = {
+  shop_id: string;
+  unaccounted_qty: number;
+  mismatches: Record<string, IntegrityMismatch>;
+};
+
 export type PullQueueItem = {
   id: number;
   sku: string;
@@ -269,6 +286,14 @@ export const mimirApi = {
   // current set of needs_update records with no cap and no pagination.
   priceUpdates: (opts: RequestOptions) =>
     mimirFetch<{ items: PendingPriceUpdate[] }>("/admin/inventory/updated", opts),
+
+  // Read-only inventory-integrity checks. Both contracts are pure
+  // SELECTs: they never write, repair, backfill, or change cutover state.
+  inventoryTruthStatus: (opts: RequestOptions) =>
+    mimirFetch<InventoryTruthStatus>("/admin/inventory-truth/status", opts),
+
+  inventoryTruthReconcile: (opts: RequestOptions) =>
+    mimirFetch<InventoryTruthReconcile>("/admin/inventory-truth/reconcile", opts),
 
   addPlaceholderTrade: (
     payload: { market_value: number; cash_paid: number },
