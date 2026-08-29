@@ -44,6 +44,15 @@ export type SaleRecord = {
   timestamp: string;
 };
 
+export type TradeRecord = {
+  id: number;
+  item_name: string | null;
+  sku: string | null;
+  sold_price: number | null;
+  trade_in_value: number | null;
+  timestamp: string | null;
+};
+
 export type PlaceholderTrade = {
   id: number;
   total_market_value: number;
@@ -241,6 +250,11 @@ export const mimirApi = {
       opts
     );
   },
+
+  // Read-only recent trade history. The contract returns at most its
+  // fixed cap of records, newest-first, with no pagination and no total.
+  recentTrades: (opts: RequestOptions) =>
+    mimirFetch<{ trades: TradeRecord[] }>("/reports/trade-history", opts),
 
   addPlaceholderTrade: (
     payload: { market_value: number; cash_paid: number },

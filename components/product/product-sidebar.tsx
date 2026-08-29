@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  ArrowLeftRight,
   BarChart3,
   ExternalLink,
   FileBarChart,
@@ -58,6 +59,7 @@ const backOfficeNav: NavItem[] = [
   { href: "/admin/inventory", label: "Inventory", icon: Package },
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/sales", label: "Sales History", icon: Receipt },
+  { href: "/admin/reports", label: "Recent Trades", icon: ArrowLeftRight },
   { href: "/admin/intake", label: "Intake", icon: PlusCircle, locked: true },
   { href: "/admin/staging", label: "Staging", icon: Layers, locked: true },
   { href: "/admin/resticker", label: "Resticker", icon: Sticker, locked: true },
