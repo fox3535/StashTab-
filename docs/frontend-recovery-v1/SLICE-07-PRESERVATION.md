@@ -2,6 +2,7 @@
 
 **Slice:** `frontend-recovery-v1 / slice-07-pos-item-detail`
 **Base:** `main` `f5e721e`
+**Status:** draft PR, not merged, not deployed.
 **Contract:** accepted authenticated `GET /api/v1/inventory/{sku}`
 (`services/api/app/routers/inventory.py` `get_by_sku`, response
 `InventoryItemOut`): shop-scoped uppercase SKU lookup via verified Clerk
