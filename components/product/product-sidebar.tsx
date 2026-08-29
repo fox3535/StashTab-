@@ -8,7 +8,6 @@ import {
   BadgeDollarSign,
   BarChart3,
   ExternalLink,
-  FileBarChart,
   LayoutDashboard,
   Layers,
   MoreHorizontal,
@@ -18,6 +17,7 @@ import {
   Receipt,
   Search,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Sticker,
   Store,
@@ -62,6 +62,7 @@ const backOfficeNav: NavItem[] = [
   { href: "/admin/sales", label: "Sales History", icon: Receipt },
   { href: "/admin/reports", label: "Recent Trades", icon: ArrowLeftRight },
   { href: "/admin/price-updates", label: "Price Updates", icon: BadgeDollarSign },
+  { href: "/admin/reconciliation", label: "Inventory Integrity", icon: ShieldCheck },
   { href: "/admin/intake", label: "Intake", icon: PlusCircle, locked: true },
   { href: "/admin/staging", label: "Staging", icon: Layers, locked: true },
   { href: "/admin/resticker", label: "Resticker", icon: Sticker, locked: true },
@@ -72,7 +73,6 @@ const operationsNav: NavItem[] = [
   { href: "/admin/shopify/sync", label: "Shopify Sync", icon: Store, locked: true },
   { href: "/admin/shopify/review", label: "Shopify Review", icon: Store, locked: true },
   { href: "/admin/import", label: "CSV Import", icon: Upload, locked: true },
-  { href: "/admin/reconciliation", label: "Reconciliation", icon: FileBarChart, locked: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, locked: true },
 ];
 

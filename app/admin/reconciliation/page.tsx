@@ -1,207 +1,317 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { adminRequest } from "@/lib/admin-api";
+// Slice-11 read-only Inventory Integrity screen.
+//
+// Replaces the legacy Collectr CSV reconciliation stub (POST upload, CSV
+// export, price-drift actions) — none of that behavior is revived.
+//
+// Backed only by two accepted authenticated read contracts:
+//   GET /api/v1/admin/inventory-truth/status   (cutover_status, unaccounted)
+//   GET /api/v1/admin/inventory-truth/reconcile (unaccounted_qty, mismatches)
+// Both are pure SELECTs scoped by verified Clerk bearer + membership.
+// Reconciliation compares inventory snapshots with event-derived truth
+// and does not repair anything. The check never runs automatically — it
+// runs only through the labeled "Run read-only check" control. Missing,
+// timed-out, or unavailable data is stated plainly; no green state is
+// invented. Cutover-off stays visible and is neither an error nor an
+// approval. No cutover transition, backfill, repair, adjustment, receive,
+// sale, CSV, Shopify, notification, payment, or Watch action exists here.
 
-type ReconResult = {
-  success?: boolean;
-  to_remove: Array<Record<string, unknown>>;
-  to_add: Array<Record<string, unknown>>;
-  missing_from_collectr?: Array<Record<string, unknown>>;
-  removal_list?: Array<{ set?: string; items?: Array<Record<string, unknown>> }>;
-  prices_updated?: number;
-  updated_items_log?: string[];
-  matches_found?: number;
-  staged_unknown?: number;
-  unknown_cards?: Array<Record<string, unknown>>;
-};
+import { useEffect, useRef, useState } from "react";
+import {
+  mimirApi,
+  type InventoryTruthReconcile,
+  type InventoryTruthStatus,
+} from "@/lib/mimir-api";
+import { classifyVendorError } from "@/lib/vendor-api-error";
+import { shouldApplyShopResult } from "@/lib/shop-session";
+import {
+  INTEGRITY_CHECK_TIMEOUT_MS,
+  describeCutoverStatus,
+  formatMismatchValue,
+  reconOutcomeText,
+  timedOutNotice,
+} from "@/lib/inventory-integrity";
+import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
+import {
+  PageHeader,
+  VendorErrorBanner,
+  VendorLoadingBlock,
+} from "@/components/vendor/vendor-patterns";
 
-export default function ReconciliationPage() {
-  const [result, setResult] = useState<ReconResult | null>(null);
-  const [sinceDate, setSinceDate] = useState("");
-  const [loading, setLoading] = useState(false);
+type CheckPhase = "idle" | "running" | "done" | "timed_out" | "failed";
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLoading(true);
+/** Mobile/tablet-fallback card. Mirrors the mismatch row, never writes. */
+function MismatchCard({
+  sku,
+  eventRemaining,
+  snapshotStock,
+}: {
+  sku: string;
+  eventRemaining: number;
+  snapshotStock: number | null;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-gunmetal p-4">
+      <p className="font-mono text-sm font-medium text-foreground">{sku}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-4 font-mono text-sm">
+        <span className="text-xs text-steel">
+          event-derived remaining {formatMismatchValue(eventRemaining)}
+        </span>
+        <span className="text-xs text-steel">
+          snapshot stock {formatMismatchValue(snapshotStock)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export default function InventoryIntegrityPage() {
+  const { selectedShop, reportApiError } = useVendorShop();
+  const shopId = selectedShop?.id ?? null;
+  const shopIdRef = useRef(shopId);
+  shopIdRef.current = shopId;
+  const epochRef = useRef(0);
+  const checkControllerRef = useRef<AbortController | null>(null);
+
+  const [phase, setPhase] = useState<CheckPhase>("idle");
+  const [statusResult, setStatusResult] = useState<InventoryTruthStatus | null>(null);
+  const [reconResult, setReconResult] = useState<InventoryTruthReconcile | null>(null);
+  const [errorText, setErrorText] = useState("");
+
+  // A shop switch clears every previous result immediately and aborts any
+  // in-flight check for the previous shop. Nothing auto-runs on mount.
+  useEffect(() => {
+    setPhase("idle");
+    setStatusResult(null);
+    setReconResult(null);
+    setErrorText("");
+    checkControllerRef.current?.abort();
+    checkControllerRef.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopId]);
+
+  useEffect(() => () => checkControllerRef.current?.abort(), []);
+
+  async function runCheck() {
+    if (!shopId) return;
+    checkControllerRef.current?.abort();
+    const controller = new AbortController();
+    checkControllerRef.current = controller;
+
+    epochRef.current += 1;
+    const myEpoch = epochRef.current;
+    const requestedShopId = shopId;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, INTEGRITY_CHECK_TIMEOUT_MS);
+
+    setPhase("running");
+    setStatusResult(null);
+    setReconResult(null);
+    setErrorText("");
+
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const params = new URLSearchParams({ stage_unknown: "true" });
-      if (sinceDate) params.set("since_date", sinceDate);
-      const res = await adminRequest(`/reports/reconciliation?${params}`, {
-        method: "POST",
-        body: form,
+      const status = await mimirApi.inventoryTruthStatus({
+        shopId: requestedShopId,
+        signal: controller.signal,
       });
-      if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as ReconResult;
-      setResult(data);
-      toast.success(
-        `Recon complete — ${data.matches_found ?? 0} removals, ${data.prices_updated ?? 0} price updates`
-      );
+      const recon = await mimirApi.inventoryTruthReconcile({
+        shopId: requestedShopId,
+        signal: controller.signal,
+      });
+      if (
+        myEpoch !== epochRef.current ||
+        !shouldApplyShopResult(requestedShopId, shopIdRef.current) ||
+        controller.signal.aborted
+      ) {
+        return;
+      }
+      setStatusResult(status);
+      setReconResult(recon);
+      setPhase("done");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Reconciliation failed");
+      if (
+        myEpoch !== epochRef.current ||
+        !shouldApplyShopResult(requestedShopId, shopIdRef.current)
+      ) {
+        return;
+      }
+      if (timedOut) {
+        setStatusResult(null);
+        setReconResult(null);
+        setPhase("timed_out");
+        return;
+      }
+      if (controller.signal.aborted) return;
+      const classified = classifyVendorError(err);
+      reportApiError(err);
+      setStatusResult(null);
+      setReconResult(null);
+      setErrorText(classified.message);
+      setPhase("failed");
     } finally {
-      setLoading(false);
+      clearTimeout(timer);
     }
   }
 
-  function exportRemovalCsv() {
-    if (!result?.to_remove?.length) return;
-    const rows = [
-      ["name", "set", "sku", "qty"].join(","),
-      ...result.to_remove.map((item) =>
-        [
-          JSON.stringify(String(item.name ?? "")),
-          JSON.stringify(String(item.set ?? item.set_name ?? "")),
-          JSON.stringify(String(item.sku ?? "")),
-          String(item.qty ?? item.quantity ?? 1),
-        ].join(",")
-      ),
-    ];
-    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "collectr-removal-list.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const missing = result?.missing_from_collectr ?? [];
+  const mismatchEntries = reconResult ? Object.entries(reconResult.mismatches) : [];
+  const shopName = selectedShop?.name ?? "this shop";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">Collectr Reconciliation</h1>
-        <p className="mt-2 text-muted-foreground">
-          Upload a Collectr CSV export. Fuzzy-matches sales for removals, stages
-          unknown cards, flags price drift, and lists inventory under-reported in
-          Collectr.
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6">
+      <PageHeader
+        className="mb-5"
+        title="Inventory Integrity"
+        subtitle={`Read-only cutover status and reconciliation check for ${shopName}. Reconciliation compares inventory snapshots with event-derived truth and does not repair anything.`}
+        trailing={
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel" role="status">
+            {phase === "running" ? (
+              <span>checking…</span>
+            ) : phase === "done" && reconResult ? (
+              <>
+                <span className="text-neon">{reconResult.unaccounted_qty}</span>
+                {" mismatches"}
+              </>
+            ) : (
+              <span>check not run yet</span>
+            )}
+          </p>
+        }
+      />
+
+      <div aria-live="polite" className="sr-only">
+        {phase === "running"
+          ? "Running read-only inventory integrity check"
+          : phase === "timed_out"
+            ? timedOutNotice()
+            : phase === "failed"
+              ? errorText
+              : phase === "done" && reconResult
+                ? reconOutcomeText(reconResult.unaccounted_qty)
+                : "No check has been run yet"}
+      </div>
+
+      <section className="mb-4 rounded-lg border border-border bg-gunmetal p-4">
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-steel">
+          How this check works
+        </h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
+          <li>
+            It compares the inventory snapshot with event-derived truth, as defined by the
+            accepted read-only API contracts. It does not repair, adjust, backfill, or change
+            anything.
+          </li>
+          <li>
+            The check never runs automatically. It runs only when you choose the labeled
+            control, and it may take some time for shops with many records.
+          </li>
+          <li>
+            Results describe the moment the check ran. No production-readiness score or
+            completeness guarantee is claimed.
+          </li>
+        </ul>
+      </section>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={runCheck}
+          disabled={phase === "running" || !shopId}
+          aria-label="Run read-only inventory integrity check"
+          className="min-h-11 rounded-md border border-neon/40 bg-gunmetal px-4 font-mono text-xs uppercase tracking-[0.18em] text-neon focus:outline-none focus-visible:ring-2 focus-visible:ring-neon disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Run read-only check
+        </button>
+        {phase === "idle" ? (
+          <p className="text-sm text-steel">
+            No check has been run for this shop in this session.
+          </p>
+        ) : null}
+      </div>
+
+      {phase === "failed" ? <VendorErrorBanner message={errorText} className="mb-4" /> : null}
+
+      {phase === "timed_out" ? (
+        <p className="mb-4 rounded-lg border border-border bg-gunmetal p-3 font-mono text-xs text-steel">
+          {timedOutNotice()}
         </p>
-      </div>
+      ) : null}
 
-      <div className="flex flex-wrap items-end gap-4">
-        <div>
-          <Label htmlFor="since">Sales since (optional)</Label>
-          <Input
-            id="since"
-            type="date"
-            className="mt-1 w-48"
-            value={sinceDate}
-            onChange={(e) => setSinceDate(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="csv">Collectr CSV</Label>
-          <Input
-            id="csv"
-            type="file"
-            accept=".csv"
-            className="mt-1 max-w-sm"
-            disabled={loading}
-            onChange={handleUpload}
-          />
-        </div>
-      </div>
+      {phase === "running" ? (
+        <VendorLoadingBlock
+          label="Running read-only check…"
+          className="h-40 p-3 font-mono text-sm text-steel"
+        />
+      ) : null}
 
-      {result && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={exportRemovalCsv}>
-              Export removal list CSV
-            </Button>
-          </div>
+      {phase === "done" && statusResult && reconResult ? (
+        <>
+          {/* Cutover status — separate from reconciliation results. */}
+          <section className="mb-4 rounded-lg border border-border bg-gunmetal p-4">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-steel">
+              Cutover status
+            </h2>
+            <p className="mt-2 text-sm text-foreground">
+              {describeCutoverStatus(statusResult.cutover_status)}
+            </p>
+          </section>
 
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">Sold → remove</p>
-              <p className="text-2xl font-bold">
-                {result.matches_found ?? result.to_remove.length}
-              </p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">Price updates</p>
-              <p className="text-2xl font-bold">{result.prices_updated ?? 0}</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">Unknown → staging</p>
-              <p className="text-2xl font-bold">
-                {result.staged_unknown ??
-                  result.unknown_cards?.length ??
-                  result.to_add.length}
-              </p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">Missing in Collectr</p>
-              <p className="text-2xl font-bold">{missing.length}</p>
-            </div>
-          </div>
+          {/* Reconciliation results. */}
+          <section className="rounded-lg border border-border bg-gunmetal p-4">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-steel">
+              Reconciliation result
+            </h2>
+            <p className="mt-2 text-sm text-foreground">
+              {reconOutcomeText(reconResult.unaccounted_qty)}
+            </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <h2 className="font-semibold text-destructive">
-                To Remove ({result.to_remove.length})
-              </h2>
-              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm">
-                {result.to_remove.slice(0, 80).map((item, i) => (
-                  <li key={`${item.sku}-${i}`}>
-                    {String(item.name)} ({String(item.set ?? "")})
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h2 className="font-semibold text-primary">
-                To Add / Unknown ({result.to_add.length})
-              </h2>
-              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm">
-                {result.to_add.slice(0, 80).map((item, i) => (
-                  <li key={`${item.name}-${i}`}>{String(item.name)}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            {mismatchEntries.length > 0 ? (
+              <>
+                {/* Desktop/tablet table */}
+                <div className="mt-3 hidden overflow-x-auto rounded-lg border border-border md:block">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-obsidian">
+                        <th className="p-3 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-steel">SKU</th>
+                        <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Event-derived remaining</th>
+                        <th className="p-3 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-steel">Snapshot stock</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mismatchEntries.map(([sku, mismatch]) => (
+                        <tr key={sku} className="border-b border-border/60">
+                          <td className="p-3 font-mono text-foreground">{sku}</td>
+                          <td className="p-3 text-right font-mono text-steel">
+                            {formatMismatchValue(mismatch.event_remaining)}
+                          </td>
+                          <td className="p-3 text-right font-mono text-foreground">
+                            {formatMismatchValue(mismatch.snapshot_stock)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-          {missing.length > 0 && (
-            <div>
-              <h2 className="font-semibold">
-                In vault, under-reported in Collectr ({missing.length})
-              </h2>
-              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm">
-                {missing.slice(0, 80).map((item, i) => (
-                  <li key={`${item.sku ?? item.name}-${i}`}>
-                    {String(item.name ?? item.sku)}
-                    {item.set || item.set_name
-                      ? ` (${String(item.set ?? item.set_name)})`
-                      : ""}
-                    {item.stock != null ? ` · stock ${String(item.stock)}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {!!result.updated_items_log?.length && (
-            <div>
-              <h2 className="font-semibold">Price drift log</h2>
-              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto font-mono text-xs text-muted-foreground">
-                {result.updated_items_log.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Approve updates in Admin → Shopify Review.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+                {/* Mobile cards */}
+                <div className="mt-3 space-y-2 md:hidden" aria-label="Mismatch rows">
+                  {mismatchEntries.map(([sku, mismatch]) => (
+                    <MismatchCard
+                      key={sku}
+                      sku={sku}
+                      eventRemaining={mismatch.event_remaining}
+                      snapshotStock={mismatch.snapshot_stock}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }
