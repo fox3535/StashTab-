@@ -1,15 +1,19 @@
 # STASHTAB-INVENTORY-TRUTH-001 / AMENDMENT-1.3.0 — human vote packet
 
 **Amendment identifier:** `STASHTAB-INVENTORY-TRUTH-001 / AMENDMENT-1.3.0`
-**Status:** `PROPOSED — NOT APPROVED — NOT FROZEN`
+**Status:** `APPROVED — FROZEN` as contract version `1.3.0`
+**Human vote:** APPROVED by the named human owner on 2026-08-29
+("I APPROVE STASHTAB-INVENTORY-TRUTH-001 / AMENDMENT-1.3.0"); freeze
+records CONTRACT §7 and §10; manifests `freezes/FREEZE-1.3.0.json` and
+`freezes/FREEZE-1.3.0-git-canonical.json`.
 **Parent:** version `1.2.0` (frozen 2026-08-24; manifest
 `docs/inventory-truth-v1/freezes/FREEZE-1.2.0.json`)
-**Proposed resulting version:** `1.3.0`
+**Resulting version:** `1.3.0`
 **Frozen v1.0.0 / v1.1.0 / v1.2.0 bodies:** not edited by this packet.
-This draft is additive-only with respect to versions 1.0.0, 1.1.0, and
-1.2.0: no frozen sentence is deleted or rewritten; every change is an
-appended envelope section, an appended acceptance list, or a pointer
-record, applied only after a later human vote.
+This packet is additive-only with respect to versions 1.0.0, 1.1.0,
+and 1.2.0: no frozen sentence is deleted or rewritten; every change is
+an appended envelope section, an appended acceptance list, or a pointer
+record, applied after the human vote recorded above.
 **Rule:** CONTRACT §6 (versioned proposal, independent review against
 the frozen bodies, updated acceptance tests where behavior changes,
 named human approval, new semantic version and new freeze record).
