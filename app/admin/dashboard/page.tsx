@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Search } from "lucide-react";
+import { Package, Receipt, Search } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -29,6 +29,12 @@ const readyCards: ReadyCard[] = [
     label: "POS Find",
     detail: "Fast read-only booth lookup by SKU or barcode. Selling is not ready.",
     icon: Search,
+  },
+  {
+    href: "/admin/sales",
+    label: "Sales History",
+    detail: "Read-only browse of recorded sales. Refunds, exports, and metrics are not ready.",
+    icon: Receipt,
   },
 ];
 

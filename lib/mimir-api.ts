@@ -232,9 +232,10 @@ export const mimirApi = {
       body: JSON.stringify(payload),
     }),
 
-  salesHistory: (opts: RequestOptions & { limit?: number }) => {
+  salesHistory: (opts: RequestOptions & { limit?: number; offset?: number }) => {
     const params = new URLSearchParams();
     if (opts.limit) params.set("limit", String(opts.limit));
+    if (opts.offset) params.set("offset", String(opts.offset));
     return mimirFetch<{ sales: SaleRecord[]; total: number }>(
       `/sales/history?${params}`,
       opts
