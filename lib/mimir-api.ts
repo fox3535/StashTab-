@@ -53,6 +53,15 @@ export type TradeRecord = {
   timestamp: string | null;
 };
 
+export type PendingPriceUpdate = {
+  id: number;
+  sku: string;
+  name: string;
+  old_price: number | null;
+  price: number;
+  shop_listing_price: number | null;
+};
+
 export type PlaceholderTrade = {
   id: number;
   total_market_value: number;
@@ -255,6 +264,11 @@ export const mimirApi = {
   // fixed cap of records, newest-first, with no pagination and no total.
   recentTrades: (opts: RequestOptions) =>
     mimirFetch<{ trades: TradeRecord[] }>("/reports/trade-history", opts),
+
+  // Read-only pending price-update review. The contract returns the full
+  // current set of needs_update records with no cap and no pagination.
+  priceUpdates: (opts: RequestOptions) =>
+    mimirFetch<{ items: PendingPriceUpdate[] }>("/admin/inventory/updated", opts),
 
   addPlaceholderTrade: (
     payload: { market_value: number; cash_paid: number },

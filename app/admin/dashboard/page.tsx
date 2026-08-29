@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftRight, Package, Receipt, Search } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Package, Receipt, Search } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -41,6 +41,12 @@ const readyCards: ReadyCard[] = [
     label: "Recent Trades",
     detail: "Read-only view of up to the newest 200 trade transactions. Exports and metrics are not ready.",
     icon: ArrowLeftRight,
+  },
+  {
+    href: "/admin/price-updates",
+    label: "Price Updates",
+    detail: "Read-only review of inventory records with a pending/previous price update. Approving and repricing are not ready.",
+    icon: BadgeDollarSign,
   },
 ];
 
