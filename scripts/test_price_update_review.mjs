@@ -129,6 +129,7 @@ test("dashboard lists Price Updates as an honest fifth read-only tool", () => {
   assert.deepEqual(hrefs, [
     "/admin/inventory",
     "/admin/price-updates",
+    "/admin/reconciliation",
     "/admin/reports",
     "/admin/sales",
     "/pos/find",

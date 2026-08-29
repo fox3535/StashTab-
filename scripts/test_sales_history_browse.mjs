@@ -149,6 +149,11 @@ test("locked routes stay locked and /admin/sales is not one of them", () => {
   assert.equal(gateSrc.includes('"/admin/intake"'), true);
   assert.equal(gateSrc.includes('"/pos/pulls"'), true);
   assert.equal(gateSrc.includes("/admin/sales"), false);
+  // Slice-09's Recent Trade History (/admin/reports) and slice-11's
+  // Inventory Integrity (/admin/reconciliation) are honest read-only
+  // screens and must not be gate-locked.
+  assert.equal(gateSrc.includes('"/admin/reports"'), false);
+  assert.equal(gateSrc.includes('"/admin/reconciliation"'), false);
 });
 
 test("responsive layout keeps desktop table and mobile cards without overflow", () => {

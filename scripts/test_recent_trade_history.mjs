@@ -137,7 +137,7 @@ test("dashboard lists Recent Trades as an honest fourth read-only tool", () => {
   assert.equal(dashSrc.includes("Recent Trades"), true);
   assert.equal(dashSrc.includes("up to the newest 200 trade transactions"), true);
   const hrefs = [...dashSrc.matchAll(/href: "([^"]+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(hrefs, ["/admin/inventory", "/admin/price-updates", "/admin/reports", "/admin/sales", "/pos/find"]);
+  assert.deepEqual(hrefs, ["/admin/inventory", "/admin/price-updates", "/admin/reconciliation", "/admin/reports", "/admin/sales", "/pos/find"]);
 });
 
 test("sidebar exposes a named Recent Trades entry", () => {
