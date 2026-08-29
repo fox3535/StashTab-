@@ -215,11 +215,12 @@ test("sign-out clears shop-sensitive state before leaving", () => {
 
 // --- dashboard honest cards ---
 
-test("dashboard only links the two accepted read-only tools", () => {
+test("dashboard only links the accepted read-only tools", () => {
   assert.equal(dashboardSrc.includes('href: "/admin/inventory"'), true);
   assert.equal(dashboardSrc.includes('href: "/pos/find"'), true);
+  assert.equal(dashboardSrc.includes('href: "/admin/sales"'), true);
   const hrefs = [...dashboardSrc.matchAll(/href: "([^"]+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(hrefs, ["/admin/inventory", "/pos/find"]);
+  assert.deepEqual(hrefs, ["/admin/inventory", "/admin/sales", "/pos/find"]);
   assert.equal(dashboardSrc.includes("Read-only"), true);
   assert.equal(dashboardSrc.includes("This page never invents numbers."), true);
 });
@@ -233,7 +234,7 @@ test("deferred cards explain themselves and are not linked", () => {
   assert.equal(dashboardSrc.includes("No billing is active."), true);
   // Deferred cards render as plain list items, never links.
   assert.equal(dashboardSrc.includes("deferredCards.map(({ label, detail })"), true);
-  assert.equal(/href: "(?!\/admin\/inventory|\/pos\/find)/.test(dashboardSrc), false);
+  assert.equal(/href: "(?!\/admin\/inventory|\/pos\/find|\/admin\/sales)/.test(dashboardSrc), false);
 });
 
 // --- all common error states ---
