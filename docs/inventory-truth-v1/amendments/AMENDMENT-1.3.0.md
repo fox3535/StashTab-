@@ -130,8 +130,10 @@ unlock.
 **Authentication / authorization:** verified Clerk bearer +
 `require_membership` via `get_shop_context`; `owner` or `staff` may
 receive (ordinary operation per DIRECTIVE-SLICE-03 wording). `X-Shop-Id`
-remains an untrusted hint. Cutover stays owner-only. No frontend-only
-role restriction.
+remains an untrusted hint. The dev bypass that `get_shop_context` can
+honor when explicitly allowed MUST be off in staging (fail-closed
+identity, D-025). Cutover stays owner-only. No frontend-only role
+restriction.
 
 **Request (JSON) + required header:**
 
@@ -181,8 +183,11 @@ trade tables, checkout/sales, adjustments. No external provider call.
   mismatch ever reached the pair level, `PermanentPairError` → 409.
   Never silent, never merged.
 - **Concurrency:** one transaction wins the partial unique index; the
-  loser's unique violation is treated as retry → reload winner →
-  `no_op` (DESIGN §2 rule 5; `_write_pair` savepoint).
+  loser's ENTIRE uncommitted transaction — including its item insert or
+  stock bump — rolls back (commit-at-end design), the request then
+  re-resolves by client key against the winner and returns `no_op`
+  (DESIGN §2 rule 5; `_write_pair` savepoint). No in-transaction reload
+  of a dirty snapshot is permitted.
 - **Timeout:** client timeout never commits twice — resend resolves by
   key to `no_op` or executes fresh if nothing committed. Timeout is
   never reported as green.
