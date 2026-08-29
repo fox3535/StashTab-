@@ -15,7 +15,8 @@
     "test:slice04": "node --test scripts/test_stale_links_cleanup.mjs",
     "test:slice05": "node --test scripts/test_pos_find_browse.mjs",
     "test:slice06": "node --test scripts/test_admin_inventory_browse.mjs",
-    "test:vendor-core": "node --test scripts/test_vendor_core_batch.mjs"
+    "test:vendor-core": "node --test scripts/test_vendor_core_batch.mjs",
+    "test:slice07": "node --test scripts/test_item_detail.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",
