@@ -6,6 +6,10 @@ No migration is run from this document.
 
 1. Additive unique indexes `(shop_id, id)` on live `inventory_item`,
    `purchase_record`, `sale` — **indexes only**, not column rewrites.
+   Exception authorized only by AMENDMENT-1.3.0: one additive nullable
+   column `purchase_record.client_idempotency_key VARCHAR(36)` plus the
+   partial unique `uq_purchase_record_shop_client_key`; no type change,
+   no rewrite, no drop.
 2. Add `acquisition_lot`, `inventory_event`, and
    `inventory_truth_cutover` with `UNIQUE (shop_id, id)` on the first two
    and `UNIQUE (shop_id, generation)` on cutover. Composite FKs: `DESIGN.md`.
@@ -86,6 +90,22 @@ Checks: after=before+delta; after>=0; delta<>0; reason/source/input_mode
 enums; loss-class delta<0. Append-only + TRUNCATE deny. `create_all` MUST NOT
 create it. CSV new-item rows are a file-level validation failure.
 `inventory_exception.kind` also allows `adjust_anomaly`.
+
+## F2 controlled-receive envelope (AMENDMENT-1.3.0)
+
+Same locked discipline. Staging only. Live migrator adds the nullable
+client key column and partial unique on `purchase_record` before any
+truth step; rerun no-op; injected failure leaves nothing partial.
+Runtime grant envelope for `stashtab_api` replaces SELECT-only on
+exactly `inventory_item` (SELECT, INSERT, UPDATE (stock, cost)),
+`purchase_record` (SELECT, INSERT), `acquisition_lot` (SELECT, INSERT),
+`inventory_event` (SELECT, INSERT), plus USAGE on their four identity
+sequences. No DELETE, TRUNCATE, DDL, ownership, or migrator assumption.
+Truth keys unchanged: `purchase_record:{shop_id}:{purchase_record.id}`.
+Live receive still requires a completed gen:1 cutover for that shop;
+unrelated writes after cutover fail with controlled 503
+FEATURE_NOT_READY, never raw privilege errors. Rollback disables the
+route and revokes grants; evidence rows remain.
 
 ## Backfill (same keys as live dual-write)
 

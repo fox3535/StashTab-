@@ -95,5 +95,5 @@ jobs:
       - run: python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.1-git-canonical.json --negative-check
       - run: python scripts/validate_notification_freeze.py --manifest docs/backend-notification-integration-v1/freezes/FREEZE-1.1.2-git-canonical.json --negative-check
       - run: python scripts/validate_inventory_truth_freeze.py --self-test
-      - run: python scripts/validate_inventory_truth_freeze.py --manifest docs/inventory-truth-v1/freezes/FREEZE-1.2.0-git-canonical.json --negative-check
+      - run: python scripts/validate_inventory_truth_freeze.py --manifest docs/inventory-truth-v1/freezes/FREEZE-1.3.0-git-canonical.json --negative-check
       - run: python scripts/validate_agent_context.py
