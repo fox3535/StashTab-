@@ -35,6 +35,19 @@ REQUIRED_PATHS_1_2_0 = (
     "docs/inventory-truth-v1/amendments/AMENDMENT-1.2.0.md",
 )
 
+REQUIRED_PATHS_1_3_0 = (
+    "docs/inventory-truth-v1/CONTRACT.md",
+    "docs/inventory-truth-v1/DESIGN.md",
+    "docs/inventory-truth-v1/MIGRATION.md",
+    "docs/inventory-truth-v1/TESTS.md",
+    "docs/inventory-truth-v1/amendments/AMENDMENT-1.3.0.md",
+)
+
+PREVIOUS_FREEZE_LINEAGE = {
+    "1.2.0": ("1.1.0", "1.0.0"),
+    "1.3.0": ("1.2.0",),
+}
+
 ALLOWED_PREFIX = "docs/inventory-truth-v1/"
 HEX64 = 64
 CANONICAL_GIT_LF = "git-lf-text-bytes"
@@ -109,12 +122,19 @@ def validate(root: Path, manifest_path: Path) -> None:
         raise ValueError("approved_amendments must be a list")
     if "AMENDMENT-1.2.0" not in manifest["approved_amendments"]:
         raise ValueError("approved_amendments must include AMENDMENT-1.2.0")
+    if manifest["contract_version"] == "1.3.0" and (
+        "AMENDMENT-1.3.0" not in manifest["approved_amendments"]
+    ):
+        raise ValueError("1.3.0 approved_amendments must include AMENDMENT-1.3.0")
 
     previous = manifest["previous_freeze"]
     if not isinstance(previous, dict):
         raise ValueError("previous_freeze must be an object")
-    if previous.get("contract_version") not in ("1.1.0", "1.0.0"):
-        raise ValueError("previous_freeze.contract_version must preserve 1.1.0 lineage")
+    allowed_previous = PREVIOUS_FREEZE_LINEAGE.get(
+        manifest["contract_version"], ("1.1.0", "1.0.0")
+    )
+    if previous.get("contract_version") not in allowed_previous:
+        raise ValueError("previous_freeze.contract_version does not match version lineage")
 
     files = manifest["files"]
     if not isinstance(files, list) or not files:
@@ -140,6 +160,10 @@ def validate(root: Path, manifest_path: Path) -> None:
         missing_required = [path for path in REQUIRED_PATHS_1_2_0 if path not in listed]
         if missing_required:
             raise ValueError(f"1.2.0 manifest missing required files: {missing_required}")
+    elif manifest["contract_version"] == "1.3.0":
+        missing_required = [path for path in REQUIRED_PATHS_1_3_0 if path not in listed]
+        if missing_required:
+            raise ValueError(f"1.3.0 manifest missing required files: {missing_required}")
 
     for rel, expected in listed.items():
         target = (root / rel).resolve()
@@ -170,6 +194,13 @@ def validate(root: Path, manifest_path: Path) -> None:
         raise ValueError("v1.0.0 freeze history missing from CONTRACT.md")
     if "## 8." not in contract or "1.1.0" not in contract:
         raise ValueError("v1.1.0 freeze history missing from CONTRACT.md")
+    if manifest["contract_version"] == "1.3.0":
+        if "AMENDMENT-1.3.0" not in contract:
+            raise ValueError("CONTRACT.md does not name AMENDMENT-1.3.0")
+        if "docs/inventory-truth-v1/freezes/FREEZE-1.3.0.json" not in contract:
+            raise ValueError("CONTRACT.md must point at FREEZE-1.3.0.json and not self-hash")
+        if "## 9." not in contract:
+            raise ValueError("v1.2.0 freeze history missing from CONTRACT.md")
 
 
 def _write(path: Path, data: bytes) -> None:

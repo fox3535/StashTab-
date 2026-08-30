@@ -1,0 +1,42 @@
+{
+  "contract_id": "STASHTAB-INVENTORY-TRUTH-001",
+  "contract_version": "1.3.0",
+  "freeze_status": "FROZEN",
+  "frozen_at": "2026-08-29T19:05:53Z",
+  "approved_amendments": [
+    "AMENDMENT-1.1.0",
+    "AMENDMENT-1.2.0",
+    "AMENDMENT-1.3.0"
+  ],
+  "previous_freeze": {
+    "contract_version": "1.2.0",
+    "record": "docs/inventory-truth-v1/CONTRACT.md \u00a79"
+  },
+  "algorithm": "SHA-256",
+  "canonical_bytes": "git-lf-text-bytes",
+  "evidence_kind": "amendment-1.3.0-freeze",
+  "historical_evidence": "docs/inventory-truth-v1/freezes/FREEZE-1.3.0.json",
+  "notes": "Byte-hash evidence for the approved AMENDMENT-1.3.0 freeze. Contract text as applied by the vote.",
+  "files": [
+    {
+      "path": "docs/inventory-truth-v1/CONTRACT.md",
+      "sha256": "66321eaae7d9de427c6a294d5e8c69123c2f1fccfa0a410373278fde053cc69f"
+    },
+    {
+      "path": "docs/inventory-truth-v1/DESIGN.md",
+      "sha256": "0c1298d676730847759e8587ad9253a5f4a1d277cfe2422f6bbd69747cd2689d"
+    },
+    {
+      "path": "docs/inventory-truth-v1/MIGRATION.md",
+      "sha256": "06dd601d901f64be06e4d5c8a0dc3026665b344c19c5766ef68fa19b60cec7eb"
+    },
+    {
+      "path": "docs/inventory-truth-v1/TESTS.md",
+      "sha256": "684977eabfbff2c18cc54c58bec4d6d134154fec437d48d408804299c290ba25"
+    },
+    {
+      "path": "docs/inventory-truth-v1/amendments/AMENDMENT-1.3.0.md",
+      "sha256": "03be1647bb6a4136103a35e08a0e746dc5a5fcf3759a020ce8cfaab747d9d19a"
+    }
+  ]
+}

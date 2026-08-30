@@ -95,3 +95,9 @@ Twelve tests per `DIRECTIVE-SLICE-02.md` §8:
 
 The 31 tests listed in `amendments/AMENDMENT-1.2.0.md` §13. PostgreSQL
 concurrency/freeze/CSV/append-only twice on disposable databases.
+
+## F2 controlled-receive acceptance tests (AMENDMENT-1.3.0)
+
+The 8 tests listed in `amendments/AMENDMENT-1.3.0.md` §13. PostgreSQL
+permissions/concurrency/idempotency/atomic-failure/append-only twice on
+disposable databases; API-level equivalents with synthetic membership.
