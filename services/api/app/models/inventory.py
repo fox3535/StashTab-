@@ -68,6 +68,10 @@ class PurchaseRecord(Base, ShopScopedMixin, TimestampMixin):
     quantity: Mapped[int] = mapped_column(Integer, default=1)
     cost_per_unit: Mapped[float] = mapped_column(Float, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # AMENDMENT-1.3.0 §4: additive nullable client idempotency key; partial
+    # unique (shop_id, client_idempotency_key) is migrator-only DDL
+    # (uq_purchase_record_shop_client_key). Existing rows stay NULL.
+    client_idempotency_key: Mapped[str | None] = mapped_column(String(36))
 
 
 class ShowPriceCapture(Base, ShopScopedMixin, TimestampMixin):

@@ -16,3 +16,15 @@ def is_missing_relation(exc: BaseException) -> bool:
         return True
     text = str(exc).lower()
     return "no such table" in text or "undefinedtable" in text
+
+
+def is_insufficient_privilege(exc: BaseException) -> bool:
+    """PostgreSQL privilege denial (SQLSTATE 42501). SQLAlchemy 2.x
+    surfaces psycopg2's InsufficientPrivilege as a wrapped OperationalError,
+    so classify by pgcode; the DBAPI class is a secondary signal."""
+    orig = getattr(exc, "orig", None)
+    if getattr(orig, "pgcode", None) == "42501":
+        return True
+    if orig is not None and type(orig).__name__ == "InsufficientPrivilege":
+        return True
+    return "insufficient privilege" in str(exc).lower()
