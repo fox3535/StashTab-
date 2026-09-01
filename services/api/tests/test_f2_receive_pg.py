@@ -219,6 +219,21 @@ def _priv(engine, role: str, obj: str, priv: str) -> bool:
         )
 
 
+def _col_priv(engine, role: str, table: str, column: str, priv: str) -> bool:
+    with engine.connect() as conn:
+        return bool(
+            conn.execute(
+                text("SELECT has_column_privilege(:role, :rel, :col, :priv)"),
+                {
+                    "role": role,
+                    "rel": f"public.{table}",
+                    "col": column,
+                    "priv": priv,
+                },
+            ).scalar()
+        )
+
+
 # --- §13.1: runtime role boundary ------------------------------------------
 
 
@@ -233,7 +248,12 @@ class TestPrivilegeEnvelope:
         }
         for table, want in expected.items():
             held = {p for p in PRIVS if _priv(admin, "stashtab_api", table, p)}
-            assert held == want, table
+            if table == "inventory_item":
+                assert held == {"SELECT", "INSERT"}, table
+                for column in ("stock", "cost"):
+                    assert _col_priv(admin, "stashtab_api", table, column, "UPDATE"), column
+            else:
+                assert held == want, table
         # Everything else stays SELECT-only (evidence of the per-table assert).
         for table in ("sale", "inventory_adjustment", "inventory_truth_cutover"):
             held = {p for p in PRIVS if _priv(admin, "stashtab_api", table, p)}

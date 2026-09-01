@@ -47,7 +47,7 @@ F2_CLIENT_KEY_COLUMN = "client_idempotency_key"
 F2_CLIENT_KEY_INDEX = "uq_purchase_record_shop_client_key"
 _F2_GRANT_TABLES = ("inventory_item", "purchase_record", "acquisition_lot", "inventory_event")
 _F2_TABLE_PRIVS = {
-    "inventory_item": frozenset({"SELECT", "INSERT", "UPDATE"}),
+    "inventory_item": frozenset({"SELECT", "INSERT"}),  # UPDATE is column-scoped
     "purchase_record": frozenset({"SELECT", "INSERT"}),
     "acquisition_lot": frozenset({"SELECT", "INSERT"}),
     "inventory_event": frozenset({"SELECT", "INSERT"}),
@@ -395,14 +395,14 @@ def _grant_f2_envelope(conn) -> list[str]:
         grants.append(f"{api}:{table}:select")
         conn.execute(text(f"GRANT INSERT ON TABLE {table} TO {api}"))
         grants.append(f"{api}:{table}:insert")
-    conn.execute(text(f"GRANT UPDATE ON TABLE inventory_item TO {api}"))
+    conn.execute(text(f"REVOKE UPDATE ON TABLE inventory_item FROM {api}"))
+    conn.execute(
+        text(
+            f"GRANT UPDATE ({', '.join(_F2_UPDATE_COLUMNS)}) "
+            f"ON TABLE inventory_item TO {api}"
+        )
+    )
     grants.append(f"{api}:inventory_item:update({','.join(_F2_UPDATE_COLUMNS)})")
-    # Table-level UPDATE expands to every column; revoke everything except
-    # the frozen containment columns (idempotent on rerun).
-    for column in _table_columns(conn, "inventory_item"):
-        if not _COLUMN_RE.fullmatch(column) or column in _F2_UPDATE_COLUMNS:
-            continue
-        conn.execute(text(f'REVOKE UPDATE ("{column}") ON TABLE inventory_item FROM {api}'))
     for seq in _F2_SEQUENCES:
         if _has_sequence(conn, seq):
             conn.execute(text(f"GRANT USAGE ON SEQUENCE {seq} TO {api}"))

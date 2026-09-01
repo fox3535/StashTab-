@@ -1096,6 +1096,8 @@ class TestSlice02Outbound:
             (Path("app") / "logic" / "trades.py"): {"existing_item.stock = total_qty"},
             (Path("app") / "logic" / "intake.py"): {"existing.stock = total_qty"},
             (Path("app") / "inventory_truth" / "core_adjust.py"): {"item.stock = qty_after"},
+            # F2 controlled receive (AMENDMENT-1.3.0 §5)
+            (Path("app") / "logic" / "controlled_receive.py"): {"item.stock = total_qty"},
         }
         pattern = re.compile(r"^\s*\w[\w.\[\]]*\.stock\s*(?:-=|\+=|=(?!=))", re.MULTILINE)
         violations: list[str] = []
