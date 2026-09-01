@@ -658,3 +658,20 @@ payments, Watch, or production.
 
 Evidence: `docs/frontend-recovery-v1/ACCEPTANCE-SLICE-01-AUTHENTICATED-SHELL-READ-INVENTORY.md`.
 
+## D-040 — F2 slice-01 controlled receive implemented locally
+
+Approved by named human owner 2026-08-31.
+
+`inventory-truth-v1 / f2-slice-01-controlled-receive` is **IMPLEMENTED
+LOCALLY — NOT MERGED — NOT DEPLOYED — PRIVILEGES/CUTOVER UNCHANGED**.
+
+Branch `implementation/f2-slice-01-controlled-receive`: implementation
+`af9431b`, correction `feb94d6` (PostgreSQL 16 column-scoped UPDATE
+grant). Local disposable PostgreSQL 16 acceptance green (F2 12, identity
+12, rehearsal 15, inventory-truth PG 25, notification PG 21; clean-main
+baseline 73). F2 SQLite 18; broader SQLite/API 263. Controlled 503 handler
+maps only SQLSTATE 42501 / missing-relation programming errors. No staging
+schema apply, privilege cutover, deploy, or cloud contact.
+
+Evidence: `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`.
+

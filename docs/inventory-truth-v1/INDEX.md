@@ -52,3 +52,6 @@ Amendments require a separately versioned proposal. See `CONTRACT.md` §6.
 13. `amendments/AMENDMENT-1.2.0.md` and `freezes/FREEZE-1.2.0.json`
 14. `DIRECTIVE-SLICE-03.md` (adjustment plan frozen against v1.2.0)
 15. `ACCEPTANCE-SLICE-03.md` (human acceptance record, 2026-08-24)
+16. `amendments/AMENDMENT-1.3.0.md` and `freezes/FREEZE-1.3.0.json`
+17. `DIRECTIVE-F2-SLICE-01-CONTROLLED-RECEIVE.md`
+18. `ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md` (local implementation accepted 2026-08-31; not merged)

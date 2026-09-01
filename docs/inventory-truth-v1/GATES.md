@@ -53,6 +53,15 @@ review loop; it names the failed criterion and owner and **stops**.
 | **CSV-COST-FEEDBACK-GATE** | Human owner + API/UI | Existing-item CSV cost fields remain unapplied. Before production use, the API/import result and eventual interface must explicitly report that cost changes were ignored and require a separately approved cost-correction workflow. They must not be reported as successfully updated. | Open gate — **BLOCKS production use of CSV adjust** |
 | Critical-exception retention policy | Operations/policy follow-up | No auto-delete of unresolved exceptions or audit history until a policy exists | Open follow-up |
 
+## F2 slice-01 (`f2-slice-01-controlled-receive`)
+
+| Gate | Owner | Evidence | Terminal |
+|---|---|---|---|
+| AMENDMENT-1.3.0 freeze | Executive sponsor | `freezes/FREEZE-1.3.0.json`; contract v1.3.0 on `main` via PR #30 | **FROZEN** (`9870468`) |
+| `implementation_unlock` F2 controlled receive | Executive sponsor | Named unlock; implementation `af9431b` + correction `feb94d6` | **IMPLEMENTED LOCALLY — NOT MERGED — NOT DEPLOYED** (`ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`) |
+| Provisioning unlock (staging schema apply) | Human owner + database owner | Reviewed migrator apply on staging Neon only | **OPEN — privileges/cutover unchanged** |
+| Cutover unlock (gen-1 synthetic shop) | Human owner | Owner actor, pre-checks, acceptance-recorded evidence | **OPEN** |
+
 ## Deferred professional gates (not planning / freeze blockers)
 
 COGS method; trade-credit booking; market-data license; PCI; Stripe/PayPal
