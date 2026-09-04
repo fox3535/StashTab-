@@ -293,6 +293,10 @@ npm run dev -- -p 3001
 4. Multi-tenant: verified Clerk identity plus membership and `shop_id` scope.
 5. Roadmap approval permits planning only. Do not push, merge, migrate, deploy,
    use paid credits, or access production without the matching human approval.
+   Never run `git push origin main`. Never commit follow-up records on local
+   `main`. Post-merge documentation uses a new branch and pull request.
+   Emergency ruleset bypass requires a fresh owner instruction that names the
+   emergency.
 
 ### Frozen card-resolution contract
 
