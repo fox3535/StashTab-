@@ -675,3 +675,23 @@ schema apply, privilege cutover, deploy, or cloud contact.
 
 Evidence: `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`.
 
+## D-041 — F2 slice-01 controlled receive merged on main
+
+Approved by named human owner 2026-09-04.
+
+`inventory-truth-v1 / f2-slice-01-controlled-receive` is **MERGED ON
+`main` — NOT DEPLOYED — PRIVILEGES/CUTOVER UNCHANGED**.
+
+PR #31 merged with a merge commit `a354fed0570241894b6e866e9e18ffbb059add6f`.
+Head was `8fa58cb`; base was protected `main` `9870468`. Owner accepted
+the non-blocking freeze baseline: `FREEZE-1.3.0.json` is historical
+machine-byte evidence; `FREEZE-1.3.0-git-canonical.json` is the
+authoritative CI record; neither frozen manifest was modified.
+
+Staging provisioning is prepared and not executed. Cutover and receive
+endpoint use remain separately locked. No Railway/Neon/Clerk contact,
+migration, privilege change, or staging write.
+
+Evidence: `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
+`docs/inventory-truth-v1/CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`.
+

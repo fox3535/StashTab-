@@ -58,9 +58,9 @@ review loop; it names the failed criterion and owner and **stops**.
 | Gate | Owner | Evidence | Terminal |
 |---|---|---|---|
 | AMENDMENT-1.3.0 freeze | Executive sponsor | `freezes/FREEZE-1.3.0.json`; contract v1.3.0 on `main` via PR #30 | **FROZEN** (`9870468`) |
-| `implementation_unlock` F2 controlled receive | Executive sponsor | Named unlock; implementation `af9431b` + correction `feb94d6` | **IMPLEMENTED LOCALLY — NOT MERGED — NOT DEPLOYED** (`ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`) |
-| Provisioning unlock (staging schema apply) | Human owner + database owner | Reviewed migrator apply on staging Neon only | **OPEN — privileges/cutover unchanged** |
-| Cutover unlock (gen-1 synthetic shop) | Human owner | Owner actor, pre-checks, acceptance-recorded evidence | **OPEN** |
+| `implementation_unlock` F2 controlled receive | Executive sponsor | Named unlock; PR #31 merge `a354fed` | **MERGED ON main — NOT DEPLOYED** (`ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`) |
+| Provisioning unlock (staging schema apply) | Human owner + database owner | Reviewed migrator apply on staging Neon only | **OPEN — checkpoint prepared, not executed** (`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`) |
+| Cutover unlock (gen-1 synthetic shop) | Human owner | Owner actor, pre-checks, acceptance-recorded evidence | **OPEN — separately locked** |
 
 ## Deferred professional gates (not planning / freeze blockers)
 

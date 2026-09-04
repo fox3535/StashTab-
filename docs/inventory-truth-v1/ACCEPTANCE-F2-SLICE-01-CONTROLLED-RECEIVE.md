@@ -5,11 +5,14 @@
 **Branch:** `implementation/f2-slice-01-controlled-receive`
 **Implementation commit:** `af9431b`
 **Correction commit:** `feb94d6` (column-scoped UPDATE grant fix)
-**Decision:** **APPROVED by human owner, 2026-08-31**
-**Status:** `IMPLEMENTED LOCALLY — NOT MERGED — NOT DEPLOYED — PRIVILEGES/CUTOVER UNCHANGED`
+**Decision:** **APPROVED by human owner, 2026-08-31**; **MERGED 2026-09-04**
+**Status:** `MERGED ON main — NOT DEPLOYED — PRIVILEGES/CUTOVER UNCHANGED`
+**Merge:** PR #31 merge commit `a354fed0570241894b6e866e9e18ffbb059add6f`
+**`main` SHA:** `a354fed`
 
-No merge, push to production, staging schema apply, privilege cutover,
-Railway/Neon/Clerk contact, or staging writes occurred during acceptance.
+Merged through protected `main` with a merge commit. No squash, rebase,
+force-push, or emergency bypass. Staging schema apply, privilege cutover,
+Railway/Neon/Clerk contact, and staging writes did not occur.
 
 ## PostgreSQL evidence (disposable local `postgres:16`)
 
@@ -74,7 +77,9 @@ One Bugbot review of correction pass (`feb94d6`): no findings.
 ## Explicitly not done
 
 Staging Neon apply, production migration, privilege cutover, gen-1
-cutover on synthetic shop, frontend receive UI, merge to `main`,
-deploy, worker/Shopify/notifications enablement, and any cloud contact.
+cutover on synthetic shop, frontend receive UI, deploy,
+worker/Shopify/notifications enablement, and any cloud contact.
+Provisioning remains prepared only:
+`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`.
 
 `lib/use-api-auth.ts` and seven barcode PNGs remain untracked and untouched.
