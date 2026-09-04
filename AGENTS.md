@@ -65,6 +65,11 @@ than guessing. Chat transcripts are not durable project memory.
 - Do not commit secrets or local env files. Do not push, merge, migrate, deploy,
   enable external delivery, use paid provider credits, or use production
   credentials without the matching explicit human approval.
+- Never run `git push origin main`. Never commit follow-up records directly on
+  local `main`. After a merge, documentation and context updates must use a new
+  branch and pull request. An emergency ruleset bypass requires a fresh, explicit
+  owner instruction that names the emergency; merge approval is not that
+  instruction.
 - Reviews require contract clauses, exact code, or test evidence. Agent
   agreement is not acceptance evidence.
 - Use bounded review/correction/finalization paths. A timeout or repeated review
@@ -78,8 +83,9 @@ than guessing. Chat transcripts are not durable project memory.
   slice directive, and contracts directly relevant to the changed subsystem.
   Do not reload historical reviews or chat transcripts without a concrete need.
 - Routine frontend and documentation work may run as one continuous sequence:
-  inspect, implement, test, review once, correct once, commit, push, and open a
-  draft PR. A named slice unlock authorizes these reversible local steps.
+  inspect, implement, test, review once, correct once, commit on a feature
+  branch, push that branch, and open a draft PR. Never push `origin main`.
+  A named slice unlock authorizes these reversible local steps.
 - Normal backend work uses one short plan, one implementation pass, relevant
   tests, one bounded review, and one correction pass.
 - Reserve freeze/amendment packets and separate approval gates for high-risk
