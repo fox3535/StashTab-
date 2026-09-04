@@ -262,3 +262,42 @@ Must cover every remaining absolute or manual inventory mutation path
 variance if introduced, recovery from mistaken adjustments) and replace
 silent absolute overwrites with append-only, auditable quantity changes
 while preserving the existing inventory snapshot.
+
+## inventory-truth-v1 / f2-slice-01-controlled-receive
+
+**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONING APPLIED AND VERIFIED 2026-09-04 — NOT DEPLOYED — CUTOVER LOCKED`
+**Source:** D-040; D-041; D-042;
+`docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
+`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`; `GATES-POINTER-F2-SLICE-01.md`
+
+Controlled-receive code merged on `main`. Staging provisioning
+(`purchase_record.client_idempotency_key`, partial unique index
+`uq_purchase_record_shop_client_key`, and the `stashtab_api` least-privilege
+envelope) was applied on Neon `stashtab_staging` only during an authorized
+Cursor run, then reconciled and verified read-only by Qoder (idempotent rerun
+byte-identical; business tables empty; identity 2 shops / 2 owners; no
+`F2-TEST-0001`; cutover row absent). No rollback, deploy, seed, receive, or
+production action.
+
+### Remaining gates (each a separate named unlock)
+
+1. **API-only Railway deployment** of the merged code to staging — prepared,
+   not executed (`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`). Autodeploy off;
+   API service only (no worker); cutover stays off; verify health/ready 200,
+   unauthenticated receive 401, authenticated receive controlled 503 before any
+   write, and Neon row counts unchanged.
+2. **Cutover unlock** (gen-1 synthetic shop) — separately locked. Do not use the
+   receive endpoint until cutover is unlocked.
+3. **Production** provisioning, cutover, and deploy — blocked by
+   `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates.
+
+### Non-F2 privilege follow-ups (pre-existing baseline; not F2 claims)
+
+Recorded for a future runtime least-privilege review; unrelated to and not
+introduced by the F2 envelope; not a slice blocker:
+
+- Runtime `stashtab_api` holds INSERT on identity `shops` / `shop_members`.
+- Runtime `stashtab_api` holds USAGE/SELECT/UPDATE on the non-F2 truth sequences
+  (`sale`, `inventory_adjustment`, `inventory_channel_observation`,
+  `inventory_exception`, `inventory_truth_cutover`, `refund_record`,
+  `return_record`) while those tables stay SELECT-only.

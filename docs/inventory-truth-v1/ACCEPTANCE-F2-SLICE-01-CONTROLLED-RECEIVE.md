@@ -6,7 +6,7 @@
 **Implementation commit:** `af9431b`
 **Correction commit:** `feb94d6` (column-scoped UPDATE grant fix)
 **Decision:** **APPROVED by human owner, 2026-08-31**; **MERGED 2026-09-04**
-**Status:** `MERGED ON main — NOT DEPLOYED — PRIVILEGES/CUTOVER UNCHANGED`
+**Status:** `MERGED ON main — STAGING PROVISIONING APPLIED AND VERIFIED — NOT DEPLOYED — CUTOVER LOCKED`
 **Merge:** PR #31 merge commit `a354fed0570241894b6e866e9e18ffbb059add6f`
 **`main` SHA:** `a354fed`
 
@@ -74,12 +74,39 @@ acceptance and handler design review.
 
 One Bugbot review of correction pass (`feb94d6`): no findings.
 
+## Staging provisioning reconciliation (2026-09-04)
+
+The staging provisioning prepared above was **applied on Neon `stashtab_staging`
+only** during an authorized Cursor run that was interrupted before its report.
+Qoder reconciled and verified it read-only; every item matched this record.
+
+| Item | Verified staging state |
+| --- | --- |
+| Column | `purchase_record.client_idempotency_key` `varchar(36)`, nullable — present |
+| Index | partial unique `uq_purchase_record_shop_client_key` on `(shop_id, client_idempotency_key)` — present |
+| `stashtab_api` envelope | SELECT + INSERT on the four envelope tables; `UPDATE (stock, cost)` on `inventory_item` only; no table-wide UPDATE/DELETE/TRUNCATE; USAGE on the four F2 sequences |
+| Other seven rehearsal tables | SELECT-only |
+| `stashtab_worker` / `stashtab_readonly` / PUBLIC | no envelope rights; no migrator assumption |
+| Ownership | all F2 objects owned by `stashtab_migrator` |
+| Business/truth rows | all `0` |
+| Identity | `2` shops / `2` owners — intact |
+| `F2-TEST-0001` | absent — no receive call, no partial write |
+| Cutover | rowcount `0` — OFF |
+| Idempotent rerun | single `apply-f2-receive` returned `columns: []`, `indexes: []`; before/after snapshots byte-identical (SHA-256 `c5f5eafb196d85a47fe56062c5472245de2831cfd1c90cc456c368ef7e7f087b`) |
+| Not done | no rollback, deploy, seed, receive, cutover, or production action |
+
+The staging migrator URL file was securely destroyed after verification. Two
+**pre-existing non-F2** privilege observations (runtime INSERT on identity
+`shops`/`shop_members`; USAGE/SELECT/UPDATE on non-F2 truth sequences) are
+recorded as follow-ups in `GATES-POINTER-F2-SLICE-01.md`, not as F2 claims.
+
 ## Explicitly not done
 
-Staging Neon apply, production migration, privilege cutover, gen-1
-cutover on synthetic shop, frontend receive UI, deploy,
-worker/Shopify/notifications enablement, and any cloud contact.
-Provisioning remains prepared only:
-`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`.
+Production migration, privilege cutover, gen-1 cutover on synthetic shop,
+frontend receive UI, deploy, worker/Shopify/notifications enablement, and any
+production cloud contact. Staging Neon apply **has since been performed and
+verified** — see the reconciliation section above. Cutover and receive-endpoint
+use remain locked: `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md` and
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
 
 `lib/use-api-auth.ts` and seven barcode PNGs remain untracked and untouched.
