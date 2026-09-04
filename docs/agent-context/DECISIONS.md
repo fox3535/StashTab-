@@ -695,3 +695,55 @@ migration, privilege change, or staging write.
 Evidence: `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
 `docs/inventory-truth-v1/CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`.
 
+## D-042 — F2 staging provisioning reconciled and verified; API deployment checkpoint prepared
+
+Approved by named human owner 2026-09-04.
+
+`inventory-truth-v1 / f2-slice-01-controlled-receive` staging provisioning is
+**APPLIED ON STAGING — RECONCILED AND VERIFIED — NOT DEPLOYED — CUTOVER
+LOCKED**.
+
+The provisioning prepared in D-041 was applied on Neon `stashtab_staging` only
+during an **authorized Cursor run** that was interrupted (usage limit) before it
+reported. This is reconciliation of an authorized action, **not** a governance
+incident. Qoder verified the live state read-only against the checkpoint; every
+item matched.
+
+Recorded facts: column `purchase_record.client_idempotency_key` `varchar(36)`
+nullable and partial unique index `uq_purchase_record_shop_client_key` present;
+the `stashtab_api` envelope is SELECT + INSERT on the four envelope tables with
+column-scoped `UPDATE (stock, cost)` on `inventory_item` only, no table-wide
+UPDATE/DELETE/TRUNCATE, and USAGE on the four F2 sequences; the other seven
+rehearsal tables stay SELECT-only; `stashtab_worker`, `stashtab_readonly`, and
+PUBLIC hold no envelope rights and no role can assume `stashtab_migrator`; all
+F2 objects are owned by `stashtab_migrator`. Every business/truth table holds
+`0` rows; identity is intact at `2` shops / `2` owners; `F2-TEST-0001` is
+absent; the cutover rowcount is `0` (OFF). No receive call and no partial
+business-data write occurred.
+
+A single idempotent `apply-f2-receive` returned `columns: []`, `indexes: []` and
+re-affirmed grants; before/after read-only snapshots were byte-identical
+(SHA-256 `c5f5eafb196d85a47fe56062c5472245de2831cfd1c90cc456c368ef7e7f087b`).
+No rollback ran. The staging migrator URL file was securely destroyed after
+verification. No deployment, seed, receive, cutover, or production action and no
+Railway/Neon/Clerk contact occurred.
+
+Two **pre-existing non-F2** privilege observations were recorded as follow-ups,
+not F2 claims: runtime `stashtab_api` INSERT on identity `shops`/`shop_members`,
+and USAGE/SELECT/UPDATE on the non-F2 truth sequences while those tables stay
+SELECT-only.
+
+An **API-only** Railway staging deployment checkpoint was prepared (not
+executed): deploy protected `main` at the eventual docs-merge SHA, autodeploy
+off, API service only (no worker), existing staging environment and pooled
+`stashtab_api` role, cutover off, no feature flags/Shopify/notifications/Web
+Push/worker jobs; after deploy verify health and ready 200, unauthenticated
+receive 401, authenticated receive blocked with a controlled 503 before any
+write, and Neon row counts unchanged. This decision does **not** authorize that
+deployment, cutover, or any receive use.
+
+Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`;
+`docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
+`docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
+`docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
+
