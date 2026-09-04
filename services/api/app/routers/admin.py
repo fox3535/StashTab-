@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 import math
+import uuid
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -1197,3 +1198,70 @@ def inventory_truth_reconcile(
 
     mismatches = truth_core.reconcile_shop(db, ctx.shop_id)
     return {"shop_id": ctx.shop_id, "unaccounted_qty": len(mismatches), "mismatches": mismatches}
+
+
+class ControlledReceiveIn(BaseModel):
+    """AMENDMENT-1.3.0 §5 request contract for the controlled receive."""
+
+    sku: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=1, max_length=100)
+    quantity: int = Field(ge=1, le=1000)
+    unit_cost: float = Field(ge=0.0, le=99999.99)
+    set_name: str | None = Field(default=None, max_length=100)
+    sequence_number: str | None = Field(default=None, max_length=50)
+
+
+def _require_receive_role(ctx: ShopContext) -> None:
+    # owner or staff only; a missing role (e.g. dev bypass) is fail-closed.
+    if getattr(ctx, "role", None) not in ("owner", "staff"):
+        raise HTTPException(status_code=403, detail="Receive requires owner or staff role")
+
+
+def _validated_client_key(idempotency_key: str | None) -> str:
+    if not idempotency_key:
+        raise HTTPException(status_code=422, detail="Idempotency-Key header is required")
+    try:
+        parsed = uuid.UUID(idempotency_key)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Idempotency-Key must be a UUIDv4 (36 chars)")
+    if len(idempotency_key) != 36 or parsed.version != 4:
+        raise HTTPException(status_code=422, detail="Idempotency-Key must be a UUIDv4 (36 chars)")
+    return idempotency_key
+
+
+@router.post("/inventory/receive")
+def inventory_receive(
+    payload: ControlledReceiveIn,
+    ctx: ShopContext = Depends(get_shop_context),
+    db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict:
+    """F2 controlled receive (AMENDMENT-1.3.0 §5). One transaction, commit
+    only at the end; replay by (shop_id, client_idempotency_key)."""
+    from app.logic.controlled_receive import ReceiveConflictError, receive_controlled
+
+    _require_receive_role(ctx)
+    client_key = _validated_client_key(idempotency_key)
+    try:
+        result = receive_controlled(
+            db,
+            shop_id=ctx.shop_id,
+            client_key=client_key,
+            sku=payload.sku,
+            name=payload.name,
+            quantity=payload.quantity,
+            unit_cost=payload.unit_cost,
+            set_name=payload.set_name,
+            sequence_number=payload.sequence_number,
+            actor_clerk_user_id=ctx.clerk_user_id,
+        )
+    except ReceiveConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return {
+        "success": True,
+        "result": result.result,
+        "inventory_item_id": result.inventory_item_id,
+        "sku": result.sku,
+        "stock": result.stock,
+        "purchase_record_id": result.purchase_record_id,
+    }

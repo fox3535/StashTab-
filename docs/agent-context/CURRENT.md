@@ -1,16 +1,19 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-08-28
-**Branch:** `main` at `aaac4e4` (slice-06 PR #23 merged); `feature/f1-vendor-core-recovery-batch` in draft review
+**Last verified:** 2026-08-31
+**Branch:** `main` at `9870468`; `implementation/f2-slice-01-controlled-receive` implemented locally (draft PR pending); `feature/f1-vendor-core-recovery-batch` in draft review
 **Staging API:** Railway deploy `9c47945a` of `main` (staging smoke passed, D-039)
 
 ## Frozen contracts
 
 - `STASHTAB-CARD-RESOLUTION-001` v1.0.0. AMENDMENT-1.1.1 and 1.1.2 frozen.
   Web Push off. Local 1.1.2 backend on `main` as `c3647a4`; not in production.
-- `STASHTAB-INVENTORY-TRUTH-001` **v1.2.0** — frozen. Slices 01–03 on `main`
-  via `c3647a4`. Staging schema applied 2026-08-27 (D-028). Not production.
+- `STASHTAB-INVENTORY-TRUTH-001` **v1.3.0** — frozen (AMENDMENT-1.3.0 on `main`
+  via `9870468`). Slices 01–03 on `main` via `c3647a4`. F2 controlled receive
+  **implemented locally** on `implementation/f2-slice-01-controlled-receive`
+  (`af9431b` + `feb94d6`); not merged, not deployed, staging privileges/cutover
+  unchanged. Staging schema for slices 01–03 applied 2026-08-27 (D-028). Not production.
 
 ## Current phase
 
@@ -42,10 +45,14 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
    Merged on `main` `3c3ca33`; staging smoke passed: real Clerk memberships,
    live staging inventory read, full keyboard walkthrough, mobile, sign-out
    and re-sign-in. No schema or data writes.
+9. F2 slice-01 controlled receive: **implemented locally** (D-040). Branch
+   `implementation/f2-slice-01-controlled-receive`; PostgreSQL/SQLite acceptance
+   green; draft PR awaiting review. Not merged, not deployed, privileges/cutover
+   unchanged on staging.
 
 ## Next queued phases
 
-1. Owner review of the F1 vendor-core batch draft PR
+1. Owner review of F2 controlled-receive draft PR and F1 vendor-core batch draft PR
    (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`): onboarding recovery,
    vendor-core pattern consolidation, regression suite. Not merged,
    not deployed.

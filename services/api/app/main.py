@@ -5,10 +5,11 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.config import settings
 from app.database import init_db
-from app.errors import FeatureNotReadyError
+from app.errors import FeatureNotReadyError, is_insufficient_privilege, is_missing_relation
 from app.auth.identity import log_dev_identity_bypass_state
 from app.card_resolution.router import router as card_resolution_router
 from app.routers import (
@@ -50,6 +51,40 @@ async def feature_not_ready_handler(_request, exc: FeatureNotReadyError):
             "message": exc.message,
         },
     )
+
+
+def _controlled_unavailable_response() -> JSONResponse:
+    # Generic body only — never leak SQL text, role names, or stack traces.
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "FEATURE_NOT_READY",
+            "feature": "inventory",
+            "message": "This operation is not enabled in this environment.",
+        },
+    )
+
+
+@app.exception_handler(OperationalError)
+async def operational_error_handler(_request, exc: OperationalError):
+    """AMENDMENT-1.3.0 §8: after cutover the runtime keeps column-scoped
+    grants; any privilege denial (SQLSTATE 42501, surfaced by SQLAlchemy
+    2.x as a wrapped OperationalError) becomes a controlled 503, never a
+    raw 500 with database details. Other operational errors keep the
+    generic path."""
+    if is_insufficient_privilege(exc):
+        return _controlled_unavailable_response()
+    raise exc
+
+
+@app.exception_handler(ProgrammingError)
+async def programming_error_handler(_request, exc: ProgrammingError):
+    """AMENDMENT-1.3.0 §8: undefined relations (tables not provisioned in
+    this environment) map to controlled 503. Other programming errors keep
+    the generic 500 path."""
+    if is_missing_relation(exc):
+        return _controlled_unavailable_response()
+    raise exc
 
 
 app.add_middleware(

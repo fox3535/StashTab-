@@ -15,7 +15,7 @@ import os
 import re
 import sys
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 from app.database import engine as default_engine
@@ -39,6 +39,26 @@ _TABLE_PRIVS = (
 )
 _API_PRIVS = frozenset({"SELECT"})
 _ROLE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+_COLUMN_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+# AMENDMENT-1.3.0 §4/§7: F2 controlled-receive envelope. Opt-in only —
+# never applied by apply()/apply_rehearsal(); the default policy stays
+# SELECT-only everywhere.
+F2_CLIENT_KEY_COLUMN = "client_idempotency_key"
+F2_CLIENT_KEY_INDEX = "uq_purchase_record_shop_client_key"
+_F2_GRANT_TABLES = ("inventory_item", "purchase_record", "acquisition_lot", "inventory_event")
+_F2_TABLE_PRIVS = {
+    "inventory_item": frozenset({"SELECT", "INSERT"}),  # UPDATE is column-scoped
+    "purchase_record": frozenset({"SELECT", "INSERT"}),
+    "acquisition_lot": frozenset({"SELECT", "INSERT"}),
+    "inventory_event": frozenset({"SELECT", "INSERT"}),
+}
+_F2_UPDATE_COLUMNS = ("stock", "cost")
+_F2_SEQUENCES = (
+    "inventory_item_id_seq",
+    "purchase_record_id_seq",
+    "acquisition_lot_id_seq",
+    "inventory_event_id_seq",
+)
 _TRUTH_DROP_ORDER = (
     "inventory_adjustment",
     "return_record",
@@ -317,6 +337,205 @@ def _assert_select_only(conn, tables: tuple[str, ...]) -> None:
                 raise RuntimeError(f"{role} has table privileges on {table}: {sorted(held)}")
 
 
+def _has_sequence(conn, name: str) -> bool:
+    return bool(
+        conn.execute(
+            text(
+                """
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = :s AND c.relkind = 'S'
+                """
+            ),
+            {"s": name},
+        ).scalar()
+    )
+
+
+def _has_column_privilege(conn, role: str, table: str, column: str, priv: str) -> bool:
+    return bool(
+        conn.execute(
+            text("SELECT has_column_privilege(:role, :rel, :col, :priv)"),
+            {"role": role, "rel": f"public.{table}", "col": column, "priv": priv},
+        ).scalar()
+    )
+
+
+def _table_columns(conn, table: str) -> list[str]:
+    rows = conn.execute(
+        text(
+            """
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = :table
+            ORDER BY ordinal_position
+            """
+        ),
+        {"table": table},
+    )
+    return [r[0] for r in rows]
+
+
+def _grant_f2_envelope(conn) -> list[str]:
+    """AMENDMENT-1.3.0 §7 grant envelope for `stashtab_api` on exactly the
+    four named objects. Runs under SET LOCAL ROLE stashtab_migrator.
+    Column-scoped UPDATE (stock, cost) contains every unrelated write."""
+    grants: list[str] = []
+    api = _ident(API_ROLE)
+    for table in _F2_GRANT_TABLES:
+        conn.execute(text(f"REVOKE ALL PRIVILEGES ON TABLE {table} FROM PUBLIC"))
+        for role in _RUNTIME_ROLES:
+            if _role_exists(conn, role):
+                conn.execute(
+                    text(f"REVOKE ALL PRIVILEGES ON TABLE {table} FROM {_ident(role)}")
+                )
+    if not _role_exists(conn, api):
+        return grants
+    for table in _F2_GRANT_TABLES:
+        conn.execute(text(f"GRANT SELECT ON TABLE {table} TO {api}"))
+        grants.append(f"{api}:{table}:select")
+        conn.execute(text(f"GRANT INSERT ON TABLE {table} TO {api}"))
+        grants.append(f"{api}:{table}:insert")
+    conn.execute(text(f"REVOKE UPDATE ON TABLE inventory_item FROM {api}"))
+    conn.execute(
+        text(
+            f"GRANT UPDATE ({', '.join(_F2_UPDATE_COLUMNS)}) "
+            f"ON TABLE inventory_item TO {api}"
+        )
+    )
+    grants.append(f"{api}:inventory_item:update({','.join(_F2_UPDATE_COLUMNS)})")
+    for seq in _F2_SEQUENCES:
+        if _has_sequence(conn, seq):
+            conn.execute(text(f"GRANT USAGE ON SEQUENCE {seq} TO {api}"))
+            grants.append(f"{api}:{seq}:usage")
+    return grants
+
+
+def _assert_f2_policy(conn, tables: tuple[str, ...]) -> None:
+    """Per-table policy assert (DIRECTIVE-F2 §2): the §7 envelope on the
+    four named objects, SELECT-only on every other staging table, no
+    PUBLIC/worker/readonly access, UPDATE confined to stock/cost, and no
+    migrator assumption. PostgreSQL only — SQLite has no ACLs."""
+    if conn.dialect.name != "postgresql":
+        return
+    api = _ident(API_ROLE)
+    for table in tables:
+        expected = _F2_TABLE_PRIVS.get(table, _API_PRIVS)
+        for priv in _TABLE_PRIVS:
+            if _public_has_table_privilege(conn, table, priv):
+                raise RuntimeError(f"PUBLIC has {priv} on {table}")
+        if _role_exists(conn, API_ROLE):
+            allowed = {
+                priv for priv in _TABLE_PRIVS if _has_table_privilege(conn, API_ROLE, table, priv)
+            }
+            if allowed != expected:
+                raise RuntimeError(
+                    f"stashtab_api privileges on {table} are {sorted(allowed)}, "
+                    f"expected {sorted(expected)}"
+                )
+        for role in (WORKER_ROLE, READONLY_ROLE):
+            if not _role_exists(conn, role):
+                continue
+            held = {
+                priv for priv in _TABLE_PRIVS if _has_table_privilege(conn, role, table, priv)
+            }
+            if held:
+                raise RuntimeError(f"{role} has table privileges on {table}: {sorted(held)}")
+    if _role_exists(conn, API_ROLE):
+        for column in _table_columns(conn, "inventory_item"):
+            expected_update = column in _F2_UPDATE_COLUMNS
+            if _has_column_privilege(conn, API_ROLE, "inventory_item", column, "UPDATE") != expected_update:
+                raise RuntimeError(
+                    f"stashtab_api UPDATE containment violated on inventory_item.{column}"
+                )
+        for seq in _F2_SEQUENCES:
+            if _has_sequence(conn, seq) and not bool(
+                conn.execute(
+                    text("SELECT has_sequence_privilege(:role, :seq, 'USAGE')"),
+                    {"role": API_ROLE, "seq": f"public.{seq}"},
+                ).scalar()
+            ):
+                raise RuntimeError(f"stashtab_api lacks USAGE on {seq}")
+    _assert_runtime_cannot_assume_migrator(conn)
+
+
+def apply_f2_receive(
+    target_engine: Engine | None = None, *, fail_after: str | None = None
+) -> dict[str, list[str]]:
+    """AMENDMENT-1.3.0 §4: additive client idempotency key column, partial
+    unique index, §7 runtime grants, and the per-table policy assert — ONE
+    atomic reviewed-migrator transaction. Opt-in only; rerun is a no-op;
+    injected mid-failure leaves nothing partial."""
+    engine = target_engine or default_engine
+    migrator = _ident(MIGRATOR_ROLE)
+    applied: dict[str, list[str]] = {"columns": [], "indexes": [], "grants": []}
+    with engine.begin() as conn:
+        is_pg = conn.dialect.name == "postgresql"
+        if is_pg:
+            if not _role_exists(conn, migrator):
+                raise RuntimeError("stashtab_migrator role is missing")
+            _assert_runtime_cannot_assume_migrator(conn)
+            conn.execute(text(f"SET LOCAL ROLE {migrator}"))
+        insp = inspect(conn)
+        if not insp.has_table("purchase_record"):
+            raise RuntimeError("purchase_record is missing; apply the live schema first")
+        columns = {col["name"] for col in insp.get_columns("purchase_record")}
+        if F2_CLIENT_KEY_COLUMN not in columns:
+            if_clause = " IF NOT EXISTS" if is_pg else ""
+            conn.execute(
+                text(
+                    f"ALTER TABLE purchase_record ADD COLUMN{if_clause} "
+                    f"{F2_CLIENT_KEY_COLUMN} VARCHAR(36)"
+                )
+            )
+            applied["columns"].append(f"purchase_record.{F2_CLIENT_KEY_COLUMN}")
+        if fail_after == "column":
+            raise RuntimeError("injected f2 failure after column")
+        index_names = _index_names(conn, "purchase_record") if is_pg else {
+            ix["name"] for ix in insp.get_indexes("purchase_record")
+        }
+        if F2_CLIENT_KEY_INDEX not in index_names:
+            conn.execute(
+                text(
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS {F2_CLIENT_KEY_INDEX} "
+                    f"ON purchase_record (shop_id, {F2_CLIENT_KEY_COLUMN}) "
+                    f"WHERE {F2_CLIENT_KEY_COLUMN} IS NOT NULL"
+                )
+            )
+            applied["indexes"].append(F2_CLIENT_KEY_INDEX)
+        if fail_after == "index":
+            raise RuntimeError("injected f2 failure after index")
+        if is_pg:
+            applied["grants"] = _grant_f2_envelope(conn)
+            if fail_after == "grants":
+                raise RuntimeError("injected f2 failure after grants")
+            conn.execute(text("RESET ROLE"))
+            _assert_f2_policy(conn, REHEARSAL_TABLES)
+    return applied
+
+
+def rollback_f2_receive_grants(target_engine: Engine | None = None) -> dict[str, list[str]]:
+    """Evidence-preserving rollback (AMENDMENT-1.3.0 §12): revoke the §7
+    envelope back to SELECT-only. Keeps the column, the partial unique
+    index, and every evidence row; no DELETE, no column drop."""
+    engine = target_engine or default_engine
+    with engine.begin() as conn:
+        if conn.dialect.name != "postgresql":
+            return {"grants": []}
+        migrator = _ident(MIGRATOR_ROLE)
+        if not _role_exists(conn, migrator):
+            raise RuntimeError("stashtab_migrator role is missing")
+        conn.execute(text(f"SET LOCAL ROLE {migrator}"))
+        grants = _normalize_privileges(conn, REHEARSAL_TABLES)
+        if _role_exists(conn, API_ROLE):
+            api = _ident(API_ROLE)
+            for seq in _F2_SEQUENCES:
+                if _has_sequence(conn, seq):
+                    conn.execute(text(f"REVOKE ALL ON SEQUENCE {seq} FROM {api}"))
+        conn.execute(text("RESET ROLE"))
+        _assert_select_only(conn, REHEARSAL_TABLES)
+    return {"grants": grants}
+
+
 def apply(target_engine: Engine | None = None, *, fail_after: str | None = None) -> dict[str, list[str]]:
     """Create the three live parents in one transaction. Idempotent."""
     engine = target_engine or default_engine
@@ -444,7 +663,17 @@ def _drop_tables(engine: Engine, names: tuple[str, ...]) -> dict[str, list[str]]
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Live inventory parent migrator")
-    parser.add_argument("command", choices=("apply", "rollback", "apply-rehearsal", "rollback-rehearsal"))
+    parser.add_argument(
+        "command",
+        choices=(
+            "apply",
+            "rollback",
+            "apply-rehearsal",
+            "rollback-rehearsal",
+            "apply-f2-receive",
+            "rollback-f2-receive-grants",
+        ),
+    )
     args = parser.parse_args(argv)
     if args.command == "apply":
         print("inventory-live-schema apply:", apply())
@@ -452,6 +681,10 @@ def main(argv: list[str] | None = None) -> int:
         print("inventory-live-schema rollback:", rollback())
     elif args.command == "apply-rehearsal":
         print("inventory-schema-rehearsal apply:", apply_rehearsal())
+    elif args.command == "apply-f2-receive":
+        print("inventory-live-schema f2-receive apply:", apply_f2_receive())
+    elif args.command == "rollback-f2-receive-grants":
+        print("inventory-live-schema f2-receive grant rollback:", rollback_f2_receive_grants())
     else:
         print("inventory-schema-rehearsal rollback:", rollback_rehearsal())
     return 0
