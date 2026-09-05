@@ -265,10 +265,12 @@ while preserving the existing inventory snapshot.
 
 ## inventory-truth-v1 / f2-slice-01-controlled-receive
 
-**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONING APPLIED AND VERIFIED 2026-09-04 — NOT DEPLOYED — CUTOVER LOCKED`
-**Source:** D-040; D-041; D-042;
+**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED 2026-09-04 — CUTOVER LOCKED`
+**Source:** D-040; D-041; D-042; D-043;
 `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
-`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`; `GATES-POINTER-F2-SLICE-01.md`
+`CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`;
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`;
+`CHECKPOINT-F2-CUTOVER-PLANNING.md`; `GATES-POINTER-F2-SLICE-01.md`
 
 Controlled-receive code merged on `main`. Staging provisioning
 (`purchase_record.client_idempotency_key`, partial unique index
@@ -276,20 +278,33 @@ Controlled-receive code merged on `main`. Staging provisioning
 envelope) was applied on Neon `stashtab_staging` only during an authorized
 Cursor run, then reconciled and verified read-only by Qoder (idempotent rerun
 byte-identical; business tables empty; identity 2 shops / 2 owners; no
-`F2-TEST-0001`; cutover row absent). No rollback, deploy, seed, receive, or
+`F2-TEST-0001`; cutover row absent). Provisioning is **complete**.
+
+The **API-only** Railway staging deployment was then executed once and verified
+read-only: `main` at `ec9f72c` as deployment `44317623` (`SUCCESS`), autodeploy
+off, no worker. Health and ready `200` with every feature flag `false`;
+unauthenticated receive `401`; exactly one owner-run authenticated probe `503`
+`FEATURE_NOT_READY` after membership resolution and before any write; Neon row
+counts unchanged, both probe markers absent, and the F2 column/index/grant
+envelope unchanged (digest and detail in D-043). The endpoint is **deployed but
+fail-closed**. No rollback, seed, flag or grant change, successful receive, or
 production action.
 
 ### Remaining gates (each a separate named unlock)
 
-1. **API-only Railway deployment** of the merged code to staging — prepared,
-   not executed (`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`). Autodeploy off;
-   API service only (no worker); cutover stays off; verify health/ready 200,
-   unauthenticated receive 401, authenticated receive controlled 503 before any
-   write, and Neon row counts unchanged.
-2. **Cutover unlock** (gen-1 synthetic shop) — separately locked. Do not use the
-   receive endpoint until cutover is unlocked.
+1. **Cutover runbook, audit logging, and break-glass procedure** — not yet
+   written; required before any cutover execution (frozen `GATES.md` standing
+   deployment gate 4).
+2. **Cutover unlock** (gen-1 synthetic shop) — separately locked, with a
+   zero-variance reconciliation target. Do not use the receive endpoint until
+   cutover is unlocked. `CHECKPOINT-F2-CUTOVER-PLANNING.md` is **planning
+   only** — not approved, not executed.
 3. **Production** provisioning, cutover, and deploy — blocked by
    `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates.
+
+Closed since the provisioning record: the **API-only Railway staging
+deployment** (executed once and verified fail-closed 2026-09-04;
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, D-043).
 
 ### Non-F2 privilege follow-ups (pre-existing baseline; not F2 claims)
 

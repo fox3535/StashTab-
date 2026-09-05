@@ -747,3 +747,79 @@ Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.m
 `docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
 `docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
 
+## D-043 — F2 pre-cutover staging deployment verified fail-closed; cutover planning prepared
+
+Approved by named human owner 2026-09-04 (one deployment unlock, one owner-run
+probe). Verification and this record are documentation only.
+
+`inventory-truth-v1 / f2-slice-01-controlled-receive` is now **PROVISIONED —
+DEPLOYED TO STAGING — VERIFIED FAIL-CLOSED — CUTOVER LOCKED**.
+
+The API-only Railway staging deployment prepared in D-042 was executed once:
+protected `main` at `ec9f72c` (PR #33 merge commit; full SHA
+`ec9f72c42c4f5ad0c0adf217c05c5f766033739c`) deployed as Railway deployment
+`44317623`, status `SUCCESS`, created 2026-09-04T23:19:51Z. Deployment
+`meta.commitHash` matched the pinned SHA. Autodeploy stayed off
+(`watchPatterns: []`); one API service instance, no worker service,
+`cronSchedule` null, DOCKERFILE builder, root directory `services/api`,
+healthcheck path `/api/v1/health`.
+
+Verification was read-only. `GET /api/v1/health` and `GET /api/v1/ready` both
+returned `200`; ready reported `app_env: staging`, `database.connected: true`,
+`identity.dev_bypass_allowed: false`, `schema.legacy` and
+`schema.inventory_truth` true with `schema.notifications` false, all five
+feature flags (`notifications_backend`, `web_push`, `inventory_cutover`,
+`shopify_sync`, `worker`) `false`, and `reasons: []`. Bounded runtime logs
+showed one `Started server process`, one `Uvicorn running`, one `Application
+startup complete`, and no shutdown, crash, or restart — one stable process —
+plus zero worker, Shopify, notification, Web Push, schema, migration, and seed
+activity.
+
+The owner ran the authenticated receive probe **exactly once**: `POST
+/api/v1/admin/inventory/receive` → **503** with body `FEATURE_NOT_READY` /
+`feature: inventory_truth`. Bounded logs contain exactly one authenticated probe
+`503`, one earlier unauthenticated `401`, and one CORS `OPTIONS` `200`. The 503
+occurred **after** authentication and membership resolution (`GET
+/api/v1/shops/me/memberships` → `200`; `GET /api/v1/inventory/search` → `200`)
+and **before** any receive transaction or write: it is the cutover gate, not an
+authorization failure. Two unrelated `GET /api/v1/sync/notifications` `503` lines
+are the pre-existing notifications-off path, not F2 activity.
+
+Neon `stashtab_staging` was re-snapshotted twice through the **pooled
+`stashtab_api`** role in a read-only session — no migrator credential, no
+privileged role, no write, no seed. Thirteen tables were accessible; all eleven
+business/truth tables held `0` rows; the row-count digest was
+`7f92454515ec31678e05a1da695f1bb02ddba0b7f67a648db008566b22d066c9`, identical to
+the pre-probe baseline and stable across both runs; `shops = 2` and
+`shop_members = 2`; the `inventory_truth_cutover` rowcount was `0` (OFF); both
+`F2-PROBE-DO-NOT-USE` and `F2-TEST-0001` were absent. The F2 objects were
+unchanged: column `purchase_record.client_idempotency_key`
+`character varying(36)` nullable; partial unique index
+`uq_purchase_record_shop_client_key` on `(shop_id, client_idempotency_key)`
+where the key is not null; SELECT + INSERT on the four envelope tables with
+column-scoped `UPDATE (stock, cost)` on `inventory_item` only and no table-wide
+UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER; USAGE on the four F2 sequences (eleven
+sequences total). The connection URL was injected into the process environment
+only, never printed, and cleared after use.
+
+**Recorded state:** the receive endpoint is **deployed but fail-closed**;
+staging **provisioning is complete**; **cutover and a successful receive remain
+separately locked**. No flag, grant, privilege, schema, or cutover row changed.
+
+The local frontend dev server on port 3001 — started solely so the owner could
+sign in and run the probe — was stopped afterwards; Railway was left running. The
+temporary read-only verification script was deleted and no repository code
+changed.
+
+A **cutover-planning** checkpoint was prepared
+(`CHECKPOINT-F2-CUTOVER-PLANNING.md`): preconditions satisfied, preconditions
+still open (cutover runbook/audit logging/break-glass, zero-variance
+reconciliation, a named owner unlock, and the production-scope gates that must
+not be conflated with staging), and the decisions a future unlock must specify.
+It is **planning only** and does not approve or execute cutover.
+
+Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`;
+`docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
+`docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
+`docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-PLANNING.md`.
+
