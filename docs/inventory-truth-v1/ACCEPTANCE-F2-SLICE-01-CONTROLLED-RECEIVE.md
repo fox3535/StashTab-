@@ -6,9 +6,11 @@
 **Implementation commit:** `af9431b`
 **Correction commit:** `feb94d6` (column-scoped UPDATE grant fix)
 **Decision:** **APPROVED by human owner, 2026-08-31**; **MERGED 2026-09-04**
-**Status:** `MERGED ON main — STAGING PROVISIONING APPLIED AND VERIFIED — NOT DEPLOYED — CUTOVER LOCKED`
+**Status:** `MERGED ON main — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED — CUTOVER LOCKED`
 **Merge:** PR #31 merge commit `a354fed0570241894b6e866e9e18ffbb059add6f`
 **`main` SHA:** `a354fed`
+**Staging deploy:** Railway deployment `44317623` of `main` at `ec9f72c`, verified
+read-only 2026-09-04 (D-043)
 
 Merged through protected `main` with a merge commit. No squash, rebase,
 force-push, or emergency bypass. Staging schema apply, privilege cutover,
@@ -100,13 +102,45 @@ The staging migrator URL file was securely destroyed after verification. Two
 `shops`/`shop_members`; USAGE/SELECT/UPDATE on non-F2 truth sequences) are
 recorded as follow-ups in `GATES-POINTER-F2-SLICE-01.md`, not as F2 claims.
 
+## Staging deployment verification (2026-09-04)
+
+The **API-only** Railway staging deployment prepared in
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md` was executed once under a named
+owner unlock and verified read-only. The endpoint is **deployed but
+fail-closed**; provisioning is **complete**; cutover and a successful receive
+remain **separately locked**.
+
+| Item | Verified staging state |
+| --- | --- |
+| Deployed source | protected `main` at `ec9f72c`; deployment `meta.commitHash` `ec9f72c42c4f5ad0c0adf217c05c5f766033739c` |
+| Deployment | `44317623` — `SUCCESS`, 2026-09-04T23:19:51Z; one API service instance; no worker; `cronSchedule` null |
+| Autodeploy | **OFF** — `watchPatterns: []` |
+| Health / ready | both **200**; `app_env: staging`; `database.connected: true`; `dev_bypass_allowed: false`; `schema.notifications: false`; all five `features` `false`; `reasons: []` |
+| Unauthenticated receive | **401** — exactly one such log line |
+| Authenticated receive | **exactly one** owner-run probe → **503** `FEATURE_NOT_READY` (`feature: inventory_truth`) |
+| Probe ordering | after authentication and membership resolution (`GET /api/v1/shops/me/memberships` → `200`) and before any receive transaction or write |
+| Process stability | one `Started server process` / `Uvicorn running` / `Application startup complete`; no shutdown, crash, or restart |
+| Inactive paths | zero worker, Shopify, notification, Web Push, schema, migration, and seed activity in bounded logs |
+| Neon row counts | unchanged via pooled `stashtab_api` read-only session; digest `7f92454515ec31678e05a1da695f1bb02ddba0b7f67a648db008566b22d066c9`, stable across two runs |
+| Business/truth rows | all `0` (11 tables of 13 accessible) |
+| Identity | `2` shops / `2` owners — intact |
+| Probe markers | `F2-PROBE-DO-NOT-USE` absent; `F2-TEST-0001` absent |
+| Cutover | rowcount `0` — OFF; `features.inventory_cutover: false` |
+| F2 schema objects | column `character varying(36)` nullable; partial unique index `uq_purchase_record_shop_client_key` present and unchanged |
+| F2 grant envelope | SELECT + INSERT on the four envelope tables; `UPDATE (stock, cost)` on `inventory_item` only; no table-wide UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER; USAGE on the four F2 sequences (11 sequences total) |
+| Credential hygiene | pooled runtime role only; no migrator credential; connection URL never printed and cleared from the environment |
+| Not done | no redeploy, cutover, seed, flag or grant change, successful receive, or production action |
+
 ## Explicitly not done
 
 Production migration, privilege cutover, gen-1 cutover on synthetic shop,
-frontend receive UI, deploy, worker/Shopify/notifications enablement, and any
+frontend receive UI, worker/Shopify/notifications enablement, and any
 production cloud contact. Staging Neon apply **has since been performed and
-verified** — see the reconciliation section above. Cutover and receive-endpoint
-use remain locked: `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md` and
-`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
+verified** — see the reconciliation section above — and the staging **API
+deployment has since been performed and verified fail-closed** — see the
+deployment verification section above. Cutover and receive-endpoint use remain
+locked: `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`,
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, and
+`CHECKPOINT-F2-CUTOVER-PLANNING.md` (planning only).
 
 `lib/use-api-auth.ts` and seven barcode PNGs remain untracked and untouched.

@@ -22,9 +22,29 @@ Provisioning does not unlock cutover. No `inventory_truth_cutover` row exists.
 **Receive-endpoint use:** **STILL LOCKED.** `POST
 /api/v1/admin/inventory/receive` must not succeed until cutover is unlocked;
 authenticated calls fail closed with a controlled 503 before any write.
+**Observed 2026-09-04:** exactly one owner-run authenticated probe returned
+`503` `FEATURE_NOT_READY` (`feature: inventory_truth`) after authentication and
+membership resolution (`GET /api/v1/shops/me/memberships` → `200`) and before
+any receive transaction or write; the earlier unauthenticated probe returned
+`401`. No receive row exists.
 
-**API deployment (Railway staging, API only):** **PREPARED — NOT EXECUTED.**
-See `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
+**API deployment (Railway staging, API only):** **EXECUTED AND VERIFIED —
+FAIL-CLOSED** 2026-09-04. Protected `main` at `ec9f72c` deployed once as Railway
+deployment `44317623` (`SUCCESS`); `meta.commitHash` matched the pinned SHA;
+autodeploy stayed off (`watchPatterns: []`); one API service instance, no
+worker, no cron. Health and ready both `200`, all feature flags `false`
+(including `inventory_cutover`), one stable process, zero worker/Shopify/
+notification/Web Push/schema/migration/seed activity. Pooled-`stashtab_api`
+read-only Neon re-snapshot: row-count digest
+`7f92454515ec31678e05a1da695f1bb02ddba0b7f67a648db008566b22d066c9` unchanged,
+all business/truth tables `0`, `shops = 2` / `shop_members = 2`, cutover rowcount
+`0`, both `F2-PROBE-DO-NOT-USE` and `F2-TEST-0001` absent, and the F2 column,
+partial unique index, and grant envelope unchanged.
+See `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`; D-043.
+
+**Cutover planning:** **PREPARED — PLANNING ONLY.**
+`CHECKPOINT-F2-CUTOVER-PLANNING.md` lists the preconditions and evidence a
+future cutover unlock must satisfy. It does **not** approve or execute cutover.
 
 ## Non-F2 baseline follow-ups (not F2 claims)
 
@@ -42,8 +62,11 @@ a defect claim and not a blocker for this slice:
 
 Still open:
 
-- Cutover unlock and any receive / inventory write on staging.
-- F2 API deployment to Railway (prepared checkpoint above).
+- Cutover unlock and any receive / inventory write on staging (planning
+  checkpoint prepared; not approved, not executed).
 - The two non-F2 baseline privilege follow-ups above.
 - Production provisioning, cutover, and deploy (all blocked by
   `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates).
+
+Closed since the provisioning record: the F2 API deployment to Railway staging
+(executed and verified fail-closed, above).
