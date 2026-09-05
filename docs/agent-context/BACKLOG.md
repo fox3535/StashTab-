@@ -265,12 +265,13 @@ while preserving the existing inventory snapshot.
 
 ## inventory-truth-v1 / f2-slice-01-controlled-receive
 
-**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED 2026-09-04 — CUTOVER LOCKED`
-**Source:** D-040; D-041; D-042; D-043;
+**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED 2026-09-04 — VERIFICATION RECORD MERGED ON main (PR #34, 0a244a5) — CUTOVER OPERATIONS PLAN PREPARED (PLANNING ONLY) — CUTOVER LOCKED`
+**Source:** D-040; D-041; D-042; D-043; D-044;
 `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
 `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`;
 `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`;
-`CHECKPOINT-F2-CUTOVER-PLANNING.md`; `GATES-POINTER-F2-SLICE-01.md`
+`CHECKPOINT-F2-CUTOVER-PLANNING.md`;
+`CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`; `GATES-POINTER-F2-SLICE-01.md`
 
 Controlled-receive code merged on `main`. Staging provisioning
 (`purchase_record.client_idempotency_key`, partial unique index
@@ -290,21 +291,35 @@ envelope unchanged (digest and detail in D-043). The endpoint is **deployed but
 fail-closed**. No rollback, seed, flag or grant change, successful receive, or
 production action.
 
+That verification record was **merged to `main`** as merge commit `0a244a5`
+(PR #34; base `ec9f72c`, head `4589b64`; two parents, so no squash or rebase;
+local `main` fast-forwarded only; untracked files preserved). The merge caused
+no deployment, migration, cutover, receive call, privilege change, or cloud
+write: health and ready stayed `200` with an unchanged ready body, and the
+receive log lines were still exactly the same `401` / CORS `OPTIONS` `200` /
+authenticated `503` (D-044).
+
 ### Remaining gates (each a separate named unlock)
 
-1. **Cutover runbook, audit logging, and break-glass procedure** — not yet
-   written; required before any cutover execution (frozen `GATES.md` standing
-   deployment gate 4).
+1. **Cutover runbook, audit logging, and break-glass procedure** — **drafted
+   planning only** in `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`: runbook phases
+   0–7, append-only audit record, break-glass procedure, zero-reconciliation gate
+   R1–R7, and stop conditions S1–S11 with a least-destructive rollback order.
+   It names **seven owner decisions** and approves nothing. Still required before
+   any cutover execution (frozen `GATES.md` standing deployment gate 4): the
+   owner records those decisions, then the runbook is approved verbatim.
 2. **Cutover unlock** (gen-1 synthetic shop) — separately locked, with a
    zero-variance reconciliation target. Do not use the receive endpoint until
-   cutover is unlocked. `CHECKPOINT-F2-CUTOVER-PLANNING.md` is **planning
-   only** — not approved, not executed.
+   cutover is unlocked. `CHECKPOINT-F2-CUTOVER-PLANNING.md` and
+   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` are **planning only** — not
+   approved, not executed.
 3. **Production** provisioning, cutover, and deploy — blocked by
    `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates.
 
 Closed since the provisioning record: the **API-only Railway staging
 deployment** (executed once and verified fail-closed 2026-09-04;
-`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, D-043).
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, D-043), and the **merge of that
+verification record to `main`** (PR #34, `0a244a5`, D-044).
 
 ### Non-F2 privilege follow-ups (pre-existing baseline; not F2 claims)
 

@@ -823,3 +823,66 @@ Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`;
 `docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
 `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-PLANNING.md`.
 
+## D-044 — F2 pre-cutover record merged on main; planning-only cutover operations plan prepared
+
+Approved by named human owner 2026-09-04.
+
+PR #34 was marked ready and merged through protected `main` with a **merge
+commit** `0a244a5707c362385529a619a6f1df34857f1b82` (`mergedAt`
+2026-09-05T01:49:31Z). Base was protected `main` at
+`ec9f72c42c4f5ad0c0adf217c05c5f766033739c`; head was
+`4589b6471f29ca2723182929c7989fcf5ea3384d`. The commit carries two parents
+(`ec9f72c` and `4589b64`), which proves no squash and no rebase. No force-push,
+no direct push to `main`, and no ruleset bypass. The source branch was not
+deleted.
+
+Pre-merge checks: state `MERGEABLE` / `CLEAN`; all applicable CI terminal and
+green (`contract`, `contract-and-backend`, `pg-acceptance`, `paths`,
+`secret_probe`, `advisory_status`; `sqlite`, `postgres`, and `frontend-build`
+honestly skipped for a docs-only diff); zero reviews, zero review comments, and
+zero issue comments, so no unresolved conversation; the diff was exactly the
+**seven mutable documentation files**, with no frozen file, product code,
+workflow, dependency, environment file, secret, schema, privilege, flag, or
+barcode artifact.
+
+Local `main` was updated by **fast-forward only** (`ec9f72c..0a244a5`); `HEAD`,
+`main`, and `origin/main` are all `0a244a5`. Untracked working-tree files were
+preserved (`lib/use-api-auth.ts` and the seven generated barcode PNGs).
+
+The merge caused **no cloud write**. Health and ready both still returned `200`
+with a byte-identical ready body (`app_env staging`, `database.connected true`,
+`dev_bypass_allowed false`, `schema.legacy` and `schema.inventory_truth` true,
+`schema.notifications` false, all five feature flags `false`, `reasons: []`).
+Bounded runtime logs showed one startup marker and one startup-complete marker,
+zero migration/seed/schema lines, and exactly the same three pre-existing
+receive lines (`POST` `401`, CORS `OPTIONS` `200`, authenticated `POST` `503`)
+— no new receive call. Autodeploy stayed off (`watchPatterns: []`), so no
+deployment was triggered. No migration, no cutover row, and no privilege or
+flag change.
+
+A **planning-only cutover operations plan** was then prepared on a new branch
+`docs/f2-cutover-operations-plan` from `main` at `0a244a5`
+(`CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`). It is grounded in the implemented
+gate rather than assumption: `ensure_inventory_mutations_ready` opens
+staging/production receive only when `cutover_status(db, shop_id) == "complete"`;
+`cutover_status` takes the **first** matching row unordered by `generation`; the
+runtime `stashtab_api` role is **SELECT-only** on `inventory_truth_cutover`, so
+the cutover write needs a credential outside the runtime envelope;
+`features.inventory_cutover` is hard-coded `False` and will not flip on a
+per-shop cutover; and a truth-migrator role present in the app environment would
+turn `/api/v1/ready` into `503` with reason `truth_migrator_role`, making ready
+`200` with `reasons: []` both a precondition and a built-in detector. The plan
+drafts the runbook (phases 0–7), the append-only audit record, the break-glass
+procedure, the zero-reconciliation gate (R1–R7), and the exact stop conditions
+(S1–S11) with a least-destructive rollback order, and names **seven owner
+decisions** that must be recorded before any execution.
+
+It authorizes nothing. No cutover was executed, no successful receive occurred,
+and no code changed. Cutover and receive-endpoint use remain **separately
+locked**.
+
+Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`;
+`docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-PLANNING.md`;
+`docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
+`docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
+
