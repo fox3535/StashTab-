@@ -1,6 +1,8 @@
 # Checkpoint — F2 cutover planning (planning only)
 
 **Status:** `PREPARED — PLANNING ONLY — NOT APPROVED — NOT EXECUTED`
+**Operations plan:** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` (also planning
+only; awaiting owner decisions)
 **Slice:** `inventory-truth-v1 / f2-slice-01-controlled-receive`
 **Prepared on:** `docs/f2-pre-cutover-deployment-verified` from `main` at `ec9f72c`
 **Prepared:** 2026-09-04 (D-043)
@@ -29,8 +31,9 @@ separately locked.
 Staging-scope blockers for a gen-1 synthetic-shop cutover:
 
 1. **Cutover operations runbook, audit logging, and break-glass procedure**
-   (frozen `GATES.md` standing deployment gate 4). No runbook document exists
-   yet; it must be written and reviewed before any cutover execution.
+   (frozen `GATES.md` standing deployment gate 4). A **planning-only draft** now
+   exists — `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` — but it still requires
+   the owner decisions and review named there before any cutover execution.
 2. **Cutover reconciliation must equal zero** (standing deployment gate 3).
    Timeout is never green; the reconciliation query set and its zero-variance
    target must be named in the unlock.
@@ -103,8 +106,15 @@ planning loop; it names the failed precondition and the owner and stops.
 
 ## Next step
 
-Prepare the cutover **runbook, audit-logging plan, and break-glass procedure**
-as a separate documentation slice, then request a named owner cutover unlock for
-one staging gen-1 synthetic shop with a zero-variance reconciliation target.
-Until that unlock is granted and executed, the receive endpoint stays deployed
-and fail-closed.
+**Done as planned:** the cutover **runbook, audit-record, break-glass,
+zero-reconciliation, and rollback/stop-condition** plan was prepared as a
+separate planning-only documentation slice —
+`CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`. It reads the gate mechanism from
+code rather than assuming it, and lists the seven owner decisions that must be
+answered first.
+
+**Remaining:** the owner records those decisions, the runbook is approved
+verbatim, and only then is a named cutover unlock requested for one staging
+gen-1 synthetic shop with a zero-variance reconciliation target. Until that
+unlock is granted and executed, the receive endpoint stays deployed and
+fail-closed.

@@ -46,6 +46,14 @@ See `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`; D-043.
 `CHECKPOINT-F2-CUTOVER-PLANNING.md` lists the preconditions and evidence a
 future cutover unlock must satisfy. It does **not** approve or execute cutover.
 
+**Cutover operations plan:** **PREPARED — PLANNING ONLY — AWAITING OWNER
+DECISIONS.** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` drafts the cutover
+runbook (phases 0–7), the append-only audit record, the break-glass procedure,
+the zero-reconciliation gate (R1–R7), and the exact stop and rollback conditions
+(S1–S11 plus the least-destructive rollback order). It names seven owner
+decisions that must be recorded first, authorizes nothing, and executed no
+cutover, receive, deploy, privilege change, or code change.
+
 ## Non-F2 baseline follow-ups (not F2 claims)
 
 Pre-existing least-privilege observations on staging, unrelated to and **not**
@@ -63,10 +71,16 @@ a defect claim and not a blocker for this slice:
 Still open:
 
 - Cutover unlock and any receive / inventory write on staging (planning
-  checkpoint prepared; not approved, not executed).
+  checkpoint and operations plan prepared; not approved, not executed).
+- The seven owner decisions in
+  `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2, then verbatim runbook approval,
+  then a **separate** named cutover unlock.
 - The two non-F2 baseline privilege follow-ups above.
 - Production provisioning, cutover, and deploy (all blocked by
   `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates).
 
 Closed since the provisioning record: the F2 API deployment to Railway staging
-(executed and verified fail-closed, above).
+(executed and verified fail-closed, above), and the pre-cutover deployment
+verification record merged to `main` as `0a244a5` (PR #34, merge commit;
+parents `ec9f72c` and `4589b64`). No deployment, migration, cutover, receive
+call, privilege change, or cloud write occurred during that merge.

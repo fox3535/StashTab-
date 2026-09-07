@@ -2,12 +2,14 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-09-04
-**Branch:** `main` at `ec9f72c` (PR #33 merged); F2 deployment verification +
-cutover-planning checkpoint on `docs/f2-pre-cutover-deployment-verified` (draft
-PR pending); no other PR open — `feature/f1-vendor-core-recovery-batch` is
-pushed on `origin` at `19efd9a` with no open PR
+**Branch:** `main` at `0a244a5` (PR #34 merged as a merge commit; parents
+`ec9f72c` and `4589b64`); planning-only cutover operations plan on
+`docs/f2-cutover-operations-plan` (draft PR pending); no other PR open —
+`feature/f1-vendor-core-recovery-batch` is pushed on `origin` at `19efd9a` with
+no open PR
 **Staging API:** Railway deploy `44317623` of `main` at `ec9f72c` — verified
-fail-closed 2026-09-04 (D-043); supersedes `9c47945a` (D-039 staging smoke)
+fail-closed 2026-09-04 (D-043); unchanged by the PR #34 merge (D-044);
+supersedes `9c47945a` (D-039 staging smoke)
 
 ## Frozen contracts
 
@@ -65,17 +67,22 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
    Evidence: `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`,
    `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`,
    `ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`,
-   `GATES-POINTER-F2-SLICE-01.md`.
+   `GATES-POINTER-F2-SLICE-01.md`. Verification record **merged to `main` as
+   `0a244a5`** (D-044); the merge caused no deployment, migration, cutover,
+   receive call, privilege change, or cloud write.
 
 ## Next queued phases
 
-1. F2 staging provisioning **and** the API-only staging deployment are **done**
-   and verified fail-closed. Next: the cutover **runbook, audit-logging plan,
-   and break-glass procedure**, then a **separate** named cutover unlock —
-   `CHECKPOINT-F2-CUTOVER-PLANNING.md` is planning only and approves nothing.
-   Do not use the receive endpoint until cutover is unlocked. F1 vendor-core
-   batch remains unmerged with no open PR
-   (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`).
+1. F2 staging provisioning, the API-only staging deployment, and the merged
+   verification record are **done** and fail-closed. The cutover **runbook,
+   audit record, break-glass procedure, zero-reconciliation gate (R1–R7), and
+   stop/rollback conditions (S1–S11)** are now drafted **planning only** in
+   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`, which names seven required owner
+   decisions and approves nothing. Next: the owner records those decisions, then
+   the runbook is approved verbatim, then a **separate** named cutover unlock.
+   `CHECKPOINT-F2-CUTOVER-PLANNING.md` is planning only too. Do not use the
+   receive endpoint until cutover is unlocked. F1 vendor-core batch remains
+   unmerged with no open PR (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`).
 2. Frontend recovery continuation: next slice planning per
    `docs/frontend-recovery-v1/`; navigation/deferred-routes cleanup item for
    bare `/admin/shopify` 404 (non-blocking UX backlog).
