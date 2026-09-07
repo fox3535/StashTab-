@@ -265,8 +265,8 @@ while preserving the existing inventory snapshot.
 
 ## inventory-truth-v1 / f2-slice-01-controlled-receive
 
-**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED 2026-09-04 — VERIFICATION RECORD MERGED ON main (PR #34, 0a244a5) — CUTOVER OPERATIONS PLAN PREPARED (PLANNING ONLY) — CUTOVER LOCKED`
-**Source:** D-040; D-041; D-042; D-043; D-044;
+**Status:** `MERGED ON main (PR #31, a354fed) — STAGING PROVISIONED — DEPLOYED TO STAGING AND VERIFIED FAIL-CLOSED 2026-09-04 — VERIFICATION RECORD MERGED ON main (PR #34, 0a244a5) — CUTOVER OPERATIONS PLAN MERGED ON main (PR #35, 9266e2a) — OWNER DECISIONS RECORDED (D-045, PLANNING ONLY) — CUTOVER LOCKED`
+**Source:** D-040; D-041; D-042; D-043; D-044; D-045;
 `docs/inventory-truth-v1/ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`;
 `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`;
 `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`;
@@ -299,27 +299,57 @@ write: health and ready stayed `200` with an unchanged ready body, and the
 receive log lines were still exactly the same `401` / CORS `OPTIONS` `200` /
 authenticated `503` (D-044).
 
+The planning-only **cutover operations plan** was then merged to `main` as merge
+commit `9266e2a` (PR #35; base `0a244a5`, head `74b7356`; two parents; local
+`main` fast-forwarded only). The owner then answered all seven §2 decisions and
+they are **recorded** as **D-045** — recorded only, with no credential created,
+no row written, and no cloud contact: existing **Smoke Shop B**
+(`798d40f4-0832-46c4-991b-050e1310f6c4`) at `generation = 1` only with no shop
+or membership write; one time-bounded direct `stashtab_migrator` session held
+privately by Chris, never added to Railway or application configuration and
+securely deleted afterwards (“revoke” means destroying the temporary
+credential/session, not deleting the Neon migrator role); `locking` with
+`frozen_at`, then R1–R7 **while locked**, then `complete` with `opened_at` in the
+same controlled session, never a second generation and never a row deletion;
+cutover and reconciliation as one future unlock with the first successful receive
+behind a **second** named unlock; `F2-CUT-GEN1-0001` reserved with one POST and
+one replay permitted only after that later unlock, and neither earlier probe/test
+key reused; R1–R7 approved **verbatim** with timeout, partial response,
+exception, or mismatch treated as failure and zero variance required, evidence in
+the mutable acceptance record plus append-only database evidence, never
+fix-forward and never evidence deletion; and acceptance that the global
+`features.inventory_cutover` may remain `false` after this per-shop cutover with
+no readiness code change in this slice.
+
 ### Remaining gates (each a separate named unlock)
 
 1. **Cutover runbook, audit logging, and break-glass procedure** — **drafted
-   planning only** in `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`: runbook phases
-   0–7, append-only audit record, break-glass procedure, zero-reconciliation gate
-   R1–R7, and stop conditions S1–S11 with a least-destructive rollback order.
-   It names **seven owner decisions** and approves nothing. Still required before
-   any cutover execution (frozen `GATES.md` standing deployment gate 4): the
-   owner records those decisions, then the runbook is approved verbatim.
+   planning only** in `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` (merged on
+   `main` as `9266e2a`): runbook phases 0–7, append-only audit record,
+   break-glass procedure, zero-reconciliation gate R1–R7, and stop conditions
+   S1–S11 with a least-destructive rollback order. The **seven owner decisions
+   are now recorded** (D-045, §2.1 of the plan). Still required before any
+   cutover execution (frozen `GATES.md` standing deployment gate 4): verbatim
+   approval of the runbook in §3–§7, and the exact R1 SQL written against the
+   frozen DESIGN/MIGRATION semantics and independently reviewed.
 2. **Cutover unlock** (gen-1 synthetic shop) — separately locked, with a
-   zero-variance reconciliation target. Do not use the receive endpoint until
-   cutover is unlocked. `CHECKPOINT-F2-CUTOVER-PLANNING.md` and
-   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` are **planning only** — not
-   approved, not executed.
+   zero-variance reconciliation target. Named target recorded in D-045: existing
+   **Smoke Shop B** (`798d40f4-0832-46c4-991b-050e1310f6c4`), `generation = 1`
+   only, no identity writes. Do not use the receive endpoint until cutover is
+   unlocked; the first successful receive needs a **second** named unlock.
+   `CHECKPOINT-F2-CUTOVER-PLANNING.md` and
+   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` remain **planning only** —
+   execution not approved, not executed.
 3. **Production** provisioning, cutover, and deploy — blocked by
    `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates.
 
 Closed since the provisioning record: the **API-only Railway staging
 deployment** (executed once and verified fail-closed 2026-09-04;
-`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, D-043), and the **merge of that
-verification record to `main`** (PR #34, `0a244a5`, D-044).
+`CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`, D-043); the **merge of that
+verification record to `main`** (PR #34, `0a244a5`, D-044); the **merge of the
+planning-only cutover operations plan to `main`** (PR #35, `9266e2a`); and the
+**recording of the seven cutover owner decisions** (D-045 — recorded only,
+execution not approved).
 
 ### Non-F2 privilege follow-ups (pre-existing baseline; not F2 claims)
 

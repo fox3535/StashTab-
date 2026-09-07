@@ -2,7 +2,9 @@
 
 **Status:** `PREPARED — PLANNING ONLY — NOT APPROVED — NOT EXECUTED`
 **Operations plan:** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` (also planning
-only; awaiting owner decisions)
+only) — merged to `main` as `9266e2a` (PR #35)
+**Owner decisions:** all seven **recorded 2026-09-07 (D-045)** — recorded only;
+execution still not approved, nothing executed
 **Slice:** `inventory-truth-v1 / f2-slice-01-controlled-receive`
 **Prepared on:** `docs/f2-pre-cutover-deployment-verified` from `main` at `ec9f72c`
 **Prepared:** 2026-09-04 (D-043)
@@ -31,12 +33,17 @@ separately locked.
 Staging-scope blockers for a gen-1 synthetic-shop cutover:
 
 1. **Cutover operations runbook, audit logging, and break-glass procedure**
-   (frozen `GATES.md` standing deployment gate 4). A **planning-only draft** now
-   exists — `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` — but it still requires
-   the owner decisions and review named there before any cutover execution.
+   (frozen `GATES.md` standing deployment gate 4). The planning-only draft
+   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` is merged on `main` (`9266e2a`) and
+   the seven owner decisions it required are now **recorded** (D-045). Still
+   outstanding before any cutover execution: verbatim approval of the runbook in
+   its §3–§7, and a separate named cutover unlock.
 2. **Cutover reconciliation must equal zero** (standing deployment gate 3).
-   Timeout is never green; the reconciliation query set and its zero-variance
-   target must be named in the unlock.
+   Timeout is never green. D-045 decision 6 approves **R1–R7 verbatim** as that
+   query set and treats a timeout, partial response, exception, or mismatch as
+   failure. The exact R1 SQL still has to be written against the frozen
+   DESIGN/MIGRATION semantics and independently reviewed, and the named unlock
+   must restate the zero-variance target.
 3. **Named owner cutover unlock** (frozen `GATES.md` §“F2 slice-01”: “Cutover
    unlock (gen-1 synthetic shop) — **OPEN — separately locked**”). Owner actor,
    pre-checks, and acceptance-recorded evidence are required.
@@ -58,7 +65,11 @@ follow-ups in `GATES-POINTER-F2-SLICE-01.md` (runtime INSERT on identity
 `shops`/`shop_members`; USAGE/SELECT/UPDATE on non-F2 truth sequences). A future
 runtime least-privilege review should disposition them.
 
-## What a cutover unlock must specify (owner decisions — not made here)
+## What a cutover unlock must specify (answers recorded in D-045)
+
+The owner answered these on 2026-09-07 — see **D-045** and §2.1 of
+`CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`. The list is kept as the checklist a
+named unlock must restate:
 
 - The named **gen-1 synthetic shop** (shop identity plus its owner membership)
   and the Clerk actor used.
@@ -113,8 +124,21 @@ separate planning-only documentation slice —
 code rather than assuming it, and lists the seven owner decisions that must be
 answered first.
 
-**Remaining:** the owner records those decisions, the runbook is approved
-verbatim, and only then is a named cutover unlock requested for one staging
-gen-1 synthetic shop with a zero-variance reconciliation target. Until that
-unlock is granted and executed, the receive endpoint stays deployed and
-fail-closed.
+**Done since:** the owner recorded all seven decisions on 2026-09-07 (**D-045**)
+— existing **Smoke Shop B** (`798d40f4-0832-46c4-991b-050e1310f6c4`) at
+`generation = 1` only, with no shop or membership write; one time-bounded direct
+`stashtab_migrator` session held privately and never placed in Railway or
+application configuration; `locking` with `frozen_at`, then R1–R7 **while
+locked**, then `complete` with `opened_at`, never a second generation and never a
+row deletion; cutover and reconciliation as one future unlock with the first
+receive behind a second named unlock; `F2-CUT-GEN1-0001` reserved; R1–R7 approved
+verbatim with zero variance required, no fix-forward and no evidence deletion;
+and acceptance that the global `features.inventory_cutover` may stay `false` with
+no readiness code change. Recording them executed nothing.
+
+**Remaining:** verbatim approval of the operations-plan runbook (§3–§7), the
+exact R1 SQL written against the frozen DESIGN/MIGRATION semantics and
+independently reviewed, and only then a named cutover unlock for one staging
+gen-1 cutover of Smoke Shop B with a zero-variance R1–R7 target. The first
+successful receive stays behind a **second** named unlock. Until those are
+granted and executed, the receive endpoint stays deployed and fail-closed.
