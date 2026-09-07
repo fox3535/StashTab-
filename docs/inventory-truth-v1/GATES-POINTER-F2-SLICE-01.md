@@ -52,7 +52,9 @@ future cutover unlock must satisfy. It does **not** approve or execute cutover.
 
 **Cutover operations plan:** **OWNER DECISIONS RECORDED — PLANNING ONLY —
 EXECUTION NOT APPROVED.** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` drafts the
-cutover runbook (phases 0–7), the append-only audit record, the break-glass
+cutover runbook (the single authoritative sequence of steps 1–8, re-ordered by
+D-045 decision 3: reconcile while `locking`, then `complete`, then stop without
+receiving), the append-only audit record, the break-glass
 procedure, the zero-reconciliation gate (R1–R7), and the exact stop and rollback
 conditions (S1–S11 plus the least-destructive rollback order). It was merged to
 `main` as `9266e2a` (PR #35). The owner answered all seven §2 decisions on

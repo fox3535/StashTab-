@@ -325,7 +325,9 @@ no readiness code change in this slice.
 
 1. **Cutover runbook, audit logging, and break-glass procedure** — **drafted
    planning only** in `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` (merged on
-   `main` as `9266e2a`): runbook phases 0–7, append-only audit record,
+   `main` as `9266e2a`): runbook steps 1–8 — the single authoritative sequence
+   after D-045 decision 3, which reconciles while `locking` and stops before any
+   receive — plus the append-only audit record,
    break-glass procedure, zero-reconciliation gate R1–R7, and stop conditions
    S1–S11 with a least-destructive rollback order. The **seven owner decisions
    are now recorded** (D-045, §2.1 of the plan). Still required before any

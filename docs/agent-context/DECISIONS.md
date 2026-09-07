@@ -930,9 +930,15 @@ Clerk were not contacted while recording these decisions.
 
 Recorded consequences, derived from the implemented gate rather than assumed:
 
-- Decision 3 re-orders the runbook: reconciliation runs while the row is
-  `locking`, before `complete` is written, so runbook phase 3 splits into two
-  writes with phase 6 between them.
+- Decision 3 re-orders the runbook, so §3 of the operations plan is now the
+  single authoritative sequence of steps 1–8: open one private time-bounded
+  migrator session; preflight and baseline; write the generation-1 `locking` row
+  with `frozen_at`; confirm writes still return a controlled `503`; run and
+  record R1–R7 while locked; transition that same row to `complete` with
+  `opened_at` only if all seven pass; verify cutover state; then stop without
+  receiving. Decision 4 removes the receive from that sequence entirely. The
+  superseded D-044 draft ordering (direct `complete`, then receive, then
+  reconcile) is retained as provenance only and is not executable.
 - While `status = 'locking'`, `cutover_status(db, shop_id)` is not `"complete"`,
   so an authenticated receive for Smoke Shop B must still return `503` — a
   positive check that the gate is driven by `status`, not by row existence.
