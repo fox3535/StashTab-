@@ -5,3 +5,10 @@ docs/backend-notification-integration-v1/**/*.json text eol=lf
 docs/card-resolution-workflow/**/*.md text eol=lf
 docs/inventory-truth-v1/**/*.md text eol=lf
 docs/inventory-truth-v1/**/*.json text eol=lf
+
+# The F2 cutover command set is executed by psql inside a Linux container. psql
+# reads a line up to \n and keeps any trailing \r, which breaks meta-commands
+# such as \ir and \echo on a CRLF file. These files are stored and checked out
+# as LF on every platform so an operator on Windows and the disposable harness
+# both feed psql identical bytes.
+scripts/f2-cutover/**/*.sql text eol=lf
