@@ -18,6 +18,10 @@ Evidence: `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`;
 
 **Cutover unlock (gen-1 synthetic shop):** **STILL OPEN — separately locked.**
 Provisioning does not unlock cutover. No `inventory_truth_cutover` row exists.
+**Named target (D-045 — recorded, not executed):** existing **Smoke Shop B**,
+`shop_id` `798d40f4-0832-46c4-991b-050e1310f6c4`, `generation = 1` only. No shop
+or membership is created or changed. A **separate named unlock** is still
+required, and the first successful receive requires a second one.
 
 **Receive-endpoint use:** **STILL LOCKED.** `POST
 /api/v1/admin/inventory/receive` must not succeed until cutover is unlocked;
@@ -46,13 +50,27 @@ See `CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`; D-043.
 `CHECKPOINT-F2-CUTOVER-PLANNING.md` lists the preconditions and evidence a
 future cutover unlock must satisfy. It does **not** approve or execute cutover.
 
-**Cutover operations plan:** **PREPARED — PLANNING ONLY — AWAITING OWNER
-DECISIONS.** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` drafts the cutover
-runbook (phases 0–7), the append-only audit record, the break-glass procedure,
-the zero-reconciliation gate (R1–R7), and the exact stop and rollback conditions
-(S1–S11 plus the least-destructive rollback order). It names seven owner
-decisions that must be recorded first, authorizes nothing, and executed no
-cutover, receive, deploy, privilege change, or code change.
+**Cutover operations plan:** **OWNER DECISIONS RECORDED — PLANNING ONLY —
+EXECUTION NOT APPROVED.** `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` drafts the
+cutover runbook (the single authoritative sequence of steps 1–8, re-ordered by
+D-045 decision 3: reconcile while `locking`, then `complete`, then stop without
+receiving), the append-only audit record, the break-glass
+procedure, the zero-reconciliation gate (R1–R7), and the exact stop and rollback
+conditions (S1–S11 plus the least-destructive rollback order). It was merged to
+`main` as `9266e2a` (PR #35). The owner answered all seven §2 decisions on
+2026-09-07 (**D-045**; §2.1 of the plan): one time-bounded direct
+`stashtab_migrator` session, held privately and never placed in Railway or
+application configuration; existing Smoke Shop B only, with no identity writes;
+`generation = 1`, `locking` with `frozen_at`, R1–R7 run **while locked**, then
+`complete` with `opened_at` — never a second generation, never a row deletion;
+cutover and reconciliation as one future unlock, with the first receive behind a
+second named unlock; `F2-CUT-GEN1-0001` reserved and neither earlier probe/test
+key reused; R1–R7 approved verbatim, with timeout, partial response, exception,
+or mismatch treated as failure, zero variance required, no fix-forward and no
+evidence deletion; and acceptance that the global `features.inventory_cutover`
+flag may stay `false` with no readiness code change. Recording these answers
+authorizes nothing and executed no cutover, receive, deploy, privilege change, or
+code change.
 
 ## Non-F2 baseline follow-ups (not F2 claims)
 
@@ -71,16 +89,20 @@ a defect claim and not a blocker for this slice:
 Still open:
 
 - Cutover unlock and any receive / inventory write on staging (planning
-  checkpoint and operations plan prepared; not approved, not executed).
-- The seven owner decisions in
-  `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2, then verbatim runbook approval,
-  then a **separate** named cutover unlock.
+  checkpoint and operations plan merged; owner decisions recorded; execution
+  **not** approved, **not** executed).
+- Verbatim approval of the runbook in §3–§7 of the operations plan, then a
+  **separate** named cutover unlock for Smoke Shop B, then a **second** named
+  unlock before the first successful receive.
 - The two non-F2 baseline privilege follow-ups above.
 - Production provisioning, cutover, and deploy (all blocked by
   `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing deployment gates).
 
 Closed since the provisioning record: the F2 API deployment to Railway staging
-(executed and verified fail-closed, above), and the pre-cutover deployment
-verification record merged to `main` as `0a244a5` (PR #34, merge commit;
-parents `ec9f72c` and `4589b64`). No deployment, migration, cutover, receive
-call, privilege change, or cloud write occurred during that merge.
+(executed and verified fail-closed, above); the pre-cutover deployment
+verification record merged to `main` as `0a244a5` (PR #34, merge commit; parents
+`ec9f72c` and `4589b64`); the planning-only cutover operations plan merged to
+`main` as `9266e2a` (PR #35, merge commit; parents `0a244a5` and `74b7356`); and
+the seven owner decisions recorded as **D-045**. No deployment, migration,
+cutover, receive call, privilege change, or cloud write occurred during either
+merge or while recording those decisions.

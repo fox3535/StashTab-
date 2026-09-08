@@ -886,3 +886,79 @@ Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`;
 `docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`;
 `docs/inventory-truth-v1/CHECKPOINT-F2-API-DEPLOYMENT-PRE-CUTOVER.md`.
 
+## D-045 — F2 cutover owner decisions recorded; execution still not approved
+
+Approved by named human owner (Chris) 2026-09-07. Recorded on
+`docs/f2-cutover-owner-decisions` from protected `main` at `9266e2a` (PR #35
+merged 2026-09-07T14:11:48Z).
+
+The owner answered all seven decisions in §2 of
+`CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`. **This entry records those answers.
+It does not execute cutover, create a credential, schedule a cutover, or act as
+the named cutover unlock.** No cutover row, receive, reconciliation, deploy,
+migration, privilege change, or code change occurred, and Railway, Neon, and
+Clerk were not contacted while recording these decisions.
+
+1. **Cutover write credential.** One **time-bounded direct session** as
+   `stashtab_migrator`. The credential is held privately by Chris, is **never**
+   added to Railway or to application configuration, and is securely deleted
+   after the session. “Revoke” means destroying the temporary
+   credential/session — **not** deleting the Neon migrator role.
+2. **Named gen-1 synthetic shop.** Existing **Smoke Shop B** only, `shop_id`
+   `798d40f4-0832-46c4-991b-050e1310f6c4`. No shop or membership is created or
+   changed; the staging identity baseline (`shops = 2` / `shop_members = 2`) is
+   both a precondition and a postcondition.
+3. **Row content and status path.** `generation = 1` only. Write `locking` with
+   `frozen_at`; run and record R1–R7 **while locked**; only after every check
+   passes, write `complete` with `opened_at`. Both writes use the same controlled
+   migrator session, in separate transactions where required. Never create a
+   second generation; never delete the row.
+4. **Receive separation.** Cutover and reconciliation are **one** future unlock.
+   The first successful receive requires **another separate named unlock**.
+5. **Future receive idempotency key.** `F2-CUT-GEN1-0001` is reserved. One POST
+   and one replay are permitted **only** after the later receive unlock. Neither
+   earlier probe/test key (`F2-PROBE-DO-NOT-USE`, `F2-TEST-0001`) may be reused.
+6. **Reconciliation acceptance.** R1–R7 are approved **verbatim** as the
+   zero-variance gate. A timeout, partial response, exception, or mismatch is a
+   **failure**; success requires zero variance. Evidence belongs in the mutable
+   acceptance record plus the append-only database evidence. Never fix forward;
+   never delete evidence during the proof.
+7. **Ready flag.** Accepted that the global `features.inventory_cutover` may
+   remain `false` after this per-shop cutover. The readiness code is **not**
+   changed in this slice. The shop-scoped cutover row and the reconciliation
+   evidence govern this proof.
+
+Recorded consequences, derived from the implemented gate rather than assumed:
+
+- Decision 3 re-orders the runbook, so §3 of the operations plan is now the
+  single authoritative sequence of steps 1–8: open one private time-bounded
+  migrator session; preflight and baseline; write the generation-1 `locking` row
+  with `frozen_at`; confirm writes still return a controlled `503`; run and
+  record R1–R7 while locked; transition that same row to `complete` with
+  `opened_at` only if all seven pass; verify cutover state; then stop without
+  receiving. Decision 4 removes the receive from that sequence entirely. The
+  superseded D-044 draft ordering (direct `complete`, then receive, then
+  reconcile) is retained as provenance only and is not executable.
+- While `status = 'locking'`, `cutover_status(db, shop_id)` is not `"complete"`,
+  so an authenticated receive for Smoke Shop B must still return `503` — a
+  positive check that the gate is driven by `status`, not by row existence.
+- Because decision 4 defers the receive, R2 and R3 evaluate against **zero**
+  receive rows at cutover time and must return zero trivially; they become the
+  substantive test when re-run under the later receive unlock.
+- Decision 1 keeps `stashtab_truth_migrator_role` out of the app environment, so
+  ready must stay `200` with `reasons: []` before and after; a
+  `truth_migrator_role` reason would mean the credential reached the service,
+  which is stop condition S10.
+
+**Recorded state:** the operations plan is now `OWNER DECISIONS RECORDED —
+PLANNING ONLY — EXECUTION NOT APPROVED — NOT EXECUTED`. Cutover and the receive
+endpoint remain separately locked. The next step is a **separate named cutover
+unlock** for one staging gen-1 cutover of Smoke Shop B with a zero-variance R1–R7
+target; the first successful receive stays locked behind a second unlock.
+Production remains blocked by `MIGRATOR-ROLE-PROVISIONING-GATE` and the standing
+deployment gates.
+
+Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2.1;
+`docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-PLANNING.md`;
+`docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`.
+

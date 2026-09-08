@@ -2,14 +2,14 @@
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
 **Last verified:** 2026-09-04
-**Branch:** `main` at `0a244a5` (PR #34 merged as a merge commit; parents
-`ec9f72c` and `4589b64`); planning-only cutover operations plan on
-`docs/f2-cutover-operations-plan` (draft PR pending); no other PR open —
+**Branch:** `main` at `9266e2a` (PR #35 merged as a merge commit; parents
+`0a244a5` and `74b7356`); F2 cutover owner decisions on
+`docs/f2-cutover-owner-decisions` (draft PR pending); no other PR open —
 `feature/f1-vendor-core-recovery-batch` is pushed on `origin` at `19efd9a` with
 no open PR
 **Staging API:** Railway deploy `44317623` of `main` at `ec9f72c` — verified
-fail-closed 2026-09-04 (D-043); unchanged by the PR #34 merge (D-044);
-supersedes `9c47945a` (D-039 staging smoke)
+fail-closed 2026-09-04 (D-043); unchanged by the PR #34 and PR #35
+documentation merges (D-044, D-045); supersedes `9c47945a` (D-039 staging smoke)
 
 ## Frozen contracts
 
@@ -68,18 +68,28 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
    `CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md`,
    `ACCEPTANCE-F2-SLICE-01-CONTROLLED-RECEIVE.md`,
    `GATES-POINTER-F2-SLICE-01.md`. Verification record **merged to `main` as
-   `0a244a5`** (D-044); the merge caused no deployment, migration, cutover,
-   receive call, privilege change, or cloud write.
+   `0a244a5`** (D-044) and the planning-only cutover operations plan **merged as
+   `9266e2a`** (PR #35); neither merge caused a deployment, migration, cutover,
+   receive call, privilege change, or cloud write. The seven cutover owner
+   decisions are **recorded** as D-045 — recorded only, execution **not**
+   approved, nothing executed.
 
 ## Next queued phases
 
-1. F2 staging provisioning, the API-only staging deployment, and the merged
-   verification record are **done** and fail-closed. The cutover **runbook,
-   audit record, break-glass procedure, zero-reconciliation gate (R1–R7), and
-   stop/rollback conditions (S1–S11)** are now drafted **planning only** in
-   `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`, which names seven required owner
-   decisions and approves nothing. Next: the owner records those decisions, then
-   the runbook is approved verbatim, then a **separate** named cutover unlock.
+1. F2 staging provisioning, the API-only staging deployment, the merged
+   verification record, and the planning-only cutover operations plan are **done**
+   and fail-closed. The seven cutover owner decisions are **recorded** (D-045):
+   existing **Smoke Shop B** (`798d40f4-0832-46c4-991b-050e1310f6c4`) at
+   `generation = 1` only, no identity writes; one time-bounded direct
+   `stashtab_migrator` session held privately and never placed in Railway or app
+   configuration; `locking` + `frozen_at`, R1–R7 **while locked**, then `complete`
+   + `opened_at`, never a second generation or row deletion; cutover and
+   reconciliation as one future unlock with the first receive behind a **second**
+   named unlock; `F2-CUT-GEN1-0001` reserved; R1–R7 approved verbatim with zero
+   variance required; and `features.inventory_cutover` may stay `false` with no
+   readiness code change. **Recorded only — execution not approved, nothing
+   executed.** Next: verbatim approval of the runbook (§3–§7), the exact R1 SQL
+   written and independently reviewed, then a **separate** named cutover unlock.
    `CHECKPOINT-F2-CUTOVER-PLANNING.md` is planning only too. Do not use the
    receive endpoint until cutover is unlocked. F1 vendor-core batch remains
    unmerged with no open PR (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`).
