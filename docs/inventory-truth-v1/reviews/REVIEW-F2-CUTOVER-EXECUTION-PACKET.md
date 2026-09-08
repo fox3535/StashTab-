@@ -14,7 +14,8 @@ files in `scripts/f2-cutover/sql/`, and `scripts/f2-cutover/harness_f2_cutover.p
 **Verdict:** `PASS` — the packet is operator-safe, fails closed, preserves
 append-only evidence, and is proven twice on fresh disposable PostgreSQL 16
 databases. One forward-looking finding (**P1-1**) is recorded for the later
-receive unlock; it is not a stop for this planning-only packet. **No correction
+receive unlock (resolved 2026-09-08 by **D-046**, option (a)); it is not a stop
+for this planning-only packet. **No correction
 pass was required.**
 
 No frozen file was edited and no application code was changed to reach this
@@ -212,7 +213,7 @@ SELECT); `routers/admin.py` L1203–1229 (`ControlledReceiveIn`,
 
 | ID | Severity | Discipline | Finding | Disposition |
 | --- | --- | --- | --- | --- |
-| P1-1 | P1 for the **later receive unlock**; not a stop here | Operations / contract | D-045 decision 5 reserves `F2-CUT-GEN1-0001` as the first receive's idempotency key, but `_validated_client_key` (`admin.py` L1220–L1229) requires the `Idempotency-Key` header to be a 36-char UUIDv4 and that validated string becomes `purchase_record.client_idempotency_key`. The reserved 16-char, non-UUID key is therefore rejected `422` and cannot be used as written. | Record for an owner decision under the receive unlock (reserve a UUIDv4, or decide how the reserved string is used). This packet never receives and correctly leaves the key unused; the harness proves the `422`. No change to this packet. |
+| P1-1 | P1 for the **later receive unlock**; not a stop here | Operations / contract | D-045 decision 5 reserves `F2-CUT-GEN1-0001` as the first receive's idempotency key, but `_validated_client_key` (`admin.py` L1220–L1229) requires the `Idempotency-Key` header to be a 36-char UUIDv4 and that validated string becomes `purchase_record.client_idempotency_key`. The reserved 16-char, non-UUID key is therefore rejected `422` and cannot be used as written. | Record for an owner decision under the receive unlock (reserve a UUIDv4, or decide how the reserved string is used). This packet never receives and correctly leaves the key unused; the harness proves the `422`. No change to this packet. **Resolved 2026-09-08 by D-046, option (a):** frozen UUIDv4 validation stays authoritative/unamended; `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` reserved for the later receive proof; `F2-CUT-GEN1-0001` retained only as the `422`/no-write control; both keys unused; receive still locked. |
 | R1-1 | P2 (recorded) | Data integrity / contract | `ck_overlay_zero_delta` does not enforce the frozen `reverse`-of-overlay `quantity_delta = 0` clause. | Already recorded in `REVIEW-F2-CUTOVER-R1-SQL.md`; compensated at the gate by R1c arms (c)/(d); unreachable at step 5. Schema reconciliation is a separate named slice. No change to this packet. |
 | O-1 | Observation | Architecture | Runbook §0 says the notification migrator "issues REVOKEs for the other six" relations; precisely, `REVOKE TRUNCATE, DELETE` runs over all twelve (L469–470) and the other six simply receive no `SELECT` grant. | The operative claim — runtime role has SELECT on only six of twelve, so R5b needs the owning migrator session — is correct and verified at L462–L479. No correction required. |
 

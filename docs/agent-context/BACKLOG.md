@@ -314,7 +314,10 @@ same controlled session, never a second generation and never a row deletion;
 cutover and reconciliation as one future unlock with the first successful receive
 behind a **second** named unlock; `F2-CUT-GEN1-0001` reserved with one POST and
 one replay permitted only after that later unlock, and neither earlier probe/test
-key reused; R1–R7 approved **verbatim** with timeout, partial response,
+key reused (superseded in part by D-046: the reserved receive key is now the
+UUIDv4 `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`, which resolved finding P1-1 with
+option (a); `F2-CUT-GEN1-0001` is retained only as a rejected `422`/no-write
+control); R1–R7 approved **verbatim** with timeout, partial response,
 exception, or mismatch treated as failure and zero variance required, evidence in
 the mutable acceptance record plus append-only database evidence, never
 fix-forward and never evidence deletion; and acceptance that the global

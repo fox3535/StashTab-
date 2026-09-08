@@ -15,7 +15,8 @@ databases; see `CHECKPOINT-F2-CUTOVER-EXECUTION-PACKET.md` §4.
 | Tenant | Smoke Shop B |
 | `shop_id` | `798d40f4-0832-46c4-991b-050e1310f6c4` |
 | Generation | `1` only. No second generation, no second row. |
-| Reserved key | `F2-CUT-GEN1-0001` — reserved, **never used by this runbook** |
+| Reserved receive key | `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` — UUIDv4 reserved for the **later** first-receive proof (D-046); **never used by this runbook** |
+| Rejected control probe | `F2-CUT-GEN1-0001` — not a UUIDv4; H-3b only, must return `422` and write nothing (D-046) |
 | Database | Neon `stashtab_staging` |
 | Write role | `stashtab_migrator` (owner of every F2 object) |
 | Runtime role | `stashtab_api`; also `stashtab_worker`, `stashtab_readonly` |
@@ -429,11 +430,16 @@ gate. That is the whole reason the probe key must be a fresh UUIDv4.
 `admin.py::_validated_client_key` rejects anything else with `422` **before**
 the readiness gate is reached, so a probe carrying a non-UUID key proves nothing
 about the gate. This is why `F2-CUT-GEN1-0001` cannot be used as a probe key and
-must not be: it is reserved, it is not a UUIDv4, and sending it would produce a
-`422` that an operator could misread. See
-`reviews/REVIEW-F2-CUTOVER-EXECUTION-PACKET.md` finding **P1-1** — the reserved
-key is unusable as written and needs an owner decision under the later receive
-unlock.
+must not be: it is not a UUIDv4, and sending it would produce a `422` that an
+operator could misread. Finding **P1-1**
+(`reviews/REVIEW-F2-CUTOVER-EXECUTION-PACKET.md`) is **resolved** by **D-046**
+(2026-09-08, option (a)): frozen UUIDv4 validation stays authoritative and
+unamended, and the reserved receive `Idempotency-Key` for the **later**
+first-receive proof is now the UUIDv4
+`6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`. `F2-CUT-GEN1-0001` is retained only as
+the H-3b control probe that must return `422` and write nothing. The reserved
+UUIDv4 stays unused and the receive stays locked behind its own separate named
+unlock; this runbook never receives.
 
 Record for each probe: wall clock, endpoint, HTTP status, the `error` and
 `feature` fields of the body, and the request id from the Railway log line. Never

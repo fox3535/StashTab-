@@ -210,6 +210,18 @@ packet, which never receives and correctly leaves the key unused. No correction
 pass was required: the packet is internally consistent, the harness passes twice,
 and every finding is a recording rather than a defect in this packet's behavior.
 
+**P1-1 resolved by D-046 (2026-09-08, option (a)).** Frozen UUIDv4 validation
+(`AMENDMENT-1.3.0` §5 and `_validated_client_key`) stays authoritative and is
+**not** amended; no application code, schema, test, workflow, or dependency
+changed. The reserved receive `Idempotency-Key` for the later
+one-POST/one-replay first-receive proof is now the UUIDv4
+`6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`; `F2-CUT-GEN1-0001` is retained only as a
+rejected `422`/no-write control probe (H-3b). Both keys remain unused, the
+receive remains locked behind its own separate named unlock, and R1-1 remains a
+separate named schema concern to close before any receive. This packet was merged
+to protected `main` as `f0b0ebb` (PR #37); recording the decision executed
+nothing.
+
 ## 8. Not done by this packet (explicit)
 
 No contact with Railway, Neon, or Clerk. No credential created. No staging SQL
@@ -254,6 +266,9 @@ This packet is `PREPARED — PROVEN LOCALLY`. The next state,
 `RUNBOOK APPROVED — READY FOR NAMED UNLOCK`, requires verbatim approval of
 `RUNBOOK` §3–§7 and a **separate** named cutover unlock that names the shop, the
 actor, the reserved key, and the scope. D-045 is not that unlock. The first
-successful receive requires a **second** named unlock and must resolve finding
-P1-1 first. Merge, deploy, migration, and any cloud write remain separately
+successful receive requires a **second** named unlock; finding P1-1 is now
+resolved by D-046 (the reserved receive key is the UUIDv4
+`6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`), but R1-1 remains a separate named
+schema concern to close before any receive. Merge, deploy, migration, and any
+cloud write remain separately
 gated and are not authorised here.

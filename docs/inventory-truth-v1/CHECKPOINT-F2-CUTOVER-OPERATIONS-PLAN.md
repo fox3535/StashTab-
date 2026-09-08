@@ -98,6 +98,14 @@ execution.
 5. **Future receive idempotency key** — `F2-CUT-GEN1-0001` is reserved. One POST
    and one replay are permitted **only** after the later receive unlock. Neither
    earlier probe/test key (`F2-PROBE-DO-NOT-USE`, `F2-TEST-0001`) may be reused.
+   _Superseded in part by D-046 (P1-1 resolved, option (a)):_ `F2-CUT-GEN1-0001`
+   is not a UUIDv4, so `_validated_client_key` rejects it `422` before the gate
+   and it can never be the first receive's key. The reserved receive
+   `Idempotency-Key` is now the UUIDv4
+   `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` (D-046); `F2-CUT-GEN1-0001` is retained
+   only as a rejected `422`/no-write control probe. Frozen UUIDv4 validation stays
+   authoritative and unamended; both keys stay unused and the receive stays locked
+   behind its own separate named unlock.
 6. **Reconciliation acceptance** — **R1–R7 approved verbatim** as the
    zero-variance gate. A timeout, partial response, exception, or mismatch is a
    **failure**; success requires zero variance. Evidence belongs in the mutable

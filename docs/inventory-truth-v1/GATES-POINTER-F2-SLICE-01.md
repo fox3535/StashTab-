@@ -65,7 +65,10 @@ application configuration; existing Smoke Shop B only, with no identity writes;
 `complete` with `opened_at` — never a second generation, never a row deletion;
 cutover and reconciliation as one future unlock, with the first receive behind a
 second named unlock; `F2-CUT-GEN1-0001` reserved and neither earlier probe/test
-key reused; R1–R7 approved verbatim, with timeout, partial response, exception,
+key reused (the reserved receive key is now the UUIDv4
+`6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` per D-046, which resolved P1-1 with
+option (a); `F2-CUT-GEN1-0001` is retained only as a rejected `422`/no-write
+control); R1–R7 approved verbatim, with timeout, partial response, exception,
 or mismatch treated as failure, zero variance required, no fix-forward and no
 evidence deletion; and acceptance that the global `features.inventory_cutover`
 flag may stay `false` with no readiness code change. Recording these answers
