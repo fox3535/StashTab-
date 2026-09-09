@@ -918,6 +918,12 @@ Clerk were not contacted while recording these decisions.
 5. **Future receive idempotency key.** `F2-CUT-GEN1-0001` is reserved. One POST
    and one replay are permitted **only** after the later receive unlock. Neither
    earlier probe/test key (`F2-PROBE-DO-NOT-USE`, `F2-TEST-0001`) may be reused.
+   _Superseded in part by D-046 (P1-1 resolved, option (a)):_ this literal is
+   not a UUIDv4, so `_validated_client_key` rejects it `422` before the gate and
+   it can never be the first receive's key. The reserved receive
+   `Idempotency-Key` is now the UUIDv4 recorded in D-046; `F2-CUT-GEN1-0001` is
+   retained only as a rejected `422`/no-write control probe. Every other part of
+   this decision is unchanged.
 6. **Reconciliation acceptance.** R1–R7 are approved **verbatim** as the
    zero-variance gate. A timeout, partial response, exception, or mismatch is a
    **failure**; success requires zero variance. Evidence belongs in the mutable
@@ -961,4 +967,54 @@ deployment gates.
 Evidence: `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2.1;
 `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-PLANNING.md`;
 `docs/inventory-truth-v1/GATES-POINTER-F2-SLICE-01.md`.
+
+## D-046 — F2 first-receive idempotency key resolved to a reserved UUIDv4
+
+Approved by named human owner (Chris) 2026-09-08, resolving finding **P1-1**
+from the F2 cutover execution-packet review. Recorded on
+`docs/f2-receive-uuidv4-key-decision` from protected `main` at `f0b0ebb`
+(the execution packet, PR #37, merged 2026-09-08T04:46:22Z as a merge commit;
+parents `aafae79` and `d72949d`).
+
+P1-1 was a confirmed contradiction, not a packet defect: D-045 decision 5
+reserved `F2-CUT-GEN1-0001` as the first receive's `Idempotency-Key`, but the
+frozen `AMENDMENT-1.3.0` §5 and `_validated_client_key`
+(`services/api/app/routers/admin.py` L1220–L1229) require a 36-character UUIDv4
+and reject anything else with `422` **before** the cutover gate, so the reserved
+16-character literal can never be the first receive's key.
+
+The owner chose **option (a)** — preserve the frozen UUIDv4 requirement:
+
+1. **Frozen validation stays authoritative.** `AMENDMENT-1.3.0` §5 and
+   `_validated_client_key` are **not** amended. No application code, schema,
+   test, workflow, dependency, or frozen contract text changes.
+2. **Reserved receive key.** `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` (a valid
+   36-character UUIDv4) is reserved as the `Idempotency-Key` for the later
+   first-receive proof — **one POST and one replay only**, and **only** under the
+   separate named receive unlock of D-045 decision 4.
+3. **Old literal retained as a rejected control.** `F2-CUT-GEN1-0001` is kept
+   only as the runbook's H-3b control probe, which must return `422` and write
+   nothing. This supersedes **only** the reserved-key literal in D-045 decision
+   5; every other part of D-045 is unchanged.
+4. **Never used for a receive; still locked.** No receive has occurred and
+   neither key has been consumed by one. The reserved UUIDv4 has never been sent
+   anywhere. `F2-CUT-GEN1-0001` has been exercised **only** as the rejected
+   `422`/no-write control probe: the disposable local harness sends it and
+   asserts `422` with zero written rows, and H-3b would repeat that only if the
+   runbook is later executed under a named unlock. It has therefore never been
+   accepted or written on staging. The receive endpoint stays deployed and
+   fail-closed; the cutover and the first receive each still require their own
+   separate named unlock.
+5. **R1-1 stays separate.** Finding R1-1 (the `ck_overlay_zero_delta`
+   reverse-of-overlay gap) remains a separate named schema slice to reconcile
+   **before** the receive unlock writes any `reverse` row. It is not resolved
+   here and is not part of this decision.
+
+This entry records a decision only. It authorizes no cutover, no reconciliation
+against staging, no receive, no deployment, no migration, no privilege change,
+and no production activity. Railway, Neon, and Clerk were not contacted.
+
+Evidence: `docs/inventory-truth-v1/reviews/REVIEW-F2-CUTOVER-EXECUTION-PACKET.md`
+(P1-1); `docs/inventory-truth-v1/RUNBOOK-F2-CUTOVER-GEN1.md` §5;
+`docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2.1.
 

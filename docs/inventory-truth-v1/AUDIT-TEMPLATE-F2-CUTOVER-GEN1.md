@@ -29,7 +29,8 @@ referenced, name where the owner holds it.
 | Tenant | Smoke Shop B |
 | `shop_id` | `798d40f4-0832-46c4-991b-050e1310f6c4` |
 | Generation | `1` |
-| Reserved key (must stay unused) | `F2-CUT-GEN1-0001` |
+| Reserved receive key (must stay unused) | `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` — UUIDv4, D-046 |
+| Rejected control probe (H-3b, `422`/no-write) | `F2-CUT-GEN1-0001` — not a UUIDv4, D-046 |
 | Outcome (fill last) | `COMPLETED-STOPPED-AT-STEP-8` / `STOPPED-S__` / `BREAK-GLASS` |
 
 ## B. Actors
@@ -308,7 +309,8 @@ row is removed from any table.
 | `features.inventory_cutover` | `false` — unchanged, and this attempt does **not** claim otherwise |
 | Global readiness flag | **not** claimed true |
 | Successful receive performed | must be `NO` |
-| `F2-CUT-GEN1-0001` used | must be `NO` — still reserved for the later receive unlock |
+| `F2-CUT-GEN1-0001` used | must be `NO` — H-3b control probe only; must return `422` and write nothing (D-046) |
+| Reserved UUIDv4 `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` used | must be `NO` — reserved for the later first-receive proof (D-046) |
 | Second generation created | must be `NO` |
 | Any DELETE, TRUNCATE, fix-forward, or seed | must be `NO` |
 | Frozen packet files edited | must be `NO` |

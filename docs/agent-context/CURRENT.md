@@ -1,15 +1,18 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-09-04
-**Branch:** `main` at `9266e2a` (PR #35 merged as a merge commit; parents
-`0a244a5` and `74b7356`); F2 cutover owner decisions on
-`docs/f2-cutover-owner-decisions` (draft PR pending); no other PR open —
+**Last verified:** 2026-09-08
+**Branch:** `main` at `f0b0ebb` (PR #37, the F2 cutover execution packet, merged
+2026-09-08 as a merge commit; parents `aafae79` and `d72949d`). Since the last
+snapshot PR #36 (D-045 owner decisions) merged as `aafae79` and PR #37 as
+`f0b0ebb` — both documentation-only, no deploy, migration, cutover, or receive.
+F2 first-receive UUIDv4 decision (D-046) on
+`docs/f2-receive-uuidv4-key-decision` (draft PR pending).
 `feature/f1-vendor-core-recovery-batch` is pushed on `origin` at `19efd9a` with
 no open PR
 **Staging API:** Railway deploy `44317623` of `main` at `ec9f72c` — verified
-fail-closed 2026-09-04 (D-043); unchanged by the PR #34 and PR #35
-documentation merges (D-044, D-045); supersedes `9c47945a` (D-039 staging smoke)
+fail-closed 2026-09-04 (D-043); unchanged by the PR #34–#37 documentation
+merges (D-044, D-045, D-046); supersedes `9c47945a` (D-039 staging smoke)
 
 ## Frozen contracts
 
@@ -85,10 +88,17 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
    configuration; `locking` + `frozen_at`, R1–R7 **while locked**, then `complete`
    + `opened_at`, never a second generation or row deletion; cutover and
    reconciliation as one future unlock with the first receive behind a **second**
-   named unlock; `F2-CUT-GEN1-0001` reserved; R1–R7 approved verbatim with zero
+   named unlock; `F2-CUT-GEN1-0001` reserved (superseded in part by **D-046**:
+   the reserved receive key is now the UUIDv4
+   `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`, which resolved finding P1-1 with
+   option (a) — frozen UUIDv4 validation stays authoritative and unamended;
+   `F2-CUT-GEN1-0001` is retained only as a rejected `422`/no-write control; both
+   keys unused; receive still locked; R1-1 a separate named schema concern before
+   any receive); R1–R7 approved verbatim with zero
    variance required; and `features.inventory_cutover` may stay `false` with no
    readiness code change. **Recorded only — execution not approved, nothing
-   executed.** Next: verbatim approval of the runbook (§3–§7), the exact R1 SQL
+   executed.** The execution packet merged as PR #37 (`f0b0ebb`). Next: verbatim
+   approval of the runbook (§3–§7), the exact R1 SQL
    written and independently reviewed, then a **separate** named cutover unlock.
    `CHECKPOINT-F2-CUTOVER-PLANNING.md` is planning only too. Do not use the
    receive endpoint until cutover is unlocked. F1 vendor-core batch remains
