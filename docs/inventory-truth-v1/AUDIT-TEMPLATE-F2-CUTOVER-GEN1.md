@@ -7,7 +7,7 @@ never rewrite a stopped attempt to look successful. A correction is a new
 appended line with a wall clock and a reason, leaving the original visible.
 
 Authority: `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §4, and D-045 decisions 1,
-2, 5 and 7. Procedure: `RUNBOOK-F2-CUTOVER-GEN1.md`.
+2, 5 and 7; supervision model D-047. Procedure: `RUNBOOK-F2-CUTOVER-GEN1.md`.
 
 **Never record a credential, connection string, password, token, session cookie,
 or URL containing any of them.** Record role **names** only. If a value must be
@@ -37,13 +37,24 @@ referenced, name where the owner holds it.
 
 | Role in this attempt | Identity recorded | Notes |
 | --- | --- | --- |
-| Owner (authorises, present throughout) | name | |
-| Operator (executes the SQL) | name + Clerk user id | |
-| Second person (two-person rule) | name | |
+| Owner / supervisor — Chris (authorises, present throughout) | name | |
+| Automated operator — Qoder (executes the SQL under supervision) | Qoder (automated) | never an independent human reviewer |
+| Supervision model (D-047 — replaces the two-person rule) | Chris supervising Qoder | two confirmation gates (§B1); silence is never approval |
 | Database write role | `stashtab_migrator` | role name only, never a credential |
 | Runtime role asserted | `stashtab_api` | |
 | Other roles asserted | `stashtab_worker`, `stashtab_readonly` | |
 | Receive actor (step 4/7 probes only) | Clerk user id | no successful receive is performed |
+
+## B1. Supervisor confirmation gates (D-047 — replaces the two-person rule)
+
+Qoder presents evidence and pauses; the gated write runs only after Chris's
+explicit confirmation. Record the wall clock and Chris's exact confirmation. A
+failed check stops execution; **silence is never approval**.
+
+| Gate | Runs before | Qoder presented | Chris explicit confirmation (wall clock) |
+| --- | --- | --- | --- |
+| G-1 | step-3 generation-1 `locking` INSERT | verified target (`stashtab_staging`, Smoke Shop B, gen 1) + step-2 baseline | |
+| G-2 | step-6 `complete` UPDATE | R1–R7 zero-variance results | |
 
 ## C. P0 preconditions (runbook §1) — all must be ticked before step 1
 
@@ -51,7 +62,7 @@ referenced, name where the owner holds it.
 | --- | --- | --- | --- | --- |
 | P0-1 | Named unlock recorded | unlock text | | |
 | P0-2 | Runbook approved verbatim; plan §3–§7 unchanged | review record | | |
-| P0-3 | Two-person rule in force | §B | | |
+| P0-3 | Supervision arrangement in force (Chris supervising Qoder, D-047) | §B, §B1 | | |
 | P0-4 | Target is `stashtab_staging`, not production | `PGDATABASE`, P-preflight G3 | | |
 | P0-5 | Railway autodeploy off | Railway console observation | | |
 | P0-6 | No worker, no cron | log window | | |
