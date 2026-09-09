@@ -1,17 +1,19 @@
 # Current context
 
 **Contract:** `STASHTAB-INVENTORY-TRUTH-001` (active); `STASHTAB-CARD-RESOLUTION-001` (frozen)
-**Last verified:** 2026-09-08
-**Branch:** `main` at `f0b0ebb` (PR #37, the F2 cutover execution packet, merged
-2026-09-08 as a merge commit; parents `aafae79` and `d72949d`). Since the last
-snapshot PR #36 (D-045 owner decisions) merged as `aafae79` and PR #37 as
-`f0b0ebb` — both documentation-only, no deploy, migration, cutover, or receive.
-F2 first-receive UUIDv4 decision (D-046) on
-`docs/f2-receive-uuidv4-key-decision` (draft PR pending).
+**Last verified:** 2026-09-09
+**Branch:** `main` at `0d6cb78` (PR #38, the D-046 UUIDv4 receive-key decision,
+merged 2026-09-09 as a merge commit; parents `f0b0ebb` and `6815752`). Since the
+last snapshot PR #37 (execution packet) merged as `f0b0ebb` and PR #38 as
+`0d6cb78` — all documentation-only, no deploy, migration, cutover, or receive.
+Owner approved the runbook at `0d6cb78` (runbook approval only); D-047
+(supervised cutover: Chris supervising Qoder, replaces the two-person rule) on
+`docs/f2-supervised-cutover-procedure` (draft PR pending) — revised procedure
+awaits review, grants no staging execution authority.
 `feature/f1-vendor-core-recovery-batch` is pushed on `origin` at `19efd9a` with
 no open PR
 **Staging API:** Railway deploy `44317623` of `main` at `ec9f72c` — verified
-fail-closed 2026-09-04 (D-043); unchanged by the PR #34–#37 documentation
+fail-closed 2026-09-04 (D-043); unchanged by the PR #34–#38 documentation
 merges (D-044, D-045, D-046); supersedes `9c47945a` (D-039 staging smoke)
 
 ## Frozen contracts
@@ -97,9 +99,12 @@ Writes, worker, Shopify, notifications, Watch remain off. Convex is out (D-024).
    any receive); R1–R7 approved verbatim with zero
    variance required; and `features.inventory_cutover` may stay `false` with no
    readiness code change. **Recorded only — execution not approved, nothing
-   executed.** The execution packet merged as PR #37 (`f0b0ebb`). Next: verbatim
-   approval of the runbook (§3–§7), the exact R1 SQL
-   written and independently reviewed, then a **separate** named cutover unlock.
+   executed.** The execution packet merged as PR #37 (`f0b0ebb`) and D-046 as
+   PR #38 (`0d6cb78`). The owner **approved the runbook verbatim** at `0d6cb78`
+   (runbook approval only, no execution authority); the exact R1 SQL is written
+   and independently reviewed. **D-047** then revised the supervision model
+   (Chris supervising Qoder, replacing the two-person rule; draft PR pending,
+   awaits review). Next: a **separate** named cutover unlock.
    `CHECKPOINT-F2-CUTOVER-PLANNING.md` is planning only too. Do not use the
    receive endpoint until cutover is unlocked. F1 vendor-core batch remains
    unmerged with no open PR (`F1-VENDOR-CORE-BATCH-PRESERVATION.md`).

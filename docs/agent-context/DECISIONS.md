@@ -1018,3 +1018,75 @@ Evidence: `docs/inventory-truth-v1/reviews/REVIEW-F2-CUTOVER-EXECUTION-PACKET.md
 (P1-1); `docs/inventory-truth-v1/RUNBOOK-F2-CUTOVER-GEN1.md` §5;
 `docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §2.1.
 
+## D-047 — F2 cutover supervision: Chris supervising Qoder replaces the two-person rule
+
+Approved by named human owner (Chris) 2026-09-09, revising the F2 generation-1
+cutover operating procedure on branch `docs/f2-supervised-cutover-procedure`
+from protected `main` at `0d6cb78` (PR #38 / D-046, merged 2026-09-09T17:09:26Z
+as a merge commit; parents `f0b0ebb` and `6815752`). The runbook and operations
+plan were owner-approved at `0d6cb78`; this entry revises **only** their
+supervision model. The revised procedure **awaits review** and grants **no**
+staging execution authority.
+
+**Freeze gate checked first.** The former "two-person rule (owner present,
+operator executing)" lived only in mutable operational documents —
+`RUNBOOK-F2-CUTOVER-GEN1.md` §1, the operations-plan §3 `P0` row, and
+`AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` §B/§C. No frozen inventory-truth v1.3.0
+contract requires two humans: `CONTRACT.md`'s only cutover clauses are technical
+(no startup `create_all`; the freeze-then-lock cutover-race sequence),
+`DESIGN.md` states no operator model, and `AMENDMENT-1.3.0`'s "named human owner"
+and "independent review" describe the contract-ratification vote (CONTRACT §6),
+not the cutover operator. Frozen text is therefore unchanged and this is a
+mutable-documentation revision, confirmed against
+`freezes/FREEZE-1.3.0-git-canonical.json`.
+
+The owner approved this explicit arrangement:
+
+1. **Chris is the human owner and supervisor.** Chris is present throughout,
+   authorises each gated transition, is the sole break-glass authority, and
+   rotates the credential on any suspected exposure.
+2. **Qoder is the automated operator.** Qoder runs the read-only steps and the
+   SQL command set under Chris's supervision. Qoder is **never** described or
+   recorded as an independent human reviewer, and prior AI review does not
+   substitute for Chris's supervision or for the human accountability the
+   two-person rule provided.
+3. **Chris privately enters the credential.** The `stashtab_migrator` credential
+   is entered by Chris into the session environment and must never appear in
+   chat, logs, Git, or application configuration — nor in a command line, a file,
+   a Railway variable, or any printed output.
+4. **Two explicit confirmation gates.** Qoder presents evidence and pauses; the
+   gated write runs only after Chris's explicit confirmation:
+   - **Gate 1 — before the step-3 generation-1 `locking` INSERT:** Qoder presents
+     the verified target (`stashtab_staging`, Smoke Shop B, generation 1) and the
+     step-2 baseline, then pauses for Chris's explicit confirmation.
+   - **Gate 2 — before the step-6 `complete` UPDATE:** after R1–R7 pass with zero
+     variance, Qoder presents the results, then pauses again for Chris's explicit
+     confirmation before changing that same row to `complete`.
+5. **A failed check stops execution; silence is never approval.** Any non-zero
+   invariant, timeout, error, or partial response stops the run under the
+   existing stop conditions; an absent, ambiguous, or delayed reply from Chris is
+   not a confirmation and must be treated as "do not proceed".
+
+**Unchanged.** The stop conditions S1–S11, evidence preservation, the runbook's
+§7 break-glass limits and §8 recovery/rollback order, per-shop isolation, and the
+separate named unlock required for the first successful receive (D-045 decision 4)
+are all unchanged. The reserved UUIDv4 `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2`
+(D-046) stays reserved and unused; `F2-CUT-GEN1-0001` remains only the H-3b
+`422`/no-write control probe; finding R1-1 remains a separate named schema slice
+closed before receive.
+
+**Supersession.** This supersedes **only** the "two-person rule" precondition in
+the mutable documents named above; D-045 and D-046 are otherwise unchanged and
+are not rewritten. Because the procedure is revised, the `0d6cb78`-approved
+runbook revision is superseded by this one, which itself awaits review.
+
+This entry records a decision and a documentation revision only. It authorizes no
+cutover, no reconciliation against staging, no receive, no deployment, no
+migration, no privilege change, and no production activity. Railway, Neon, and
+Clerk were not contacted; no credential was obtained; no SQL or HTTP probe was
+run.
+
+Evidence: `docs/inventory-truth-v1/RUNBOOK-F2-CUTOVER-GEN1.md` §0.1 and §1;
+`docs/inventory-truth-v1/CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §3;
+`docs/inventory-truth-v1/AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` §B/§B1/§C.
+

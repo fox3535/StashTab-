@@ -1,6 +1,6 @@
 # RUNBOOK — F2 generation-1 cutover, Smoke Shop B
 
-**Status:** `PREPARED — PROVEN LOCALLY — NOT EXECUTED — EXECUTION NOT APPROVED`
+**Status:** `PREPARED — PROVEN LOCALLY — SUPERVISION REVISED (D-047) — AWAITING REVIEW — NOT EXECUTED — EXECUTION NOT APPROVED`
 
 This runbook is the operator form of
 `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §3 steps 1–8, ordered by D-045
@@ -56,6 +56,44 @@ The only files that write are `03-write-locking.sql` (one INSERT),
 UPDATE). Nothing in the command set issues DELETE, TRUNCATE, DDL, a grant, a
 role change, or a seed.
 
+## 0.1 Supervision model — Chris supervising Qoder (owner decision D-047)
+
+D-047 replaces the former "two-person rule (owner present, operator executing)"
+with an explicit supervised-automation arrangement. This is a mutable operational
+change only: no frozen contract requires two humans (the freeze gate is recorded
+in D-047). It grants **no** staging execution authority — this runbook still
+executes only under a separate named cutover unlock, and the revised procedure
+awaits review.
+
+- **Chris is the human owner and supervisor.** Chris is present throughout,
+  authorises each gated transition, is the sole break-glass authority (§7), and
+  rotates the credential on any suspected exposure (S9).
+- **Qoder is the automated operator.** Qoder runs the read-only steps and the SQL
+  command set under Chris's supervision. Qoder is **never** described or recorded
+  as an independent human reviewer, and prior AI review does not substitute for
+  Chris's supervision or for the human accountability the two-person rule gave.
+- **Chris privately enters the credential.** The `stashtab_migrator` credential is
+  entered by Chris (§2.1) and must never appear in chat, logs, Git, or
+  application configuration.
+- **Two explicit confirmation gates.** Qoder presents evidence and pauses; the
+  gated write runs only after Chris's explicit confirmation:
+  1. **Gate 1 — before the step-3 `locking` INSERT:** Qoder presents the verified
+     target (`stashtab_staging`, Smoke Shop B, generation 1) and the step-2
+     baseline, then pauses for Chris's explicit confirmation.
+  2. **Gate 2 — before the step-6 `complete` UPDATE:** after R1–R7 pass with zero
+     variance, Qoder presents the results, then pauses again for Chris's explicit
+     confirmation before changing that same row to `complete`.
+- **A failed check stops execution. Silence is never approval.** Any non-zero
+  invariant, timeout, error, or partial response stops the run under §8; an
+  absent, ambiguous, or delayed reply from Chris is **not** a confirmation and
+  must be treated as "do not proceed".
+
+Everything else is unchanged: the stop conditions S1–S11, evidence preservation,
+the §7 recovery limits and rollback order, per-shop isolation, and the separate
+named unlock required for the first successful receive (D-045 decision 4). The
+reserved UUIDv4 (D-046) stays reserved and unused; `F2-CUT-GEN1-0001` remains
+only the H-3b `422`/no-write control.
+
 ## 1. P0 — preconditions (gate, not an execution step)
 
 Do not start unless every line is evidenced. Any unverifiable line is S11: stop
@@ -64,7 +102,7 @@ before writing anything.
 - [ ] Named cutover unlock recorded, naming shop, actor, reserved key, scope.
 - [ ] This runbook approved verbatim; `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md`
       §3–§7 unchanged since approval.
-- [ ] Two-person rule in force: owner present, operator executing.
+- [ ] Supervision arrangement in force (D-047, §0.1): Chris (human owner) supervising; Qoder is the automated operator, never an independent human reviewer.
 - [ ] Target is `stashtab_staging`. Not production. Not a local database.
 - [ ] Railway autodeploy **off**; no deployment started during the window.
 - [ ] No worker and no cron process running against the database.
@@ -78,9 +116,10 @@ before writing anything.
 
 ### 2.1 Open the session — never a URL
 
-The credential is held privately by the owner. It is typed into the session
-environment once, is never written to a file, and never appears in a command
-line, a log, a Git object, a Railway variable, or application configuration.
+The credential is held and entered privately by Chris (the human owner), not by
+Qoder. It is typed into the session environment once, is never written to a file,
+and never appears in a command line, a chat transcript, a log, a Git object, a
+Railway variable, or application configuration.
 
 libpq environment variables are used **instead of** a connection URL precisely so
 that no URL can be echoed into a shell history entry, a process listing, a CI
@@ -249,6 +288,11 @@ worker or cron line. A second process or a new deployment is S8.
 
 ### Step 3 — write the generation-1 `locking` row
 
+**Confirmation gate 1 (D-047).** Before this INSERT, Qoder presents the verified
+target (`stashtab_staging`, Smoke Shop B, generation 1) and the step-2 baseline,
+then pauses. Run `03-write-locking.sql` only after Chris's explicit
+confirmation; silence is never approval.
+
 ```powershell
 psql -X -v ON_ERROR_STOP=1 @F2 -f "$SQL/03-write-locking.sql"
 ```
@@ -311,6 +355,11 @@ audit must say "trivial zero over 0 rows", never "receive proof".
 ### Step 6 — transition the same row to `complete`
 
 Only if §6 shows every token, for both files:
+
+**Confirmation gate 2 (D-047).** After R1–R7 pass with zero variance, Qoder
+presents the results and pauses again. Run `06-write-complete.sql` only after
+Chris's explicit confirmation; silence is never approval, and any failed check
+stops the run under §8 instead.
 
 ```powershell
 psql -X -v ON_ERROR_STOP=1 @F2 -v gate_attestation=r1-r7-zero-variance `
@@ -569,8 +618,8 @@ direct commit or push to `main`.
 
 ## 10. Relationship to other records
 
-- Authority: `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §3–§7, and D-045 in
-  `docs/agent-context/DECISIONS.md`.
+- Authority: `CHECKPOINT-F2-CUTOVER-OPERATIONS-PLAN.md` §3–§7, and D-045, D-046
+  and D-047 in `docs/agent-context/DECISIONS.md`. Supervision model: D-047 (§0.1).
 - Audit: `AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` (append-only, one per attempt).
 - R1 review: `reviews/REVIEW-F2-CUTOVER-R1-SQL.md`.
 - Packet record, local proof, and the bounded review:
