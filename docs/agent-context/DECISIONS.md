@@ -996,9 +996,15 @@ The owner chose **option (a)** — preserve the frozen UUIDv4 requirement:
    only as the runbook's H-3b control probe, which must return `422` and write
    nothing. This supersedes **only** the reserved-key literal in D-045 decision
    5; every other part of D-045 is unchanged.
-4. **Still unused, still locked.** Neither key has been used and no receive has
-   occurred. The receive endpoint stays deployed and fail-closed; the cutover and
-   the first receive each still require their own separate named unlock.
+4. **Never used for a receive; still locked.** No receive has occurred and
+   neither key has been consumed by one. The reserved UUIDv4 has never been sent
+   anywhere. `F2-CUT-GEN1-0001` has been exercised **only** as the rejected
+   `422`/no-write control probe: the disposable local harness sends it and
+   asserts `422` with zero written rows, and H-3b would repeat that only if the
+   runbook is later executed under a named unlock. It has therefore never been
+   accepted or written on staging. The receive endpoint stays deployed and
+   fail-closed; the cutover and the first receive each still require their own
+   separate named unlock.
 5. **R1-1 stays separate.** Finding R1-1 (the `ck_overlay_zero_delta`
    reverse-of-overlay gap) remains a separate named schema slice to reconcile
    **before** the receive unlock writes any `reverse` row. It is not resolved
