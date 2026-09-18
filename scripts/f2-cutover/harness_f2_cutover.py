@@ -1275,3 +1275,78 @@ class TestF2CutoverPacket:
         assert _envelope_counts(pg, db) == ZERO_ENVELOPE
         assert _reserved_key_rows(pg, db) == 0
         probes.assert_no_success()
+
+
+class TestG5OwnerException:
+    """G5 denies runtime/unapproved migrator membership, direct and transitive.
+
+    The single documented exception is the Neon administrative owner role
+    (neondb_owner), which staging evidence shows CAN assume the migrator
+    (set_option and inherit_option true). The guard tolerates that named
+    administrative membership and nothing else. See
+    CHECKPOINT-F2-G5-OWNER-EXCEPTION.md.
+    """
+
+    ADMIN_OWNER = "neondb_owner"
+
+    def _guards(self, pg, db):
+        return pg.psql(db, WRITE_ROLE, "lib-guards.sql", _vars(db))
+
+    def _exec(self, pg, db, sql):
+        """Run a row-less utility statement (CREATE ROLE / GRANT) as superuser."""
+        from sqlalchemy import text
+
+        with pg.engine(db, SUPERUSER).connect() as conn:
+            conn.execute(text(sql))
+            conn.commit()
+
+    def _grant_migrator_to_owner(self, pg, db):
+        self._exec(pg, db, f"CREATE ROLE {self.ADMIN_OWNER} NOLOGIN")
+        self._exec(
+            pg, db, f"GRANT {WRITE_ROLE} TO {self.ADMIN_OWNER} WITH ADMIN OPTION"
+        )
+
+    def test_documented_owner_membership_passes_despite_set_and_inherit(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+        self._grant_migrator_to_owner(pg, db)
+
+        # The owner genuinely can assume the migrator; G5 must still pass
+        # because it is the one documented administrative exception.
+        can_assume = pg.scalar(
+            db,
+            "SELECT bool_or(m.set_option OR m.inherit_option) "
+            "FROM pg_auth_members m "
+            "JOIN pg_roles r ON r.oid = m.roleid "
+            "JOIN pg_roles u ON u.oid = m.member "
+            f"WHERE r.rolname = '{WRITE_ROLE}' "
+            f"AND u.rolname = '{self.ADMIN_OWNER}'",
+        )
+        assert can_assume is True
+
+        result = self._guards(pg, db)
+        assert result.ok, result
+        assert f"no-unapproved-role-can-assume-{WRITE_ROLE}" in result.stdout, result
+
+    def test_direct_runtime_membership_still_fails_closed(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+        self._exec(pg, db, f"GRANT {WRITE_ROLE} TO {READ_ROLE}")
+        result = self._guards(pg, db)
+        assert result.failed_with("f2_guard_prohibited_role_membership"), result
+
+    def test_transitive_runtime_membership_still_fails_closed(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+        self._grant_migrator_to_owner(pg, db)
+        self._exec(pg, db, f"GRANT {self.ADMIN_OWNER} TO {READ_ROLE}")
+        result = self._guards(pg, db)
+        assert result.failed_with("f2_guard_prohibited_role_membership"), result
+
+    def test_unexpected_member_still_fails_closed(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+        self._exec(pg, db, "CREATE ROLE rogue_probe NOLOGIN")
+        self._exec(pg, db, f"GRANT {WRITE_ROLE} TO rogue_probe")
+        result = self._guards(pg, db)
+        assert result.failed_with("f2_guard_prohibited_role_membership"), result
