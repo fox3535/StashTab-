@@ -29,23 +29,50 @@ SELECT CASE
          ELSE current_setting('stashtab_f2.f2_preflight_p1_required_relation_missing')
        END AS p1_required_relations;
 
-\echo '--- P2 all twelve canonical notification relations exist ---'
+\echo '--- P2 notification relations: three-state presence check ---'
 -- Set taken verbatim from NOTIFICATION_TABLE_NAMES in
--- services/api/app/notifications_truth/models.py. R5 asserts zero rows across
--- exactly this set, so a missing member would make R5 silently partial.
+-- services/api/app/notifications_truth/models.py.
+--
+-- Three states, deliberately not two. The frozen boundary (AMENDMENT-1.3.0
+-- section 5 exclusions and section 16) keeps notifications out of the cutover
+-- write scope, and the approved staging provisioning
+-- (CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md, "Explicitly not this
+-- checkpoint") excluded the notification slice. A database where the
+-- notification feature was never provisioned is therefore a legitimate
+-- preflight state, not a defect: R5's guarantee is that this cutover writes
+-- nothing to notification relations, and continued absence evidences that
+-- guarantee at least as strongly as zero row counts do.
+--
+--   all-12-absent  notification feature not provisioned here. 02b records the
+--                  absence as the baseline and every later notification-aware
+--                  step requires it to stay absent.
+--   all-12-present notification feature provisioned. Existing zero-row and
+--                  digest assertions apply unchanged.
+--   1 to 11        partial presence. Fail closed. Do not provision, repair or
+--                  drop anything from this file: a half-applied notification
+--                  slice is an owner decision, not a preflight fix.
+--
+-- "Currently absent" is a catalog observation about now. It does not prove the
+-- relations were never applied and later removed; that history is not visible
+-- from the catalog and is not claimed anywhere in this packet.
+SELECT count(*) AS p2_notification_present_count
+  FROM (VALUES ('notification_event'), ('notification_occurrence'),
+               ('notification_delivery'), ('notification_source'),
+               ('push_subscription'), ('notification_preference'),
+               ('shop_notification_policy'), ('notification_audit'),
+               ('notification_source_observation'),
+               ('notification_occurrence_transition'),
+               ('notification_delivery_attempt'),
+               ('notification_recovery_park')) AS required(rel)
+ WHERE to_regclass('public.' || required.rel) IS NOT NULL
+\gset
+
 SELECT CASE
-         WHEN (SELECT count(*)
-                 FROM (VALUES ('notification_event'), ('notification_occurrence'),
-                              ('notification_delivery'), ('notification_source'),
-                              ('push_subscription'), ('notification_preference'),
-                              ('shop_notification_policy'), ('notification_audit'),
-                              ('notification_source_observation'),
-                              ('notification_occurrence_transition'),
-                              ('notification_delivery_attempt'),
-                              ('notification_recovery_park')) AS required(rel)
-                WHERE to_regclass('public.' || required.rel) IS NOT NULL) = 12
+         WHEN :p2_notification_present_count = 0
+         THEN 'all-12-absent'
+         WHEN :p2_notification_present_count = 12
          THEN 'all-12-present'
-         ELSE current_setting('stashtab_f2.f2_preflight_p2_notification_relation_missing')
+         ELSE current_setting('stashtab_f2.f2_preflight_p2_notification_relation_partial_presence')
        END AS p2_notification_relations;
 
 \echo '--- P3 F2 client idempotency column shape (AMENDMENT-1.3.0 section 4) ---'

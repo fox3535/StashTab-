@@ -11,7 +11,23 @@
 --
 --   base_r5_notification   r5_notification_digest printed by
 --                          02b-baseline-notification.sql
+--   notification_baseline_state   `absent` or `present`, the state 02b
+--                          verified. Copied through unchanged; this file
+--                          re-proves it against the catalog.
 --   recon_timeout_ms       statement timeout for the gate, e.g. 15000
+--
+-- Three presence states, matching 01-preflight.sql P2 and 02b:
+--
+--   absent   NB0p proves the relations are still absent and that the baseline
+--            marker digest is unchanged. R5's guarantee — this cutover wrote
+--            nothing to notification relations — is evidenced by continued
+--            absence, and no row digest is fabricated over relations that do
+--            not exist.
+--   present  the original two-sided zero condition applies unchanged.
+--   partial  NB0p fails closed. Nothing is provisioned or repaired here.
+--
+-- A state change during the attempt fails here even if the new state would
+-- pass a fresh preflight: NB0p compares against the recorded baseline state.
 --
 -- This file completes step 5. 05-r1-r7.sql covers R1 to R4, R5a, R5c, R6 and
 -- R7; R5b is here. 06-write-complete.sql must not run until both files have
@@ -43,6 +59,34 @@ BEGIN;
 SET TRANSACTION READ ONLY;
 SET LOCAL statement_timeout = :recon_timeout_ms;
 
+\echo '--- NB0p notification presence state agrees with the recorded baseline ---'
+SELECT count(*) AS nb0p_notification_present_count
+  FROM (VALUES ('notification_event'), ('notification_occurrence'),
+               ('notification_delivery'), ('notification_source'),
+               ('push_subscription'), ('notification_preference'),
+               ('shop_notification_policy'), ('notification_audit'),
+               ('notification_source_observation'),
+               ('notification_occurrence_transition'),
+               ('notification_delivery_attempt'),
+               ('notification_recovery_park')) AS required(rel)
+ WHERE to_regclass('public.' || required.rel) IS NOT NULL
+\gset
+
+SELECT CASE
+         WHEN :nb0p_notification_present_count BETWEEN 1 AND 11
+         THEN current_setting('stashtab_f2.f2_gate_r5b_nb0p_notification_relation_partial_presence')
+         WHEN (:nb0p_notification_present_count = 0
+               AND :'notification_baseline_state' <> 'absent')
+           OR (:nb0p_notification_present_count = 12
+               AND :'notification_baseline_state' <> 'present')
+         THEN current_setting('stashtab_f2.f2_gate_r5b_nb0p_notification_presence_changed_during_attempt')
+         ELSE 'baseline-state-' || :'notification_baseline_state'
+       END AS nb0p_notification_presence_state;
+
+SELECT (:nb0p_notification_present_count = 12) AS nb0p_present_mode
+\gset
+
+\if :nb0p_present_mode
 \echo '--- NB0 the session can read all twelve notification relations ---'
 SELECT CASE
          WHEN (SELECT count(*)
@@ -59,6 +103,7 @@ SELECT CASE
          THEN current_user || '-can-read-all-12'
          ELSE current_setting('stashtab_f2.f2_gate_r5b_nb0_session_lacks_select_on_a_notification_relation')
        END AS nb0_notification_select_privileges;
+\endif
 
 \echo '--- NB1 the gate is still being evaluated at the locking point ---'
 SELECT CASE
@@ -69,6 +114,7 @@ SELECT CASE
          ELSE current_setting('stashtab_f2.f2_gate_r5b_nb1_row_is_not_locking')
        END AS nb1_evaluation_point;
 
+\if :nb0p_present_mode
 \echo '--- R5b assertion: notification baseline unchanged ---'
 WITH notification(rel, total_rows, cutover_shop_rows) AS (
   VALUES
@@ -150,6 +196,21 @@ SELECT CASE
          THEN 'R5b-zero-rows-for-pinned-shop'
          ELSE current_setting('stashtab_f2.f2_gate_r5b_notification_rows_exist_for_the_pinned_shop')
        END AS r5b_pinned_shop_rows;
+
+\else
+\echo '--- R5b absent-state assertion: notification relations still absent ---'
+-- No relation exists, so no notification row can exist for any tenant and the
+-- step-2b marker digest must be unchanged. This is the absent-state form of
+-- the same guarantee, not a weaker one.
+SELECT CASE
+         WHEN :nb0p_notification_present_count = 0
+          AND :'base_r5_notification' = md5('notification-relations-absent')
+         THEN 'R5b-notification-relations-still-absent'
+         ELSE current_setting('stashtab_f2.f2_gate_r5b_absent_state_not_still_absent')
+       END AS r5b_result;
+
+SELECT 'R5b-zero-rows-for-pinned-shop-absent-relations' AS r5b_pinned_shop_rows;
+\endif
 
 COMMIT;
 

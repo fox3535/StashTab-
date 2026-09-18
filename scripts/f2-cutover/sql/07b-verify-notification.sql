@@ -11,7 +11,17 @@
 --
 --   base_r5_notification   r5_notification_digest printed by
 --                          02b-baseline-notification.sql
+--   notification_baseline_state   `absent` or `present`, the state 02b
+--                          verified. Copied through unchanged; this file
+--                          re-proves it against the catalog.
 --   verify_timeout_ms      statement timeout for verification, e.g. 15000
+--
+-- Three presence states, matching P2, 02b and 05b. In the absent state NB0pv
+-- proves the twelve relations are still absent and the marker digest is
+-- unchanged, which is the final-verification form of R5's no-notification-write
+-- guarantee; in the present state the original digest, pinned-shop and detail
+-- assertions apply unchanged; partial presence fails closed. A state change
+-- during the attempt fails even if the new state would pass a fresh preflight.
 --
 -- This file completes step 7. 07-final-verification.sql verifies the cutover
 -- row, the open gate, R1, R6, the inventory and identity baseline and the
@@ -44,6 +54,34 @@ BEGIN;
 SET TRANSACTION READ ONLY;
 SET LOCAL statement_timeout = :verify_timeout_ms;
 
+\echo '--- NB0pv notification presence state agrees with the recorded baseline ---'
+SELECT count(*) AS nb0pv_notification_present_count
+  FROM (VALUES ('notification_event'), ('notification_occurrence'),
+               ('notification_delivery'), ('notification_source'),
+               ('push_subscription'), ('notification_preference'),
+               ('shop_notification_policy'), ('notification_audit'),
+               ('notification_source_observation'),
+               ('notification_occurrence_transition'),
+               ('notification_delivery_attempt'),
+               ('notification_recovery_park')) AS required(rel)
+ WHERE to_regclass('public.' || required.rel) IS NOT NULL
+\gset
+
+SELECT CASE
+         WHEN :nb0pv_notification_present_count BETWEEN 1 AND 11
+         THEN current_setting('stashtab_f2.f2_verify_nb0pv_notification_relation_partial_presence')
+         WHEN (:nb0pv_notification_present_count = 0
+               AND :'notification_baseline_state' <> 'absent')
+           OR (:nb0pv_notification_present_count = 12
+               AND :'notification_baseline_state' <> 'present')
+         THEN current_setting('stashtab_f2.f2_verify_nb0pv_notification_presence_changed_during_attempt')
+         ELSE 'baseline-state-' || :'notification_baseline_state'
+       END AS nb0pv_notification_presence_state;
+
+SELECT (:nb0pv_notification_present_count = 12) AS nb0pv_present_mode
+\gset
+
+\if :nb0pv_present_mode
 \echo '--- NB0v the session can read all twelve notification relations ---'
 -- Set taken verbatim from NOTIFICATION_TABLE_NAMES in
 -- services/api/app/notifications_truth/models.py. Fails closed and names what
@@ -63,6 +101,7 @@ SELECT CASE
          THEN current_user || '-can-read-all-12'
          ELSE current_setting('stashtab_f2.f2_verify_nb0v_session_lacks_select_on_a_notification_relation')
        END AS nb0v_notification_select_privileges;
+\endif
 
 \echo '--- NB1v the gate is being verified at the complete point ---'
 -- R5b at step 7 is only meaningful against the same single row that step 6
@@ -76,6 +115,7 @@ SELECT CASE
          ELSE current_setting('stashtab_f2.f2_verify_nb1v_row_is_not_the_single_complete_row')
        END AS nb1v_evaluation_point;
 
+\if :nb0pv_present_mode
 \echo '--- F10 R5b re-evaluated: notification baseline unchanged ---'
 WITH notification(rel, total_rows, cutover_shop_rows) AS (
   VALUES
@@ -187,6 +227,18 @@ FROM (VALUES
    (SELECT count(*) FROM shop_notification_policy WHERE shop_id = :'cutover_shop_id'))
 ) AS detail(rel, cutover_shop_rows)
 ORDER BY rel;
+
+\else
+\echo '--- F10/F11 absent-state verification: relations still absent ---'
+SELECT CASE
+         WHEN :nb0pv_notification_present_count = 0
+          AND :'base_r5_notification' = md5('notification-relations-absent')
+         THEN 'R5b-unchanged-at-step-7-absent-relations'
+         ELSE current_setting('stashtab_f2.f2_verify_absent_state_not_still_absent')
+       END AS f10_r5b_stability;
+
+SELECT 'R5b-zero-rows-for-pinned-shop-absent-relations' AS f11_pinned_shop_rows;
+\endif
 
 COMMIT;
 

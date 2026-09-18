@@ -5,9 +5,35 @@
 -- Session: the private, time-bounded direct migrator session, which owns the
 --          notification relations and therefore holds SELECT on all twelve.
 --          Pass -v expected_role=<write_role>.
+-- Required extra variables:
+--
+--   notification_baseline_state   the state 01-preflight.sql P2 printed for
+--                                 this database: exactly `absent` or exactly
+--                                 `present`. This is a deliberate double
+--                                 entry, like pinned_shop_id: the operator
+--                                 copies what P2 reported and this file proves
+--                                 the catalog still agrees.
+--
 -- Writes: none. Every statement here is a SELECT.
 --
--- Why this is a separate file from 02-baseline.sql: the accepted notification
+-- Three presence states, matching P2:
+--
+--   absent   none of the twelve relations exist. The notification feature is
+--            not provisioned in this database, which the approved staging
+--            scope allows. The absence itself becomes the baseline: the digest
+--            variable is a fixed marker and every later notification-aware
+--            step (05b, 07b) requires the relations to still be absent.
+--   present  all twelve exist. The original behavior applies unchanged: N0
+--            asserts SELECT on all twelve and N1 digests the row counts.
+--   partial  one to eleven exist. Fail closed. Do not provision, repair, or
+--            drop from this file.
+--
+-- A change of state during the attempt fails here even when the new state
+-- would pass a fresh preflight, because the comparison is against the
+-- recorded baseline state and not against a per-state expectation.
+--
+-- Why the present state is a separate file from 02-baseline.sql: the accepted
+-- notification
 -- migrator (_grant_runtime_privileges in
 -- services/api/app/notifications_truth/migrator.py) grants SELECT to the
 -- configured runtime role on the five append-only relations plus
@@ -24,10 +50,39 @@
 -- session. Do not weaken N0 and do not drop relations from the list.
 --
 -- Output: r5_notification_digest, passed to 05b-r5-notification.sql and to
--- 07b-verify-notification.sql as -v base_r5_notification.
+-- 07b-verify-notification.sql as -v base_r5_notification, together with
+-- -v notification_baseline_state carrying the same state this file verified.
 
 \ir lib-guards.sql
 
+\echo '--- N0p notification presence state agrees with the P2 finding ---'
+SELECT count(*) AS n0p_notification_present_count
+  FROM (VALUES ('notification_event'), ('notification_occurrence'),
+               ('notification_delivery'), ('notification_source'),
+               ('push_subscription'), ('notification_preference'),
+               ('shop_notification_policy'), ('notification_audit'),
+               ('notification_source_observation'),
+               ('notification_occurrence_transition'),
+               ('notification_delivery_attempt'),
+               ('notification_recovery_park')) AS required(rel)
+ WHERE to_regclass('public.' || required.rel) IS NOT NULL
+\gset
+
+SELECT CASE
+         WHEN :n0p_notification_present_count BETWEEN 1 AND 11
+         THEN current_setting('stashtab_f2.f2_notification_baseline_n0p_notification_relation_partial_presence')
+         WHEN (:n0p_notification_present_count = 0
+               AND :'notification_baseline_state' <> 'absent')
+           OR (:n0p_notification_present_count = 12
+               AND :'notification_baseline_state' <> 'present')
+         THEN current_setting('stashtab_f2.f2_notification_baseline_n0p_notification_presence_changed_during_attempt')
+         ELSE 'baseline-state-' || :'notification_baseline_state'
+       END AS n0p_notification_presence_state;
+
+SELECT (:n0p_notification_present_count = 12) AS n0p_present_mode
+\gset
+
+\if :n0p_present_mode
 \echo '--- N0 the session can read all twelve notification relations ---'
 -- Set taken verbatim from NOTIFICATION_TABLE_NAMES in
 -- services/api/app/notifications_truth/models.py.
@@ -94,5 +149,16 @@ SELECT rel,
              OVER ()) AS r5_notification_digest
 FROM notification
 ORDER BY rel;
+
+\else
+\echo '--- N1 absent-state notification baseline ---'
+-- None of the twelve relations exist, so there are no rows to digest and no
+-- SELECT grant to assert. The absence is recorded as a fixed marker digest so
+-- that 05b and 07b keep their existing 32-hex baseline format check while
+-- proving the state did not change: if any relation appears later, N0p/NB0p in
+-- that file raises the changed-during-attempt parameter instead of passing.
+SELECT md5('notification-relations-absent') AS r5_notification_digest,
+       'notification-relations-absent-baseline' AS n1_absent_baseline;
+\endif
 
 \echo '--- notification baseline complete ---'

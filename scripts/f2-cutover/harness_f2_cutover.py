@@ -61,6 +61,7 @@ Run it (twice, on fresh disposable databases, is built in):
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 import re
 import shutil
@@ -411,12 +412,19 @@ class Pg16:
             )
         self._created.add(db)
 
-    def provision(self, db: str) -> None:
+    def provision(self, db: str, with_notifications: bool = True) -> None:
         """Build the accepted schema in one database with the reviewed migrators.
 
         Ordering is forced by identity_schema.migrator.apply(), whose strict
         post-verification rejects any extra relation, so identity goes first
         and the notification slice goes last.
+
+        ``with_notifications=False`` reproduces the accepted staging shape.
+        The approved staging provisioning
+        (CHECKPOINT-F2-SLICE-01-STAGING-PROVISIONING.md, "Explicitly not this
+        checkpoint") excluded the notification slice, so a database with zero
+        of the twelve notification relations is a real deployment shape and
+        not a mock; the packet must pass against it.
         """
         if db in self._provisioned:
             return
@@ -453,6 +461,10 @@ class Pg16:
         assert applied["indexes"] == ["uq_purchase_record_shop_client_key"], applied
         assert applied["grants"], applied
 
+        if not with_notifications:
+            self._provisioned.add(db)
+            return
+
         previous_migrator = os.environ.get("STASHTAB_NOTIFICATION_MIGRATOR_ROLE")
         previous_runtime = os.environ.get("STASHTAB_NOTIFICATION_RUNTIME_ROLE")
         os.environ["STASHTAB_NOTIFICATION_MIGRATOR_ROLE"] = WRITE_ROLE
@@ -471,6 +483,26 @@ class Pg16:
         self._provisioned.add(db)
 
 
+NOTIFICATION_RELATIONS = (
+    "notification_event",
+    "notification_occurrence",
+    "notification_delivery",
+    "notification_source",
+    "push_subscription",
+    "notification_preference",
+    "shop_notification_policy",
+    "notification_audit",
+    "notification_source_observation",
+    "notification_occurrence_transition",
+    "notification_delivery_attempt",
+    "notification_recovery_park",
+)
+
+# The fixed marker 02b prints as r5_notification_digest when all twelve
+# relations are absent, and the value 05b/07b re-check in that state.
+NOTIFICATION_ABSENT_DIGEST = "notification-relations-absent"
+
+
 def _vars(db: str, **overrides) -> dict[str, str]:
     """The guard variables every packet file requires, for one database."""
     values = {
@@ -483,6 +515,9 @@ def _vars(db: str, **overrides) -> dict[str, str]:
         "expected_role": WRITE_ROLE,
         "expected_shops": "2",
         "expected_shop_members": "2",
+        # The default harness database carries the notification slice;
+        # absent-state tests override this to "absent".
+        "notification_baseline_state": "present",
     }
     values.update({k: str(v) for k, v in overrides.items()})
     return values
@@ -1350,3 +1385,248 @@ class TestG5OwnerException:
         self._exec(pg, db, f"GRANT {WRITE_ROLE} TO rogue_probe")
         result = self._guards(pg, db)
         assert result.failed_with("f2_guard_prohibited_role_membership"), result
+
+
+class TestNotificationPresenceStates:
+    """Three-state notification presence: absent, present, partial.
+
+    The approved staging provisioning excluded the notification slice, so a
+    database holding zero of the twelve relations is a real shape the packet
+    must pass against (CHECKPOINT-F2-P2-STOP.md). Absence is the baseline and
+    must persist; presence keeps the original digest assertions; partial
+    presence fails closed everywhere; and a state change during an attempt
+    fails even when the new state would pass a fresh preflight. No receive is
+    performed in any test here.
+    """
+
+    ABSENT_MARKER = hashlib.md5(NOTIFICATION_ABSENT_DIGEST.encode()).hexdigest()
+
+    def _exec(self, pg, db, sql):
+        from sqlalchemy import text
+
+        with pg.engine(db, SUPERUSER).connect() as conn:
+            conn.execute(text(sql))
+            conn.commit()
+
+    def _create_relations(self, pg, db, names=NOTIFICATION_RELATIONS):
+        for rel in names:
+            self._exec(pg, db, f"CREATE TABLE {rel} (shop_id varchar(36))")
+
+    def _drop_relations(self, pg, db):
+        for rel in NOTIFICATION_RELATIONS:
+            self._exec(pg, db, f"DROP TABLE IF EXISTS {rel} CASCADE")
+
+    def _present_count(self, pg, db):
+        listed = ", ".join(f"('{rel}')" for rel in NOTIFICATION_RELATIONS)
+        return int(
+            pg.scalar(
+                db,
+                f"SELECT count(*) FROM (VALUES {listed}) AS required(rel) "
+                "WHERE to_regclass('public.' || required.rel) IS NOT NULL",
+            )
+        )
+
+    def _p2_only(self, pg, db):
+        """Evaluate P2's three-state logic alone, as the migrator.
+
+        A whole-file 01-preflight rerun is refused by P7 once a cutover row
+        exists, which is correct fail-closed behavior and not a P2 result, so
+        the transition test isolates P2.
+        """
+        listed = ", ".join(f"('{rel}')" for rel in NOTIFICATION_RELATIONS)
+        return pg.psql(
+            db, WRITE_ROLE,
+            sql=(
+                "SELECT CASE WHEN s.cnt = 0 THEN 'all-12-absent' "
+                "WHEN s.cnt = 12 THEN 'all-12-present' "
+                "ELSE current_setting('stashtab_f2.f2_preflight_p2_notification_relation_partial_presence') "
+                "END AS p2_notification_relations "
+                f"FROM (SELECT count(*) AS cnt FROM (VALUES {listed}) AS required(rel) "
+                "WHERE to_regclass('public.' || required.rel) IS NOT NULL) AS s;"
+            ),
+        )
+
+    def _chain(self, pg, db, state):
+        """Run 01 -> 07b in one notification presence state. No receive."""
+        step1 = pg.psql(db, WRITE_ROLE, "01-preflight.sql", _vars(db))
+        assert step1.ok, step1
+        step2 = pg.psql(db, WRITE_ROLE, "02-baseline.sql", _vars(db))
+        assert step2.ok, step2
+        step2b = pg.psql(
+            db, WRITE_ROLE, "02b-baseline-notification.sql",
+            _vars(db, notification_baseline_state=state),
+        )
+        assert step2b.ok, step2b
+        digest = _first_value(step2b.stdout, "r5_notification_digest")
+        assert re.fullmatch(r"[0-9a-f]{32}", digest), step2b
+
+        assert pg.psql(db, WRITE_ROLE, "03-write-locking.sql", _vars(db)).ok
+        base_r5_inv = _first_value(step2.stdout, "r5_inventory_digest")
+        assert pg.psql(
+            db, WRITE_ROLE, "05-r1-r7.sql", _gate_vars(db, base_r5_inv)
+        ).ok
+        step5b = pg.psql(
+            db, WRITE_ROLE, "05b-r5-notification.sql",
+            _notification_gate_vars(db, digest, notification_baseline_state=state),
+        )
+        assert step5b.ok, step5b
+        assert pg.psql(
+            db, WRITE_ROLE, "06-write-complete.sql",
+            _vars(db, gate_attestation="r1-r7-zero-variance"),
+        ).ok
+        step7 = pg.psql(
+            db, WRITE_ROLE, "07-final-verification.sql",
+            _verify_vars(db, _first_value(step2.stdout, "baseline_excl_cutover"), base_r5_inv),
+        )
+        assert step7.ok, step7
+        step7b = pg.psql(
+            db, WRITE_ROLE, "07b-verify-notification.sql",
+            _notification_verify_vars(db, digest, notification_baseline_state=state),
+        )
+        assert step7b.ok, step7b
+        return {"step1": step1, "step2b": step2b, "digest": digest,
+                "step5b": step5b, "step7b": step7b}
+
+    def test_absent_state_passes_end_to_end(self, pg):
+        db = DB_MAIN
+        pg.provision(db, with_notifications=False)
+        assert self._present_count(pg, db) == 0
+
+        out = self._chain(pg, db, "absent")
+        assert _first_value(out["step1"].stdout, "p2_notification_relations") == "all-12-absent"
+        assert out["digest"] == self.ABSENT_MARKER, out["step2b"]
+        assert (
+            _first_value(out["step2b"].stdout, "n1_absent_baseline")
+            == "notification-relations-absent-baseline"
+        )
+        assert (
+            _first_value(out["step5b"].stdout, "r5b_result")
+            == "R5b-notification-relations-still-absent"
+        )
+        assert (
+            _first_value(out["step5b"].stdout, "r5b_pinned_shop_rows")
+            == "R5b-zero-rows-for-pinned-shop-absent-relations"
+        )
+        assert (
+            _first_value(out["step7b"].stdout, "f10_r5b_stability")
+            == "R5b-unchanged-at-step-7-absent-relations"
+        )
+        assert (
+            _first_value(out["step7b"].stdout, "f11_pinned_shop_rows")
+            == "R5b-zero-rows-for-pinned-shop-absent-relations"
+        )
+        # Nothing was provisioned, repaired or received along the way.
+        assert self._present_count(pg, db) == 0
+        assert _envelope_counts(pg, db) == ZERO_ENVELOPE
+        assert _reserved_key_rows(pg, db) == 0
+
+    def test_partial_presence_fails_closed_at_preflight_and_baseline(self, pg):
+        db = DB_MAIN
+        pg.provision(db, with_notifications=False)
+        self._create_relations(pg, db, ["notification_event"])
+        assert self._present_count(pg, db) == 1
+
+        step1 = pg.psql(db, WRITE_ROLE, "01-preflight.sql", _vars(db))
+        assert step1.failed_with(
+            "f2_preflight_p2_notification_relation_partial_presence"
+        ), step1
+
+        for state in ("absent", "present"):
+            step2b = pg.psql(
+                db, WRITE_ROLE, "02b-baseline-notification.sql",
+                _vars(db, notification_baseline_state=state),
+            )
+            assert step2b.failed_with(
+                "f2_notification_baseline_n0p_notification_relation_partial_presence"
+            ), step2b
+
+    def test_present_state_assertions_remain_intact(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+        assert self._present_count(pg, db) == 12
+
+        out = self._chain(pg, db, "present")
+        assert _first_value(out["step1"].stdout, "p2_notification_relations") == "all-12-present"
+        assert out["digest"] != self.ABSENT_MARKER, out["step2b"]
+        assert _first_value(out["step5b"].stdout, "r5b_result") == "R5b-unchanged"
+        assert (
+            _first_value(out["step5b"].stdout, "r5b_pinned_shop_rows")
+            == "R5b-zero-rows-for-pinned-shop"
+        )
+        assert (
+            _first_value(out["step7b"].stdout, "f10_r5b_stability")
+            == "R5b-unchanged-at-step-7"
+        )
+        assert _envelope_counts(pg, db) == ZERO_ENVELOPE
+
+    def test_absent_to_present_transition_fails_mid_attempt(self, pg):
+        db = DB_MAIN
+        pg.provision(db, with_notifications=False)
+
+        step1 = pg.psql(db, WRITE_ROLE, "01-preflight.sql", _vars(db))
+        assert step1.ok, step1
+        assert _first_value(step1.stdout, "p2_notification_relations") == "all-12-absent"
+        step2b = pg.psql(
+            db, WRITE_ROLE, "02b-baseline-notification.sql",
+            _vars(db, notification_baseline_state="absent"),
+        )
+        assert step2b.ok, step2b
+        digest = _first_value(step2b.stdout, "r5_notification_digest")
+        assert digest == self.ABSENT_MARKER
+        assert pg.psql(db, WRITE_ROLE, "03-write-locking.sql", _vars(db)).ok
+
+        # The relations appear mid-attempt. The new state would pass a fresh
+        # preflight, which is exactly why the comparison is against the
+        # recorded baseline state rather than against a per-state expectation.
+        self._create_relations(pg, db)
+        assert self._present_count(pg, db) == 12
+        # The new state passes P2 on its own, which is exactly why the packet
+        # compares against the recorded baseline state instead of re-deriving
+        # an expectation per step.
+        fresh_p2 = self._p2_only(pg, db)
+        assert fresh_p2.ok, fresh_p2
+        assert (
+            _first_value(fresh_p2.stdout, "p2_notification_relations")
+            == "all-12-present"
+        )
+
+        step5b = pg.psql(
+            db, WRITE_ROLE, "05b-r5-notification.sql",
+            _notification_gate_vars(db, digest, notification_baseline_state="absent"),
+        )
+        assert step5b.failed_with(
+            "f2_gate_r5b_nb0p_notification_presence_changed_during_attempt"
+        ), step5b
+
+    def test_present_to_absent_transition_fails_mid_attempt(self, pg):
+        db = DB_MAIN
+        pg.provision(db)
+
+        step2b = pg.psql(
+            db, WRITE_ROLE, "02b-baseline-notification.sql",
+            _vars(db, notification_baseline_state="present"),
+        )
+        assert step2b.ok, step2b
+        digest = _first_value(step2b.stdout, "r5_notification_digest")
+        assert re.fullmatch(r"[0-9a-f]{32}", digest) and digest != self.ABSENT_MARKER
+        assert pg.psql(db, WRITE_ROLE, "03-write-locking.sql", _vars(db)).ok
+
+        self._drop_relations(pg, db)
+        assert self._present_count(pg, db) == 0
+
+        step5b = pg.psql(
+            db, WRITE_ROLE, "05b-r5-notification.sql",
+            _notification_gate_vars(db, digest, notification_baseline_state="present"),
+        )
+        assert step5b.failed_with(
+            "f2_gate_r5b_nb0p_notification_presence_changed_during_attempt"
+        ), step5b
+
+        # A re-baselined attempt in the new state passes, so the failure above
+        # is about the transition and not about absence being rejected.
+        rebaselined = pg.psql(
+            db, WRITE_ROLE, "02b-baseline-notification.sql",
+            _vars(db, notification_baseline_state="absent"),
+        )
+        assert rebaselined.ok, rebaselined
+        assert _first_value(rebaselined.stdout, "r5_notification_digest") == self.ABSENT_MARKER

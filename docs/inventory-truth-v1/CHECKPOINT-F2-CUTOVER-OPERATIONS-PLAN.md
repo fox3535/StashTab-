@@ -222,7 +222,7 @@ triggers §7.
 | R2 | Receive envelope completeness | Every `purchase_record` row for the shop has a matching `acquisition_lot` and at least one `inventory_event`; orphan count `0` |
 | R3 | Idempotency uniqueness | No duplicate `(shop_id, client_idempotency_key)`; a replayed key produced `0` additional rows |
 | R4 | Cutover row discipline | Exactly `1` row for Smoke Shop B with `generation = 1`, and `0` rows for every other shop. The status expectation depends on the evaluation point: `status = 'locking'` with `frozen_at` set at step 5, and `status = 'complete'` with `opened_at` set at step 7 |
-| R5 | Out-of-scope writes | `0` new rows outside the F2 envelope (`sale`, `refund_record`, `return_record`, `inventory_adjustment`, `inventory_channel_observation`, `inventory_exception`) and `0` rows in notification tables |
+| R5 | Out-of-scope writes | `0` new rows outside the F2 envelope (`sale`, `refund_record`, `return_record`, `inventory_adjustment`, `inventory_channel_observation`, `inventory_exception`). Notification half, three states: if all twelve notification relations are present, `0` rows in them and an unchanged step-2b digest; if all twelve are absent (the approved staging shape), they are still absent at every later check and the recorded absence marker is unchanged; partial presence (1 to 11) fails closed and is never repaired from the packet |
 | R6 | Identity invariance | `shops = 2` and `shop_members = 2` exactly, unchanged before and after (the D-045 decision 2 baseline); any intended change must be named in the unlock |
 | R7 | Privilege invariance | Envelope grants unchanged: SELECT + INSERT on the four envelope tables, `UPDATE (stock, cost)` on `inventory_item` only, no table-wide UPDATE/DELETE/TRUNCATE, USAGE on the four F2 sequences |
 
@@ -291,7 +291,7 @@ Stop immediately — no retry inside the same unlock — on any of:
 | S8 | The API process restarts or crashes, or a new deployment appears during the window | Stop; autodeploy must stay off |
 | S9 | Suspected credential exposure | Stop; owner rotates; record the event without printing any value |
 | S10 | `/api/v1/ready` stops returning `200` with `reasons: []`, including reason `truth_migrator_role` | Stop; a migrator credential reached the app environment |
-| S11 | Any `P0` precondition cannot be evidenced | Stop before writing anything |
+| S11 | Any `P0` precondition cannot be evidenced, including a partial notification presence (1 to 11 of the twelve relations) or a notification presence state that changed since the recorded baseline | Stop before writing anything; if detected after step 3, stop and use the break-glass return to `locking` |
 
 Rollback order — least destructive first, each verified before the next:
 
