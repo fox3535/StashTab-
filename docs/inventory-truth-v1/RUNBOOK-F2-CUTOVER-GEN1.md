@@ -587,7 +587,7 @@ template. Recovery never deletes evidence.
 | S2 | A receive for a non-cutover shop returns anything other than `503`, or Smoke Shop B is not `503` while `locking` | H-1, H-2, H-3, H-5, V4, F2, F3 | Stop; treat as tenant-isolation failure; §7 |
 | S3 | Any R1–R7 invariant is non-zero | the named `stashtab_f2.*` parameter in §6 | Stop; **do not fix forward**; leave the row `locking` |
 | S4 | Reconciliation errors, times out, or cannot complete | non-zero exit, `statement timeout`, `lock timeout`, missing token | Stop — timeout is not green |
-| S5 | Unexpected privilege: runtime role can UPDATE/DELETE/TRUNCATE envelope tables, or any role can assume the migrator | P5/P6, R7a–R7e, G5/G6 | Stop; §7 step 4 grant rollback only if grants changed |
+| S5 | Unexpected privilege: runtime role can UPDATE/DELETE/TRUNCATE envelope tables, or any unapproved role can assume the migrator (the documented Neon owner `neondb_owner` administrative exception is excluded by G5; see CHECKPOINT-F2-G5-OWNER-EXCEPTION.md) | P5/P6, R7a–R7e, G5/G6 | Stop; §7 step 4 grant rollback only if grants changed |
 | S6 | Any write to a table outside the F2 envelope | R5a, R5b, F6, F6b, BG4 | Stop |
 | S7 | A duplicate idempotency key produces a second row | R3a, R3b | Stop; contract violation |
 | S8 | The API process restarts or crashes, or a new deployment appears in the window | Railway log window, step 2 and step 7 | Stop; autodeploy must stay off |

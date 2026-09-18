@@ -285,7 +285,7 @@ Stop immediately — no retry inside the same unlock — on any of:
 | S2 | A receive for a non-cutover shop returns anything other than `503` | Stop; treat as a tenant-isolation failure; §6 |
 | S3 | Any R1–R7 invariant is non-zero | Stop; do not fix forward |
 | S4 | Reconciliation errors, times out, or cannot complete | Stop — timeout is not green |
-| S5 | Unexpected privilege: runtime role can UPDATE/DELETE/TRUNCATE envelope tables, or any role can assume the migrator | Stop; §6 step 4 |
+| S5 | Unexpected privilege: runtime role can UPDATE/DELETE/TRUNCATE envelope tables, or any unapproved role can assume the migrator (documented Neon owner `neondb_owner` administrative exception excluded by G5; see CHECKPOINT-F2-G5-OWNER-EXCEPTION.md) | Stop; §6 step 4 |
 | S6 | Any write to a table outside the F2 envelope | Stop |
 | S7 | A duplicate idempotency key produces a second row | Stop; contract violation |
 | S8 | The API process restarts or crashes, or a new deployment appears during the window | Stop; autodeploy must stay off |

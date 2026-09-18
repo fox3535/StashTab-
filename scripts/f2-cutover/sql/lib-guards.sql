@@ -122,19 +122,38 @@ SELECT CASE
          ELSE current_setting('stashtab_f2.f2_guard_required_roles_missing')
        END AS g4_roles_present;
 
--- G5. No runtime role may be able to assume the migrator role. If this fails,
---     stop under S5: the least-privilege envelope is already broken and the
---     cutover write is not distinguishable from application traffic.
+-- G5. No runtime or unapproved role may hold the migrator role, directly or
+--     through any membership chain. The Neon administrative owner role
+--     (neondb_owner) is the single documented exception: staging catalog
+--     evidence of 2026-09-17 shows it holds membership rows in the migrator,
+--     one carrying set_option AND inherit_option true, i.e. it CAN assume the
+--     migrator. That is a platform-inherent administrative exception recorded
+--     in CHECKPOINT-F2-G5-OWNER-EXCEPTION.md; it is not runtime access and is
+--     not denied here. Every other reaching role, including stashtab_api /
+--     stashtab_worker / stashtab_readonly and any unexpected member, fails
+--     closed under S5. Frozen boundary: AMENDMENT-1.3.0 section 1 decision 3
+--     forbids runtime migrator-role assumption; it does not require zero
+--     membership, so this narrowing is a mutable-guard correction, not a
+--     contract amendment.
 SELECT CASE
          WHEN NOT EXISTS (
+                WITH RECURSIVE reach(cur) AS (
+                    SELECT m.member
+                      FROM pg_auth_members m
+                      JOIN pg_roles r ON r.oid = m.roleid
+                     WHERE r.rolname = :'write_role'
+                  UNION
+                    SELECT m.member
+                      FROM pg_auth_members m
+                      JOIN reach ON reach.cur = m.roleid
+                )
                 SELECT 1
-                  FROM pg_auth_members m
-                  JOIN pg_roles r ON r.oid = m.roleid
-                  JOIN pg_roles u ON u.oid = m.member
-                 WHERE r.rolname = :'write_role'
-                   AND u.rolname <> :'write_role'
+                  FROM reach
+                  JOIN pg_roles u ON u.oid = reach.cur
+                 WHERE u.rolname <> :'write_role'
+                   AND u.rolname <> 'neondb_owner'
               )
-         THEN 'no-role-can-assume-' || :'write_role'
+         THEN 'no-unapproved-role-can-assume-' || :'write_role'
          ELSE current_setting('stashtab_f2.f2_guard_prohibited_role_membership')
        END AS g5_no_migrator_assumption;
 
