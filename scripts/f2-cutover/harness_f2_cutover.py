@@ -68,6 +68,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import uuid as uuid_mod
 from pathlib import Path
@@ -1401,6 +1402,14 @@ class TestNotificationPresenceStates:
 
     ABSENT_MARKER = hashlib.md5(NOTIFICATION_ABSENT_DIGEST.encode()).hexdigest()
 
+    # Every step that consumes -v notification_baseline_state, with the prefix
+    # of the fail-closed parameters it raises.
+    NOTIFICATION_STATE_STEPS = (
+        ("02b-baseline-notification.sql", "f2_notification_baseline_n0p"),
+        ("05b-r5-notification.sql", "f2_gate_r5b_nb0p"),
+        ("07b-verify-notification.sql", "f2_verify_nb0pv"),
+    )
+
     def _exec(self, pg, db, sql):
         from sqlalchemy import text
 
@@ -1426,25 +1435,59 @@ class TestNotificationPresenceStates:
             )
         )
 
-    def _p2_only(self, pg, db):
-        """Evaluate P2's three-state logic alone, as the migrator.
+    def _state_vars(self, db, name, digest, state):
+        """Variables one notification-aware step needs, for one supplied state.
 
-        A whole-file 01-preflight rerun is refused by P7 once a cutover row
-        exists, which is correct fail-closed behavior and not a P2 result, so
-        the transition test isolates P2.
+        `state=None` omits the variable entirely, which is how a missing `-v`
+        is reproduced; no code path here substitutes a default.
         """
-        listed = ", ".join(f"('{rel}')" for rel in NOTIFICATION_RELATIONS)
-        return pg.psql(
-            db, WRITE_ROLE,
-            sql=(
-                "SELECT CASE WHEN s.cnt = 0 THEN 'all-12-absent' "
-                "WHEN s.cnt = 12 THEN 'all-12-present' "
-                "ELSE current_setting('stashtab_f2.f2_preflight_p2_notification_relation_partial_presence') "
-                "END AS p2_notification_relations "
-                f"FROM (SELECT count(*) AS cnt FROM (VALUES {listed}) AS required(rel) "
-                "WHERE to_regclass('public.' || required.rel) IS NOT NULL) AS s;"
-            ),
-        )
+        if name == "02b-baseline-notification.sql":
+            values = _vars(db)
+        elif name == "05b-r5-notification.sql":
+            values = _notification_gate_vars(db, digest)
+        else:
+            values = _notification_verify_vars(db, digest)
+        if state is None:
+            values.pop("notification_baseline_state", None)
+        else:
+            values["notification_baseline_state"] = state
+        return values
+
+    def _p2_from_packet(self, pg, db):
+        """Run P2's own text, extracted verbatim from 01-preflight.sql.
+
+        The transition tests must prove that the packet's P2 would accept the
+        new state, not that a reimplementation of it would. A whole-file rerun
+        is refused by P7 once a cutover row exists (correct fail-closed
+        behavior, not a P2 result), so only P2's own two statements are
+        extracted and run as a packet file.
+        """
+        packet = (SQL_DIR / "01-preflight.sql").read_text(encoding="utf-8")
+        start = packet.index("SELECT count(*) AS p2_notification_present_count")
+        end_marker = "END AS p2_notification_relations;"
+        snippet = packet[start:packet.index(end_marker, start) + len(end_marker)] + "\n"
+        # Extraction must not silently degrade into an empty or rewritten block.
+        for expected in (
+            "all-12-absent",
+            "all-12-present",
+            "f2_preflight_p2_notification_relation_partial_presence",
+            "\\gset",
+        ):
+            assert expected in snippet, snippet
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".sql", delete=False, encoding="utf-8", newline="\n"
+        ) as handle:
+            handle.write(snippet)
+            local = Path(handle.name)
+        try:
+            subprocess.run(
+                ["docker", "cp", str(local),
+                 f"{pg.container}:{CONTAINER_SQL_DIR}/_p2_extracted.sql"],
+                check=True, capture_output=True, text=True,
+            )
+            return pg.psql(db, WRITE_ROLE, "_p2_extracted.sql", _vars(db))
+        finally:
+            local.unlink(missing_ok=True)
 
     def _chain(self, pg, db, state):
         """Run 01 -> 07b in one notification presence state. No receive."""
@@ -1459,6 +1502,13 @@ class TestNotificationPresenceStates:
         assert step2b.ok, step2b
         digest = _first_value(step2b.stdout, "r5_notification_digest")
         assert re.fullmatch(r"[0-9a-f]{32}", digest), step2b
+        # The presence-state token is mandatory audit evidence in both states
+        # (AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md §E/§H), so its exact value and
+        # column name are asserted here rather than left to the docs.
+        assert (
+            _first_value(step2b.stdout, "n0p_notification_presence_state")
+            == f"baseline-state-{state}"
+        ), step2b
 
         assert pg.psql(db, WRITE_ROLE, "03-write-locking.sql", _vars(db)).ok
         base_r5_inv = _first_value(step2.stdout, "r5_inventory_digest")
@@ -1470,6 +1520,10 @@ class TestNotificationPresenceStates:
             _notification_gate_vars(db, digest, notification_baseline_state=state),
         )
         assert step5b.ok, step5b
+        assert (
+            _first_value(step5b.stdout, "nb0p_notification_presence_state")
+            == f"baseline-state-{state}"
+        ), step5b
         assert pg.psql(
             db, WRITE_ROLE, "06-write-complete.sql",
             _vars(db, gate_attestation="r1-r7-zero-variance"),
@@ -1484,6 +1538,10 @@ class TestNotificationPresenceStates:
             _notification_verify_vars(db, digest, notification_baseline_state=state),
         )
         assert step7b.ok, step7b
+        assert (
+            _first_value(step7b.stdout, "nb0pv_notification_presence_state")
+            == f"baseline-state-{state}"
+        ), step7b
         return {"step1": step1, "step2b": step2b, "digest": digest,
                 "step5b": step5b, "step7b": step7b}
 
@@ -1531,14 +1589,51 @@ class TestNotificationPresenceStates:
             "f2_preflight_p2_notification_relation_partial_presence"
         ), step1
 
-        for state in ("absent", "present"):
-            step2b = pg.psql(
-                db, WRITE_ROLE, "02b-baseline-notification.sql",
-                _vars(db, notification_baseline_state=state),
-            )
-            assert step2b.failed_with(
-                "f2_notification_baseline_n0p_notification_relation_partial_presence"
-            ), step2b
+        # Partial presence fails at every notification-aware step, under either
+        # supplied state, and is never provisioned, repaired or dropped.
+        for name, prefix in self.NOTIFICATION_STATE_STEPS:
+            for state in ("absent", "present"):
+                result = pg.psql(
+                    db, WRITE_ROLE, name,
+                    self._state_vars(db, name, self.ABSENT_MARKER, state),
+                )
+                assert result.failed_with(
+                    f"{prefix}_notification_relation_partial_presence"
+                ), result
+        assert self._present_count(pg, db) == 1
+
+    def test_missing_baseline_state_fails_closed(self, pg):
+        """An unsupplied -v is a syntax error, never a silent default."""
+        db = DB_MAIN
+        pg.provision(db, with_notifications=False)
+
+        for name, _prefix in self.NOTIFICATION_STATE_STEPS:
+            values = self._state_vars(db, name, self.ABSENT_MARKER, None)
+            assert "notification_baseline_state" not in values
+            result = pg.psql(db, WRITE_ROLE, name, values)
+            assert not result.ok, result
+            assert "syntax error" in result.stderr, result
+            assert "baseline-state-" not in result.stdout, result
+
+    def test_invalid_baseline_state_fails_closed(self, pg):
+        """Only `absent` and `present` reach a pass token; nothing else does.
+
+        An out-of-domain value cannot fall through the CASE to the
+        `baseline-state-` ELSE branch: it always satisfies the mismatch arm,
+        including a wrong-cased `PRESENT` and an empty value.
+        """
+        db = DB_MAIN
+        pg.provision(db, with_notifications=False)
+
+        for name, prefix in self.NOTIFICATION_STATE_STEPS:
+            for state in ("foo", "PRESENT", "", "none"):
+                result = pg.psql(
+                    db, WRITE_ROLE, name,
+                    self._state_vars(db, name, self.ABSENT_MARKER, state),
+                )
+                assert result.failed_with(
+                    f"{prefix}_notification_presence_changed_during_attempt"
+                ), (name, state, result)
 
     def test_present_state_assertions_remain_intact(self, pg):
         db = DB_MAIN
@@ -1583,7 +1678,7 @@ class TestNotificationPresenceStates:
         # The new state passes P2 on its own, which is exactly why the packet
         # compares against the recorded baseline state instead of re-deriving
         # an expectation per step.
-        fresh_p2 = self._p2_only(pg, db)
+        fresh_p2 = self._p2_from_packet(pg, db)
         assert fresh_p2.ok, fresh_p2
         assert (
             _first_value(fresh_p2.stdout, "p2_notification_relations")
@@ -1597,6 +1692,16 @@ class TestNotificationPresenceStates:
         assert step5b.failed_with(
             "f2_gate_r5b_nb0p_notification_presence_changed_during_attempt"
         ), step5b
+
+        # The same transition is refused at final verification, so the failure
+        # is not merely deferred past step 6.
+        step7b = pg.psql(
+            db, WRITE_ROLE, "07b-verify-notification.sql",
+            _notification_verify_vars(db, digest, notification_baseline_state="absent"),
+        )
+        assert step7b.failed_with(
+            "f2_verify_nb0pv_notification_presence_changed_during_attempt"
+        ), step7b
 
     def test_present_to_absent_transition_fails_mid_attempt(self, pg):
         db = DB_MAIN
@@ -1613,6 +1718,15 @@ class TestNotificationPresenceStates:
 
         self._drop_relations(pg, db)
         assert self._present_count(pg, db) == 0
+        # Proven against the packet's own P2, not a reimplementation: absence
+        # would pass a fresh preflight, which is why the comparison is against
+        # the recorded baseline state.
+        fresh_p2 = self._p2_from_packet(pg, db)
+        assert fresh_p2.ok, fresh_p2
+        assert (
+            _first_value(fresh_p2.stdout, "p2_notification_relations")
+            == "all-12-absent"
+        )
 
         step5b = pg.psql(
             db, WRITE_ROLE, "05b-r5-notification.sql",
@@ -1621,6 +1735,14 @@ class TestNotificationPresenceStates:
         assert step5b.failed_with(
             "f2_gate_r5b_nb0p_notification_presence_changed_during_attempt"
         ), step5b
+
+        step7b = pg.psql(
+            db, WRITE_ROLE, "07b-verify-notification.sql",
+            _notification_verify_vars(db, digest, notification_baseline_state="present"),
+        )
+        assert step7b.failed_with(
+            "f2_verify_nb0pv_notification_presence_changed_during_attempt"
+        ), step7b
 
         # A re-baselined attempt in the new state passes, so the failure above
         # is about the transition and not about absence being rejected.

@@ -426,6 +426,14 @@ reads `complete`; F4 re-runs R1; F5 re-runs R6; F6 and F6b compare the step-2
 digests; F7 proves the cutover rowcount is 1; F8 proves no receive was
 performed. F9 prints the row.
 
+`07b-verify-notification.sql` prints the notification half of step 7:
+`nb0pv_notification_presence_state = baseline-state-<the state from §3>`, then
+F10 and F11 — `R5b-unchanged-at-step-7` and `R5b-zero-rows-for-pinned-shop` in
+the `present` state, `R5b-unchanged-at-step-7-absent-relations` and
+`R5b-zero-rows-for-pinned-shop-absent-relations` in the `absent` state — plus the
+F12 per-relation detail in the `present` state only. Fill in the audit template
+§H step-7 rows that match the state recorded in its §A, by exact equality.
+
 Then the HTTP checks in §5 again: ready `200` with `reasons: []`, the **other**
 shop still `503`. If any other shop's gate opened, that is S2 — treat it as a
 tenant-isolation failure and go to §7 break-glass.
@@ -539,7 +547,8 @@ From `05-r1-r7.sql`: `R1-zero`, `overlay-deltas-are-zero`,
 `R5c-envelope-empty`, `R6-zero`, `R7a-zero`, `R7b-zero`, `R7c-zero`, `R7d-zero`,
 `R7e-zero`, and `gate_evaluation_point = evaluating-at-locking`.
 
-From `05b-r5-notification.sql`, in the `present` state: `R5b-unchanged`,
+From `05b-r5-notification.sql`, in the `present` state:
+`nb0p_notification_presence_state = baseline-state-present`, `R5b-unchanged`,
 `R5b-zero-rows-for-pinned-shop`, `nb1_evaluation_point = evaluating-at-locking`.
 In the `absent` state the equivalent set is
 `nb0p_notification_presence_state = baseline-state-absent`,
@@ -550,6 +559,16 @@ example an `absent` baseline state with a `present` token — is a failure.
 
 A missing token is a failure even if psql exited zero. Do not proceed to step 6
 on a partial set.
+
+Tokens are compared by **exact equality against the printed column value**,
+never by substring containment: `R5b-unchanged-at-step-7-absent-relations` does
+not satisfy a requirement for `R5b-unchanged-at-step-7`. The audit template
+carries the state, not the operator's memory:
+`AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` §A records the P2 result once as
+`notification_baseline_state`, and its §D, §E, §H and step-7 tables hold one row
+per state, so the row filled in must be the row for the §A state. A mixed set,
+or any `*_partial_presence` or `*_presence_changed_during_attempt` stop
+parameter, is S11.
 
 | # | Invariant | Zero condition as implemented |
 | --- | --- | --- |

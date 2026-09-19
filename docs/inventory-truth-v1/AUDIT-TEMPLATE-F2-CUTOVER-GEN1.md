@@ -31,6 +31,7 @@ referenced, name where the owner holds it.
 | Generation | `1` |
 | Reserved receive key (must stay unused) | `6f91b921-0c9d-4c75-8f54-6da9e74ef8f2` — UUIDv4, D-046 |
 | Rejected control probe (H-3b, `422`/no-write) | `F2-CUT-GEN1-0001` — not a UUIDv4, D-046 |
+| Notification presence state (P2 result at step 2, carried as `-v notification_baseline_state`) | `absent` or `present` — recorded once from `p2_notification_relations` and reused unchanged at steps 2, 5 and 7; never re-chosen mid-attempt |
 | Outcome (fill last) | `COMPLETED-STOPPED-AT-STEP-8` / `STOPPED-S__` / `BREAK-GLASS` |
 
 ## B. Actors
@@ -78,17 +79,17 @@ Any unticked line is **S11**: stop before writing anything.
 | Step | File / probe | Wall clock start | Wall clock end | psql exit | Tokens / values observed | Actor |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | session open + `ready` | | | n/a | `current_user`, `session_user`, `current_database()`, `version()`, HTTP status | |
-| 2 | `01-preflight.sql` | | | | P1–P8 | |
+| 2 | `01-preflight.sql` | | | | P1–P8, incl. `p2_notification_relations` = `all-12-absent` or `all-12-present` (→ §A) | |
 | 2 | `02-baseline.sql` | | | | digests (→ §E) | |
-| 2 | `02b-baseline-notification.sql` | | | | `r5_notification_digest` (→ §E) | |
+| 2 | `02b-baseline-notification.sql` | | | | `n0p_notification_presence_state`, `r5_notification_digest` (→ §E) | |
 | 3 | `03-write-locking.sql` | | | | W0, W0b, W2, W3 + row (→ §F) | |
 | 4 | `04-verify-locking.sql` | | | | V1–V7 | |
 | 4 | H-1, H-2, H-3, H-3b, H-4 | | | n/a | statuses (→ §G) | |
 | 5 | `05-r1-r7.sql` | | | | all §6 tokens (→ §H) | |
-| 5 | `05b-r5-notification.sql` | | | | `R5b-unchanged`, `R5b-zero-rows-for-pinned-shop` | |
+| 5 | `05b-r5-notification.sql` | | | | `nb0p_notification_presence_state` + the §H R5b pair **for the state recorded in §A** | |
 | 6 | `06-write-complete.sql` | | | | T0, T0b, T0c, T1–T4 + row (→ §F) | |
 | 7 | `07-final-verification.sql` | | | | F1–F9 (→ §H) | |
-| 7 | `07b-verify-notification.sql` | | | | F10, F11 | |
+| 7 | `07b-verify-notification.sql` | | | | `nb0pv_notification_presence_state`, F10, F11 — the §H step-7 pair **for the state recorded in §A** | |
 | 7 | H-3, H-4 | | | n/a | statuses (→ §G) | |
 | 8 | stop + credential destroyed | | | n/a | see §K | |
 
@@ -103,13 +104,19 @@ behaviour.
 | `baseline_digest` (13 relations, incl. cutover) | `02-baseline.sql` | |
 | `baseline_excl_cutover` (12 relations) | `02-baseline.sql` | |
 | `base_r5_inventory` (6 out-of-envelope) | `02-baseline.sql` | |
-| `base_r5_notification` (12 notification) | `02b-baseline-notification.sql` | |
+| `base_r5_notification` (12 notification relations; when all 12 are absent this is the absence marker `md5('notification-relations-absent')`) | `02b-baseline-notification.sql` | |
+| `n0p_notification_presence_state` | `02b-baseline-notification.sql` N0p | |
 | `freeze_window_start` | `02-baseline.sql` B0 | |
 | `freeze_window_end` | `07-final-verification.sql` F0 | |
 | `bg_pre_digest` (only if break-glass ran) | `08-break-glass-locking.sql` BG1 | |
 
 Per-relation baseline rows (total / pinned-shop) — paste the full aligned output
-of `02-baseline.sql` B1 and `02b-baseline-notification.sql` N1 below:
+of `02-baseline.sql` B1 below. Add `02b-baseline-notification.sql` N1 when the
+§A state is `present`. When the §A state is `absent`, N1 prints no per-relation
+rows: paste its two columns instead (`r5_notification_digest` = the absence
+marker, `n1_absent_baseline` = `notification-relations-absent-baseline`) and
+annotate the block `N1-not-applicable-relations-absent`. Never leave this block
+empty, and never paste a present-state N1 table for an `absent` attempt:
 
 ```text
 <paste>
@@ -194,6 +201,15 @@ startup marker, request lines and status codes) — paste or attach the path:
 Every invariant must be exactly zero. **A timeout, an error, a partial response
 or a missing token is a failure, not a pass.**
 
+Token matching is **exact string equality against the printed column value**,
+never substring containment: `R5b-unchanged-at-step-7-absent-relations` does not
+satisfy a requirement for `R5b-unchanged-at-step-7`. Record only the row that
+matches the notification presence state in §A. A mixed present/absent token set
+is a failure, and so is any `*_partial_presence` or
+`*_presence_changed_during_attempt` stop parameter. Partial presence (1 to 11 of
+the twelve relations) is never recorded as a pass and is never provisioned,
+repaired or dropped by the operator.
+
 | # | Invariant | Token required | Observed | Notes |
 | --- | --- | --- | --- | --- |
 | R1 | snapshot vs append-only truth | `R1-zero` | | |
@@ -203,7 +219,8 @@ or a missing token is a failure, not a pass.**
 | R3 | idempotency uniqueness | `R3-zero` | **trivial** zero; reserved key produced 0 rows |
 | R4 | cutover row discipline at `locking` | `R4-zero` | |
 | R5a | out-of-envelope inventory digest | `R5a-unchanged` | |
-| R5b | all 12 notification relations | `R5b-unchanged` + `R5b-zero-rows-for-pinned-shop` | from `05b` |
+| R5b — §A state `present` | all 12 notification relations exist and are unchanged | `R5b-unchanged` + `R5b-zero-rows-for-pinned-shop` | from `05b` |
+| R5b — §A state `absent` | all 12 notification relations are still absent | `R5b-notification-relations-still-absent` + `R5b-zero-rows-for-pinned-shop-absent-relations` | from `05b` |
 | R5c | envelope empty for pinned shop | `R5c-envelope-empty` | |
 | R6 | identity invariance | `R6-zero` | `shops = 2`, `shop_members = 2` |
 | R7a | envelope table grants | `R7a-zero` | |
@@ -213,6 +230,7 @@ or a missing token is a failure, not a pass.**
 | R7e | cutover write path | `R7e-zero` | |
 | — | evaluation point | `gate_evaluation_point = evaluating-at-locking` | |
 | — | notification evaluation point | `nb1_evaluation_point = evaluating-at-locking` | |
+| — | notification presence state at step 5 | `nb0p_notification_presence_state = baseline-state-absent` or `baseline-state-present` (must equal §A) | |
 
 R2 and R3 are recorded as **trivial pre-receive zeros** under D-045 decision 4.
 They are not receive proofs. They become substantive when re-run under the later
@@ -231,8 +249,12 @@ Step 7 re-verification:
 | F6b out-of-envelope digest | `R5a-unchanged-at-step-7` | |
 | F7 cutover rowcount | `cutover-rowcount-1` | |
 | F8 no receive performed | `no-receive-performed` | |
-| F10 notification digest at step 7 | `R5b-unchanged-at-step-7` | |
-| F11 zero notification rows, pinned shop | `R5b-zero-rows-for-pinned-shop` | |
+| F10 notification digest at step 7 — §A state `present` | `R5b-unchanged-at-step-7` | |
+| F10 notification relations still absent at step 7 — §A state `absent` | `R5b-unchanged-at-step-7-absent-relations` | |
+| F11 zero notification rows, pinned shop — §A state `present` | `R5b-zero-rows-for-pinned-shop` | |
+| F11 zero notification rows, pinned shop — §A state `absent` | `R5b-zero-rows-for-pinned-shop-absent-relations` | |
+| NB0pv notification presence state at step 7 | `nb0pv_notification_presence_state = baseline-state-absent` or `baseline-state-present` (must equal §A) | |
+| F12 per-relation detail (printed by `07b` in the `present` state only) | the aligned `rel` / `cutover_shop_rows` table, or `F12-not-applicable-relations-absent` | |
 
 Timeouts used (must be inside the guarded ranges):
 

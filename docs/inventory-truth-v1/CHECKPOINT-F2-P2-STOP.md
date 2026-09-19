@@ -104,3 +104,89 @@ in `harness_f2_cutover.py` (`TestNotificationPresenceStates`) prove the absent
 chain end to end with no receive, the present chain unchanged, partial presence
 failing at preflight and baseline, and both absent-to-present and
 present-to-absent transitions failing mid-attempt.
+
+## Review correction pass (pre-merge, same authorization)
+
+The final bounded review of draft PR #41 at head `db8ca04` found one blocking
+defect outside the SQL packet and four harness coverage gaps. Both were
+corrected before merge; nothing above was reverted.
+
+Blocking defect — the mandatory audit record still required present-state-only
+evidence. `AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` is required before step 1 by the
+runbook §1 checklist ("Audit template copied and open") and by its own §C row
+P0-10, and it is **not** in the freeze manifest, so it is mutable and belongs in
+this correction. Before the fix its §D step-5 row, §H R5b row and step-7 F10/F11
+rows demanded `R5b-unchanged`, `R5b-zero-rows-for-pinned-shop` and
+`R5b-unchanged-at-step-7`, and §E demanded per-relation N1 rows that absent-mode
+`02b` does not print. Combined with "a missing token is a failure", an operator
+on the real 0-of-12 staging shape could not record the absent state at all, and
+the absent tokens are string supersets of the present ones, so a substring
+reading would have mis-recorded an absence proof as a presence proof.
+
+Audit template now, per state:
+
+| Section | `absent` | `present` |
+| --- | --- | --- |
+| §A | `notification_baseline_state = absent`, recorded once from P2 and reused unchanged at steps 2, 5, 7 | same, `present` |
+| §D | step rows name `p2_notification_relations`, `n0p_`/`nb0p_`/`nb0pv_notification_presence_state` and "the §H pair for the state recorded in §A" | same |
+| §E | `base_r5_notification` = the absence marker; N1 block annotated `N1-not-applicable-relations-absent` with the two absent columns pasted | full N1 per-relation rows |
+| §H | `R5b-notification-relations-still-absent` + `R5b-zero-rows-for-pinned-shop-absent-relations` | `R5b-unchanged` + `R5b-zero-rows-for-pinned-shop` |
+| §H step 7 | `R5b-unchanged-at-step-7-absent-relations` + `R5b-zero-rows-for-pinned-shop-absent-relations` | `R5b-unchanged-at-step-7` + `R5b-zero-rows-for-pinned-shop` |
+
+§H also states the matching rule explicitly: exact string equality against the
+printed column value, never substring containment; a mixed present/absent set or
+any `*_partial_presence` / `*_presence_changed_during_attempt` parameter is a
+failure; partial presence is never recorded as a pass and never repaired by the
+operator. Runbook §6 carries the same rule and points at the template rows.
+
+Harness gaps closed in `TestNotificationPresenceStates`:
+
+- Missing `-v notification_baseline_state` now fails closed at `02b`, `05b` and
+  `07b` (syntax error, non-zero exit, no `baseline-state-` token printed).
+- Invalid values `foo`, `PRESENT`, empty and `none` reach
+  `..._presence_changed_during_attempt` at all three files, proving the pass
+  `ELSE` branch is unreachable for any out-of-domain state.
+- Partial presence is now asserted at `05b` and `07b` as well as `01` and `02b`,
+  under both supplied states, with the relation count re-checked afterwards so
+  nothing was provisioned or dropped.
+- Both mid-attempt transitions are now also refused at `07b`
+  (`f2_verify_nb0pv_notification_presence_changed_during_attempt`), so the
+  failure is not deferred past step 6.
+- The transition proof runs **P2's own text**, extracted verbatim from
+  `01-preflight.sql` between its count query and `END AS
+  p2_notification_relations;`, copied into the disposable container and run as a
+  packet file, instead of a hand-copied reimplementation that could diverge.
+  Extraction asserts its own content, so drift fails the test loudly.
+
+Still unchanged by this pass: every frozen file, all application code, staging
+schema, grants, roles and both D-047 confirmation gates. No staging contact, no
+preflight retry, no receive.
+
+### Second bounded review of this correction pass
+
+One review of the correction itself returned no P0/P1 and four concrete findings,
+all corrected before merge:
+
+1. The new audit-template step-7 row was labelled `F12`, but `07b` already owns
+   `F12` for its present-state per-relation detail block; the presence-state
+   value is printed by NB0pv. Relabelled to `NB0pv notification presence state
+   at step 7`, and a separate `F12 per-relation detail` row was added with
+   `F12-not-applicable-relations-absent` for the absent state, so no row points
+   an operator at a block that cannot print it.
+2. No test asserted the three `*_notification_presence_state` tokens this pass
+   made mandatory. `_chain` now asserts
+   `n0p_`/`nb0p_`/`nb0pv_notification_presence_state == baseline-state-<state>`
+   by exact equality in both states, so a drifted column name or string fails
+   the harness instead of surfacing as a missing-token stop on staging.
+3. The packet-P2 extraction proof ran in only one transition test.
+   `test_present_to_absent_transition_fails_mid_attempt` now also runs P2's own
+   text and asserts `all-12-absent`, so neither direction rests on the
+   harness's reimplementation of the count query.
+4. Runbook §6 listed the step-5 presence-state token for the `absent` state
+   only, disagreeing with the state-agnostic audit-template row. `present` now
+   lists `nb0p_notification_presence_state = baseline-state-present` too, and
+   §7 spells out the 07b token set per state with F12 as present-only.
+
+After the fixes: disposable PostgreSQL 16 harness `19 passed`, no skips;
+`validate_inventory_truth_freeze.py` ok, `validate_agent_context.py` ok,
+`git diff --check` clean, no secret-pattern line in the added diff.
