@@ -222,6 +222,26 @@ $SQL = "scripts/f2-cutover/sql"
 Guard G1b compares them, so a mistyped tenant in one place stops the run before
 any statement touches data. This is a double-entry control, not redundancy.
 
+One variable is **not** in `$F2` because it is discovered, not chosen:
+`notification_baseline_state`. `01-preflight.sql` P2 prints the notification
+presence state for this database — `all-12-absent` or `all-12-present` — and the
+operator passes the corresponding word (`absent` or `present`) to
+`02b-baseline-notification.sql`, `05b-r5-notification.sql` and
+`07b-verify-notification.sql`. Each of those files re-derives the state from the
+catalog and fails closed if it differs from the value supplied, so a
+notification slice appearing or disappearing during the attempt stops the run
+even when the new state would pass a fresh preflight. Partial presence (1 to 11
+of the twelve) fails closed at every one of those files and is never repaired
+from the packet.
+
+`absent` is a legitimate state, not a defect: the frozen boundary
+(AMENDMENT-1.3.0 §5 exclusions and §16) keeps notifications outside the cutover
+write scope, and the approved staging provisioning excluded the notification
+slice. R5's guarantee is that this cutover writes nothing to notification
+relations; continued absence evidences that guarantee, and the packet asserts it
+at every later step. "Currently absent" is a catalog observation about now and
+does not claim the relations were never applied historically.
+
 Run one file as:
 
 ```powershell
@@ -251,11 +271,15 @@ result is S10.
 ```powershell
 psql -X -v ON_ERROR_STOP=1 @F2 -f "$SQL/01-preflight.sql"
 psql -X -v ON_ERROR_STOP=1 @F2 -f "$SQL/02-baseline.sql"
-psql -X -v ON_ERROR_STOP=1 @F2 -f "$SQL/02b-baseline-notification.sql"
+psql -X -v ON_ERROR_STOP=1 @F2 `
+  -v notification_baseline_state=<absent or present, from P2> `
+  -f "$SQL/02b-baseline-notification.sql"
 ```
 
-`01-preflight.sql` proves P1–P8: the 13 inventory/identity relations and the 12
-notification relations exist; `purchase_record.client_idempotency_key` is
+`01-preflight.sql` proves P1–P8: the 13 inventory/identity relations exist; the
+12 notification relations are in one of the three P2 states (`all-12-absent`,
+`all-12-present`, or a fail-closed partial presence);
+`purchase_record.client_idempotency_key` is
 `varchar(36)` and nullable; the partial unique index
 `uq_purchase_record_shop_client_key` exists with 2 key columns and a predicate;
 `stashtab_api` is SELECT-only on `inventory_truth_cutover` while
@@ -275,6 +299,7 @@ by a digest mismatch rather than by a silent pass:
 | `baseline_excl_cutover` | `02-baseline.sql` | `07-final-verification.sql` (F6) |
 | `base_r5_inventory` | `02-baseline.sql` | `05-r1-r7.sql` (R5a), `07` (F6b) |
 | `base_r5_notification` | `02b-baseline-notification.sql` | `05b`, `07b` |
+| `notification_baseline_state` | `01-preflight.sql` (P2), re-verified by `02b` | `02b`, `05b`, `07b` |
 | `freeze_window_start` | `02-baseline.sql` | audit record only |
 
 `baseline_digest` (all thirteen relations, including `inventory_truth_cutover`)
@@ -335,6 +360,7 @@ psql -X -v ON_ERROR_STOP=1 @F2 `
 
 psql -X -v ON_ERROR_STOP=1 @F2 `
   -v base_r5_notification=<from step 2b> `
+  -v notification_baseline_state=<absent or present, from P2> `
   -v recon_timeout_ms=15000 `
   -f "$SQL/05b-r5-notification.sql"
 ```
@@ -390,6 +416,7 @@ psql -X -v ON_ERROR_STOP=1 @F2 `
 
 psql -X -v ON_ERROR_STOP=1 @F2 `
   -v base_r5_notification=<from step 2b> -v verify_timeout_ms=15000 `
+  -v notification_baseline_state=<absent or present, from P2> `
   -f "$SQL/07b-verify-notification.sql"
 ```
 
@@ -398,6 +425,14 @@ F1 re-evaluates R4 at its `complete` point; F2 proves the gate now reads
 reads `complete`; F4 re-runs R1; F5 re-runs R6; F6 and F6b compare the step-2
 digests; F7 proves the cutover rowcount is 1; F8 proves no receive was
 performed. F9 prints the row.
+
+`07b-verify-notification.sql` prints the notification half of step 7:
+`nb0pv_notification_presence_state = baseline-state-<the state from §3>`, then
+F10 and F11 — `R5b-unchanged-at-step-7` and `R5b-zero-rows-for-pinned-shop` in
+the `present` state, `R5b-unchanged-at-step-7-absent-relations` and
+`R5b-zero-rows-for-pinned-shop-absent-relations` in the `absent` state — plus the
+F12 per-relation detail in the `present` state only. Fill in the audit template
+§H step-7 rows that match the state recorded in its §A, by exact equality.
 
 Then the HTTP checks in §5 again: ready `200` with `reasons: []`, the **other**
 shop still `503`. If any other shop's gate opened, that is S2 — treat it as a
@@ -512,11 +547,28 @@ From `05-r1-r7.sql`: `R1-zero`, `overlay-deltas-are-zero`,
 `R5c-envelope-empty`, `R6-zero`, `R7a-zero`, `R7b-zero`, `R7c-zero`, `R7d-zero`,
 `R7e-zero`, and `gate_evaluation_point = evaluating-at-locking`.
 
-From `05b-r5-notification.sql`: `R5b-unchanged`,
+From `05b-r5-notification.sql`, in the `present` state:
+`nb0p_notification_presence_state = baseline-state-present`, `R5b-unchanged`,
 `R5b-zero-rows-for-pinned-shop`, `nb1_evaluation_point = evaluating-at-locking`.
+In the `absent` state the equivalent set is
+`nb0p_notification_presence_state = baseline-state-absent`,
+`R5b-notification-relations-still-absent`,
+`R5b-zero-rows-for-pinned-shop-absent-relations`, and
+`nb1_evaluation_point = evaluating-at-locking`. Mixing the two sets — for
+example an `absent` baseline state with a `present` token — is a failure.
 
 A missing token is a failure even if psql exited zero. Do not proceed to step 6
 on a partial set.
+
+Tokens are compared by **exact equality against the printed column value**,
+never by substring containment: `R5b-unchanged-at-step-7-absent-relations` does
+not satisfy a requirement for `R5b-unchanged-at-step-7`. The audit template
+carries the state, not the operator's memory:
+`AUDIT-TEMPLATE-F2-CUTOVER-GEN1.md` §A records the P2 result once as
+`notification_baseline_state`, and its §D, §E, §H and step-7 tables hold one row
+per state, so the row filled in must be the row for the §A state. A mixed set,
+or any `*_partial_presence` or `*_presence_changed_during_attempt` stop
+parameter, is S11.
 
 | # | Invariant | Zero condition as implemented |
 | --- | --- | --- |
@@ -524,7 +576,7 @@ on a partial set.
 | R2 | Receive envelope completeness | Every `purchase_record` of the shop has an `acquisition_lot` and at least one `inventory_event`, joined on the locked canonical key `'purchase_record:' \|\| shop_id \|\| ':' \|\| id`. Orphan count `0`. Trivial at step 5. |
 | R3 | Idempotency uniqueness | No duplicate `(shop_id, client_idempotency_key)`, no duplicate lot key, no duplicate event key; the reserved and probe keys produced `0` rows. Trivial at step 5. |
 | R4 | Cutover row discipline | Exactly `1` row, pinned shop, generation `1`, `0` rows elsewhere. `locking` + `frozen_at` at step 5; `complete` + `opened_at` at step 7. |
-| R5 | Out-of-scope writes | R5a: the six out-of-envelope inventory relations still match the step-2 digest. R5b: all twelve notification relations still match the step-2b digest **and** hold zero rows for the pinned tenant. R5c: the envelope is empty for the pinned shop. |
+| R5 | Out-of-scope writes | R5a: the six out-of-envelope inventory relations still match the step-2 digest. R5b, `present` state: all twelve notification relations still match the step-2b digest **and** hold zero rows for the pinned tenant. R5b, `absent` state: all twelve are still absent and the step-2b absence marker is unchanged, so no notification row can exist for any tenant. Partial presence fails closed in both states. R5c: the envelope is empty for the pinned shop. |
 | R6 | Identity invariance | `shops = 2`, `shop_members = 2`, exactly one membership for the pinned shop. |
 | R7 | Privilege invariance | R7a envelope grants on the four tables; R7b USAGE on the four F2 sequences; R7c PUBLIC holds nothing; R7d worker/readonly hold nothing; R7e the cutover write path. |
 
@@ -593,7 +645,7 @@ template. Recovery never deletes evidence.
 | S8 | The API process restarts or crashes, or a new deployment appears in the window | Railway log window, step 2 and step 7 | Stop; autodeploy must stay off |
 | S9 | Suspected credential exposure | any observation | Stop; owner rotates; record the event **without printing any value** |
 | S10 | `/api/v1/ready` stops returning `200` with `reasons: []`, including reason `truth_migrator_role` | H-4 at step 1, step 4, step 7 | Stop; a migrator credential reached the app environment |
-| S11 | Any `P0` precondition cannot be evidenced | §1 checklist, P7, G1–G9 | Stop before writing anything |
+| S11 | Any `P0` precondition cannot be evidenced, including a partial notification presence (1 to 11 of the twelve relations) or a notification presence state that changed since the recorded baseline | §1 checklist, P2, P7, G1–G9, N0p, NB0p, NB0pv | Stop before writing anything; if the change is detected after step 3, stop and §7 |
 
 Rollback order — least destructive first, each verified before the next:
 
