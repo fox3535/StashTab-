@@ -1,4 +1,3 @@
-import ScrollVideoHero from "./scroll-video-hero";
 import { HeroHeader } from "./header";
 import HeroSection from "./hero-section";
 import Workflow from "./workflow";
@@ -15,16 +14,10 @@ import CustomClerkPricing from "@/components/custom-clerk-pricing";
 export default function Home() {
   return (
     <div className="bg-obsidian">
-      {/* 1. Cinematic scroll-video hero (no chrome overlays) */}
-      <ScrollVideoHero />
-
-      {/* Boundary sentinel — the header reveals once this point is reached */}
-      <div id="after-cinematic" aria-hidden className="h-px" />
-
-      {/* Site header — hidden during the cinematic hero, appears after it */}
+      {/* Site header — always visible above the hero */}
       <HeroHeader />
 
-      {/* 2. Classic hero — headline, live UI phone screenshot, CTAs + marquee */}
+      {/* 1. Hero — headline, live UI phone screenshot, CTAs + marquee */}
       <HeroSection />
 
       {/* 3. From intake to checkout workflow */}

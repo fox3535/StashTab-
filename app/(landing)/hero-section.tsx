@@ -6,10 +6,6 @@ import { ArrowRight, ScanBarcode, Zap } from 'lucide-react'
 import { SignUpButton } from '@clerk/nextjs'
 import { PhoneScreenshot } from './phone-screenshot'
 
-function scrollToDemo() {
-    document.getElementById('pipeline')?.scrollIntoView({ behavior: 'smooth' })
-}
-
 const fadeUp = {
     hidden: { opacity: 0, y: 24 },
     show: (i: number) => ({
@@ -143,14 +139,6 @@ export default function HeroSection() {
                                         <ArrowRight className="size-4" />
                                     </Button>
                                 </SignUpButton>
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    onClick={scrollToDemo}
-                                    className="h-13 border-border bg-gunmetal/60 font-display text-base text-foreground transition-all duration-200 hover:border-neon/50 hover:text-neon hover:shadow-[0_0_18px_rgba(139,92,246,0.2)]"
-                                >
-                                    Launch Live POS
-                                </Button>
                             </motion.div>
 
                             {/* Trust signals */}

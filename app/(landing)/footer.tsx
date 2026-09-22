@@ -10,7 +10,6 @@ const productLinks = [
 ]
 
 const appLinks = [
-    { title: 'Open POS Find', href: '/pos/find' },
     { title: 'Admin console', href: '/admin/dashboard' },
     { title: 'Sign up', href: '/sign-up' },
 ]
