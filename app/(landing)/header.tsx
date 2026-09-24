@@ -2,7 +2,6 @@
 import Link from 'next/link'
 import { Loader2, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { StashTabMark } from '@/components/logo'
 import React from 'react'
 import { cn } from '@/lib/utils'
 
@@ -25,8 +24,6 @@ const menuItems = [
     { name: 'Pricing', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },
 ]
-
-export { StashTabMark }
 
 export const HeroHeader = () => {
     const [menuState, setMenuState] = React.useState(false)
@@ -63,11 +60,19 @@ export const HeroHeader = () => {
                 >
                     <div className="relative flex flex-wrap items-center justify-between gap-4 py-3">
                         <div className="flex w-full justify-between lg:w-auto">
-                            <Link href="/" aria-label="StashTab home" className="flex items-center gap-3">
-                                <StashTabMark className="size-10 text-base" />
-                                <span className="font-display text-xl font-bold tracking-tight text-foreground">
-                                    Stash<span className="text-neon">Tab</span>
-                                </span>
+                            <Link href="/" aria-label="StashTab home" className="flex items-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/stashtab-wordmark-white.svg"
+                                    alt=""
+                                    className="hidden h-10 w-auto sm:block"
+                                />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/stashtab-mark-white.svg"
+                                    alt=""
+                                    className="h-10 w-10 sm:hidden"
+                                />
                             </Link>
 
                             <button

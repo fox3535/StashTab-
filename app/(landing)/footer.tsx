@@ -23,9 +23,9 @@ export default function FooterSection() {
                         <Link href="/" aria-label="StashTab home" className="inline-block">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src="/Black%20BG%20Logo%20+%20Brand.png"
-                                alt="StashTab"
-                                className="h-20 w-auto object-contain"
+                                src="/stashtab-wordmark-white.svg"
+                                alt=""
+                                className="h-16 w-auto"
                             />
                         </Link>
                         <p className="mt-4 text-[15px] leading-relaxed text-steel">
