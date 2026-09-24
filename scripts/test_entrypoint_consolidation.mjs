@@ -41,14 +41,16 @@ test("public landing stays public and its signed-in CTA avoids locked /pos", () 
   assert.equal(existsSync(join(root, "app/(landing)/page.tsx")), true);
   assert.equal(landingSrc.includes("redirect("), false);
   assert.equal(landingHeaderSrc.includes('href="/pos"'), false);
-  assert.equal(landingHeaderSrc.includes('href="/pos/find"'), true);
+  // POS Find now lives only inside the authenticated app, never the public header.
+  assert.equal(landingHeaderSrc.includes('href="/pos/find"'), false);
 });
 
 test("signed-in landing CTAs pair explicit labels with matching targets", () => {
-  // A general entry action must go to /admin/dashboard; /pos/find is only
-  // allowed behind an explicit POS Find label.
-  assert.equal(landingHeaderSrc.includes("Open POS Find"), true);
+  // A single signed-in entry action goes to /admin/dashboard; the public
+  // header no longer exposes POS Find or a generic app label.
+  assert.equal(landingHeaderSrc.includes("Open Dashboard"), true);
   assert.equal(landingHeaderSrc.includes('href="/admin/dashboard"'), true);
+  assert.equal(landingHeaderSrc.includes("Open POS Find"), false);
   assert.equal(landingHeaderSrc.includes("Get Started"), false);
   assert.equal(landingHeaderSrc.includes("Open App"), false);
 });

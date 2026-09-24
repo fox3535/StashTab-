@@ -12,16 +12,18 @@ const dashboardSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
 const middlewareSrc = readFileSync(join(root, "middleware.ts"), "utf8");
 const gateSrc = readFileSync(join(root, "components/vendor/locked-route-gate.tsx"), "utf8");
 
-test("landing footer uses explicit Open POS Find with matching target", () => {
-  assert.equal(footerSrc.includes("Open POS Find"), true);
-  assert.equal(footerSrc.includes("'/pos/find'"), true);
+test("landing footer no longer surfaces POS Find on the public page", () => {
+  assert.equal(footerSrc.includes("Open POS Find"), false);
+  assert.equal(footerSrc.includes("'/pos/find'"), false);
   assert.equal(footerSrc.includes("'/pos'"), false);
 });
 
 test("landing surfaces never link the locked bare /pos route", () => {
   assert.equal(footerSrc.includes('href="/pos"'), false);
   assert.equal(headerSrc.includes('href="/pos"'), false);
-  assert.equal(headerSrc.includes("Open POS Find"), true);
+  // The public header now enters the app via Open Dashboard, not POS Find.
+  assert.equal(headerSrc.includes("Open Dashboard"), true);
+  assert.equal(headerSrc.includes('href="/admin/dashboard"'), true);
 });
 
 test("payment-gated starter route never implies billing works", () => {

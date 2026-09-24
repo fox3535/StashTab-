@@ -2,7 +2,6 @@
 import Link from 'next/link'
 import { Loader2, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { StashTabMark } from '@/components/logo'
 import React from 'react'
 import { cn } from '@/lib/utils'
 
@@ -26,28 +25,14 @@ const menuItems = [
     { name: 'FAQ', href: '#faq' },
 ]
 
-export { StashTabMark }
-
 export const HeroHeader = () => {
     const [menuState, setMenuState] = React.useState(false)
     const [isScrolled, setIsScrolled] = React.useState(false)
-    /** Header stays hidden while the cinematic video hero is on screen and
-     *  reveals once the visitor scrolls past it into the main landing page. */
-    const [pastHero, setPastHero] = React.useState(false)
     const { isLoaded } = useAuth()
 
     React.useEffect(() => {
-        const sentinel = document.getElementById('after-cinematic')
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 24)
-            if (sentinel) {
-                // Reveal once the boundary right after the cinematic hero
-                // has risen into (or above) the viewport.
-                const threshold = sentinel.offsetTop - window.innerHeight * 0.9
-                setPastHero(window.scrollY > threshold)
-            } else {
-                setPastHero(window.scrollY > 400)
-            }
         }
         handleScroll()
         window.addEventListener('scroll', handleScroll, { passive: true })
@@ -63,10 +48,7 @@ export const HeroHeader = () => {
             <nav
                 data-state={menuState && 'active'}
                 className={cn(
-                    'fixed inset-x-0 top-0 z-40 px-3 transition-all duration-300 ease-out motion-reduce:transition-none',
-                    pastHero
-                        ? 'translate-y-0 opacity-100'
-                        : 'pointer-events-none -translate-y-full opacity-0'
+                    'fixed inset-x-0 top-0 z-40 translate-y-0 px-3 opacity-100 transition-all duration-300 ease-out motion-reduce:transition-none'
                 )}
             >
                 <div
@@ -78,11 +60,19 @@ export const HeroHeader = () => {
                 >
                     <div className="relative flex flex-wrap items-center justify-between gap-4 py-3">
                         <div className="flex w-full justify-between lg:w-auto">
-                            <Link href="/" aria-label="StashTab home" className="flex items-center gap-3">
-                                <StashTabMark className="size-10 text-base" />
-                                <span className="font-display text-xl font-bold tracking-tight text-foreground">
-                                    Stash<span className="text-neon">Tab</span>
-                                </span>
+                            <Link href="/" aria-label="StashTab home" className="flex items-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/stashtab-wordmark-white.svg"
+                                    alt=""
+                                    className="hidden h-14 w-auto sm:block"
+                                />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/stashtab-mark-white.svg"
+                                    alt=""
+                                    className="h-14 w-14 sm:hidden"
+                                />
                             </Link>
 
                             <button
@@ -139,13 +129,8 @@ export const HeroHeader = () => {
                                                 size="sm"
                                                 className="border border-neon/40 bg-neon/10 text-neon hover:bg-neon/20 hover:shadow-[0_0_18px_rgba(139,92,246,0.35)]"
                                             >
-                                                <Link href="/pos/find">
-                                                    <span>Open POS Find</span>
-                                                </Link>
-                                            </Button>
-                                            <Button asChild size="sm" variant="outline">
                                                 <Link href="/admin/dashboard">
-                                                    <span>Admin</span>
+                                                    <span>Open Dashboard</span>
                                                 </Link>
                                             </Button>
                                             <UserButton appearance={{ baseTheme: dark }} />
