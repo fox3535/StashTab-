@@ -65,13 +65,13 @@ export const HeroHeader = () => {
                                 <img
                                     src="/stashtab-wordmark-white.svg"
                                     alt=""
-                                    className="hidden h-10 w-auto sm:block"
+                                    className="hidden h-14 w-auto sm:block"
                                 />
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src="/stashtab-mark-white.svg"
                                     alt=""
-                                    className="h-10 w-10 sm:hidden"
+                                    className="h-14 w-14 sm:hidden"
                                 />
                             </Link>
 
