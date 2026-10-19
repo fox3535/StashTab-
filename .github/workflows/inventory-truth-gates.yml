@@ -59,6 +59,9 @@ jobs:
       - name: Run PostgreSQL acceptance harness (14 criteria)
         env:
           STASHTAB_PG_URL: postgresql+psycopg2://postgres:stashtab@localhost:55432/stashtab_it
+          # Imports initialize app.database too: use the installed driver and
+          # the same disposable service, never the application's default URL.
+          DATABASE_URL: postgresql+psycopg2://postgres:stashtab@localhost:55432/stashtab_it
         # `python -m pytest` from services/api puts that directory on sys.path.
         # PYTHONPATH is not required for this layout.
         run: python -m pytest tests/test_pg_acceptance.py -q
