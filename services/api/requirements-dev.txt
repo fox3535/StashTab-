@@ -1,0 +1,4 @@
+# Local test tooling. Install with:
+#   python -m pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8.0

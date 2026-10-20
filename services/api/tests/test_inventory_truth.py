@@ -21,6 +21,14 @@ from app.models import Base
 from app.models import InventoryItem, PurchaseRecord, Sale, Shop, StagingItem
 
 
+@pytest.fixture(autouse=True)
+def _isolate_barcode_dir(tmp_path, monkeypatch):
+    """Write intake-generated barcode PNGs to a temp dir, not app/static."""
+    from app.logic import labels
+
+    monkeypatch.setattr(labels, "BARCODE_DIR", tmp_path / "barcodes")
+
+
 def _engine():
     return create_engine(
         "sqlite://",
