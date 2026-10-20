@@ -129,7 +129,7 @@ test("page never forces pagination onto the capped contract", () => {
 
 test("route gate no longer locks the paperweight report; others stay locked", () => {
   assert.equal(gateCode.includes('"/admin/paperweight"'), false);
-  for (const locked of ['"/admin/intake"', '"/admin/resticker"', '"/admin/settings"', '"/pos/pulls"']) {
+  for (const locked of ['"/admin/intake"', '"/admin/settings"', '"/pos/pulls"']) {
     assert.equal(gateCode.includes(locked), true, `${locked} must stay locked`);
   }
 });

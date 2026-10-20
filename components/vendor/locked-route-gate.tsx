@@ -7,7 +7,6 @@ const LOCKED_EXACT = new Set(["/pos"]);
 const LOCKED_PREFIXES = [
   "/admin/intake",
   "/admin/staging",
-  "/admin/resticker",
   "/admin/import",
   // Bare /admin/shopify renders its own honest FeatureNotReady page;
   // only the functional subroutes stay gate-locked.
@@ -17,7 +16,8 @@ const LOCKED_PREFIXES = [
   // /admin/reconciliation ships the read-only Inventory Integrity screen
   // (slice-11) and /admin/reports ships the read-only Recent Trade
   // History screen (slice-09); both stay out of the lock list.
-  // /admin/paperweight ships the read-only Paperweight Report (slice-12).
+  // /admin/paperweight ships the read-only Paperweight Report (slice-12)
+  // and /admin/resticker the read-only Resticker Queue (slice-13).
   "/pos/pulls",
   "/pos/stats",
 ];

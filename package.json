@@ -21,7 +21,8 @@
     "test:slice09": "node --test scripts/test_recent_trade_history.mjs",
     "test:slice10": "node --test scripts/test_price_update_review.mjs",
     "test:slice11": "node --test scripts/test_inventory_integrity.mjs",
-    "test:slice12": "node --test scripts/test_paperweight_report.mjs"
+    "test:slice12": "node --test scripts/test_paperweight_report.mjs",
+    "test:slice13": "node --test scripts/test_resticker_queue.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",

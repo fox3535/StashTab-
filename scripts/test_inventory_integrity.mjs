@@ -199,6 +199,7 @@ test("dashboard and sidebar expose an honest Inventory Integrity entry", () => {
     "/admin/price-updates",
     "/admin/reconciliation",
     "/admin/reports",
+    "/admin/resticker",
     "/admin/sales",
     "/pos/find",
   ]);

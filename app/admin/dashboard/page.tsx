@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftRight, BadgeDollarSign, Hourglass, Package, Receipt, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Hourglass, Package, Receipt, Search, ShieldCheck, Sticker } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -59,6 +59,12 @@ const readyCards: ReadyCard[] = [
     label: "Paperweight Report",
     detail: "Read-only list of in-stock items past the shop's paperweight cutoff (60 days by default), oldest first. Discounting and relisting are not ready.",
     icon: Hourglass,
+  },
+  {
+    href: "/admin/resticker",
+    label: "Resticker Queue",
+    detail: "Read-only list of in-stock items whose printed sticker has drifted from the current price. Marking restickered and printing labels are not ready.",
+    icon: Sticker,
   },
 ];
 

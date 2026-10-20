@@ -76,6 +76,15 @@ export type PaperweightReport = {
   items: PaperweightItem[];
 };
 
+export type RestickerItem = {
+  id: number;
+  sku: string;
+  name: string;
+  price: number | null;
+  sticker_price: number | null;
+  suggested_sticker: number | null;
+};
+
 export type PlaceholderTrade = {
   id: number;
   total_market_value: number;
@@ -305,6 +314,12 @@ export const mimirApi = {
   // oldest in-stock items added before the shop's cutoff.
   paperweightReport: (opts: RequestOptions) =>
     mimirFetch<PaperweightReport>("/admin/inventory/paperweight", opts),
+
+  // Read-only resticker queue: items whose sticker drifted past the shop's
+  // threshold. Uncapped, unpaginated. The approve/resticker-all writes are
+  // deliberately not wrapped here.
+  restickerQueue: (opts: RequestOptions) =>
+    mimirFetch<{ items: RestickerItem[] }>("/admin/inventory/resticker", opts),
 
   // Read-only inventory-integrity checks. Both contracts are pure
   // SELECTs: they never write, repair, backfill, or change cutover state.
