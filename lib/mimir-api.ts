@@ -62,6 +62,20 @@ export type PendingPriceUpdate = {
   shop_listing_price: number | null;
 };
 
+export type PaperweightItem = {
+  id: number;
+  sku: string;
+  name: string;
+  stock: number;
+  price: number;
+  date_added: string | null;
+};
+
+export type PaperweightReport = {
+  units: number;
+  items: PaperweightItem[];
+};
+
 export type PlaceholderTrade = {
   id: number;
   total_market_value: number;
@@ -286,6 +300,11 @@ export const mimirApi = {
   // current set of needs_update records with no cap and no pagination.
   priceUpdates: (opts: RequestOptions) =>
     mimirFetch<{ items: PendingPriceUpdate[] }>("/admin/inventory/updated", opts),
+
+  // Read-only paperweight report: uncapped unit total plus at most the 100
+  // oldest in-stock items added before the shop's cutoff.
+  paperweightReport: (opts: RequestOptions) =>
+    mimirFetch<PaperweightReport>("/admin/inventory/paperweight", opts),
 
   // Read-only inventory-integrity checks. Both contracts are pure
   // SELECTs: they never write, repair, backfill, or change cutover state.

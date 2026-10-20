@@ -8,6 +8,7 @@ import {
   BadgeDollarSign,
   BarChart3,
   ExternalLink,
+  Hourglass,
   LayoutDashboard,
   Layers,
   MoreHorizontal,
@@ -63,10 +64,10 @@ const backOfficeNav: NavItem[] = [
   { href: "/admin/reports", label: "Recent Trades", icon: ArrowLeftRight },
   { href: "/admin/price-updates", label: "Price Updates", icon: BadgeDollarSign },
   { href: "/admin/reconciliation", label: "Inventory Integrity", icon: ShieldCheck },
+  { href: "/admin/paperweight", label: "Paperweight", icon: Hourglass },
   { href: "/admin/intake", label: "Intake", icon: PlusCircle, locked: true },
   { href: "/admin/staging", label: "Staging", icon: Layers, locked: true },
   { href: "/admin/resticker", label: "Resticker", icon: Sticker, locked: true },
-  { href: "/admin/paperweight", label: "Paperweight", icon: PackageSearch, locked: true },
 ];
 
 const operationsNav: NavItem[] = [

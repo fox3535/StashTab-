@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftRight, BadgeDollarSign, Package, Receipt, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Hourglass, Package, Receipt, Search, ShieldCheck } from "lucide-react";
 import { useVendorShop } from "@/components/vendor/vendor-shop-provider";
 import { PageHeader } from "@/components/vendor/vendor-patterns";
 
@@ -53,6 +53,12 @@ const readyCards: ReadyCard[] = [
     label: "Inventory Integrity",
     detail: "Read-only cutover status and reconciliation check. It compares snapshots with event-derived truth and never repairs anything.",
     icon: ShieldCheck,
+  },
+  {
+    href: "/admin/paperweight",
+    label: "Paperweight Report",
+    detail: "Read-only list of in-stock items past the shop's paperweight cutoff (60 days by default), oldest first. Discounting and relisting are not ready.",
+    icon: Hourglass,
   },
 ];
 

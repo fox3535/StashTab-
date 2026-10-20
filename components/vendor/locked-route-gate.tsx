@@ -17,7 +17,7 @@ const LOCKED_PREFIXES = [
   // /admin/reconciliation ships the read-only Inventory Integrity screen
   // (slice-11) and /admin/reports ships the read-only Recent Trade
   // History screen (slice-09); both stay out of the lock list.
-  "/admin/paperweight",
+  // /admin/paperweight ships the read-only Paperweight Report (slice-12).
   "/pos/pulls",
   "/pos/stats",
 ];

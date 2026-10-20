@@ -195,6 +195,7 @@ test("dashboard and sidebar expose an honest Inventory Integrity entry", () => {
   const hrefs = [...dashSrc.matchAll(/href: "([^"]+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(hrefs, [
     "/admin/inventory",
+    "/admin/paperweight",
     "/admin/price-updates",
     "/admin/reconciliation",
     "/admin/reports",
