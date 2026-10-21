@@ -76,6 +76,15 @@ export type PaperweightReport = {
   items: PaperweightItem[];
 };
 
+// The only GET /admin/dashboard fields this frontend reads (slice-14 D1–D4).
+// The endpoint returns more; sales money, staging, and Shopify sync
+// figures are intentionally left untyped so they cannot be rendered.
+export type DashboardMetrics = {
+  inventory_count: number;
+  inventory_value: number;
+  paperweight_units: number;
+};
+
 export type RestickerItem = {
   id: number;
   sku: string;
@@ -320,6 +329,10 @@ export const mimirApi = {
   // deliberately not wrapped here.
   restickerQueue: (opts: RequestOptions) =>
     mimirFetch<{ items: RestickerItem[] }>("/admin/inventory/resticker", opts),
+
+  // Read-only dashboard metrics (GET only).
+  dashboardMetrics: (opts: RequestOptions) =>
+    mimirFetch<DashboardMetrics>("/admin/dashboard", opts),
 
   // Read-only inventory-integrity checks. Both contracts are pure
   // SELECTs: they never write, repair, backfill, or change cutover state.

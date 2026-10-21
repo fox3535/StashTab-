@@ -14,10 +14,17 @@ test("dashboard uses membership shop context and never the env shop hint", () =>
   assert.equal(dashboardSrc.includes("NEXT_PUBLIC_DEV_SHOP_ID"), false);
 });
 
-test("dashboard never invents metrics or fetches KPIs", () => {
+// Slice-14 (PLAN-SLICE-14-DASHBOARD-METRICS.md, owner decisions D1–D4)
+// replaced "never fetches KPIs" with "metrics come only from the accepted
+// GET contract": the legacy adminRequest fetch stays banned, sales money,
+// staging, and Shopify sync figures stay unread, and the page still
+// promises it never invents numbers.
+test("dashboard metrics come only from the accepted GET contract", () => {
   assert.equal(dashboardSrc.includes("adminRequest"), false);
-  assert.equal(dashboardSrc.includes("total_revenue"), false);
-  assert.equal(dashboardSrc.includes("inventory_value"), false);
+  assert.equal(dashboardSrc.includes("mimirApi.dashboardMetrics"), true);
+  for (const hidden of ["total_revenue", "sale_count", "staging_count", "pending_sync"]) {
+    assert.equal(dashboardSrc.includes(hidden), false, `dashboard must not read ${hidden}`);
+  }
   assert.equal(dashboardSrc.includes("never invents numbers"), true);
 });
 
