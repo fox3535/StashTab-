@@ -1,6 +1,6 @@
 # Plan — frontend-recovery-v1 / slice-14 dashboard metrics
 
-**Status:** PLANNING — awaiting owner decisions D1–D4 (§6). No code yet.
+**Status:** PLAN FINAL — decisions D1–D4 recorded 2026-10-20 (§6). Ready to implement; no code yet.
 **Pinned to:** `feature/resticker-queue` `117495b` (stack: PR #44 → slice-12 → slice-13).
 **Author/date:** partner builder session, 2026-10-20.
 **Live-operation gates:** none requested. F2 / Gate 2 remain HELD.
@@ -134,6 +134,20 @@ visual check with FIXTURE data (desktop + phone), as for slices 12–13.
 - **D4 — Units vs SKUs.** Recommended: show SKUs as the contract returns,
   labelled clearly; adding a units field is a backend change for a later
   slice.
+
+### Recorded answers (partner, 2026-10-20)
+
+- **D1:** In-stock items, Inventory value, Stagnant units — confirmed.
+- **D2:** (a) omit `total_revenue` and `sale_count` this slice. Who may see
+  sales money, and whether the API should restrict it to owners, goes to
+  Chris as a separate decision.
+- **D3:** omit `staging_count`.
+- **D4:** show SKUs as returned, labelled "SKUs with stock > 0"; no backend change.
+
+Resulting build: exactly three tiles (§3 rows 1–3). The page and tests
+must not reference `total_revenue`, `sale_count`, `staging_count`, or
+`pending_sync`. Backend tests still pin all seven fields so a later money
+slice starts from verified semantics.
 
 ## 7. Out of scope
 
