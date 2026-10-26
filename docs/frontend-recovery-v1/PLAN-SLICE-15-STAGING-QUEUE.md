@@ -1,6 +1,6 @@
 # Plan — frontend-recovery-v1 / slice-15 read-only staging queue
 
-**Status:** PLANNING — awaiting owner decisions D1–D3 (§6). No code yet.
+**Status:** PLAN FINAL — decisions D1–D3 recorded 2026-10-26 (§6). Ready to implement; no code yet.
 **Pinned to:** `feature/dashboard-metrics` `082a4b9`
 (stack: PR #44 → slice-12 → slice-13 → slice-14).
 **Author/date:** partner builder session, 2026-10-26.
@@ -124,6 +124,16 @@ check with FIXTURE staging rows (desktop + phone).
 - **D3 — Cap disclosure.** (a) *Recommended:* disclose the 100-newest cap
   in the notice only; (b) also fetch the exact total from
   `GET /admin/dashboard` `staging_count` (second request).
+
+### Recorded answers (partner, 2026-10-26)
+
+- **D1:** (a) thumbnails via the accepted `CardThumbnail`.
+- **D2:** (b) additive read-only backend change: `GET /admin/staging` also
+  returns `condition`, `variant`, `card_type`, `needs_review`; the screen
+  shows condition and variant. `cost_basis`, `barcode_path`, `ocr_metadata`
+  stay out. No schema change, no write path touched; the new backend test
+  pins the new keys and that the route still writes nothing.
+- **D3:** (a) cap disclosed in the notice only; one request.
 
 ## 7. Out of scope
 
