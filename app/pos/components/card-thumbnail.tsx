@@ -4,11 +4,16 @@ import Image from "next/image";
 import { useState } from "react";
 import { getItemImageUrl, type InventoryItem } from "@/lib/mimir-api";
 
+/** Anything with a name and an image link (inventory or staged items). */
+export type ThumbnailSource = Pick<InventoryItem, "name" | "image_url"> & {
+  game?: string | null;
+};
+
 export function CardThumbnail({
   item,
   size = "md",
 }: {
-  item: InventoryItem;
+  item: ThumbnailSource;
   size?: "sm" | "md";
 }) {
   const src = getItemImageUrl(item);

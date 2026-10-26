@@ -110,7 +110,7 @@ test("page never forces pagination onto the uncapped contract", () => {
 
 test("route gate no longer locks the resticker queue; others stay locked", () => {
   assert.equal(gateCode.includes('"/admin/resticker"'), false);
-  for (const locked of ['"/admin/intake"', '"/admin/staging"', '"/admin/settings"', '"/pos/pulls"']) {
+  for (const locked of ['"/admin/intake"', '"/admin/settings"', '"/pos/pulls"']) {
     assert.equal(gateCode.includes(locked), true, `${locked} must stay locked`);
   }
 });

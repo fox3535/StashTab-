@@ -66,8 +66,8 @@ const backOfficeNav: NavItem[] = [
   { href: "/admin/reconciliation", label: "Inventory Integrity", icon: ShieldCheck },
   { href: "/admin/paperweight", label: "Paperweight", icon: Hourglass },
   { href: "/admin/resticker", label: "Resticker", icon: Sticker },
+  { href: "/admin/staging", label: "Staging", icon: Layers },
   { href: "/admin/intake", label: "Intake", icon: PlusCircle, locked: true },
-  { href: "/admin/staging", label: "Staging", icon: Layers, locked: true },
 ];
 
 const operationsNav: NavItem[] = [

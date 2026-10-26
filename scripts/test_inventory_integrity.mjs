@@ -201,6 +201,7 @@ test("dashboard and sidebar expose an honest Inventory Integrity entry", () => {
     "/admin/reports",
     "/admin/resticker",
     "/admin/sales",
+    "/admin/staging",
     "/pos/find",
   ]);
   assert.equal(sidebarSrc.includes('href: "/admin/reconciliation", label: "Inventory Integrity"'), true);

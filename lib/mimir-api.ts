@@ -85,6 +85,23 @@ export type DashboardMetrics = {
   paperweight_units: number;
 };
 
+// GET /admin/staging row. Read-only; cost_basis is never returned.
+export type StagingQueueItem = {
+  id: number;
+  sku: string;
+  name: string | null;
+  set_name: string | null;
+  sequence_number: string | null;
+  market_price: number | null;
+  suggested_price: number | null;
+  image_url: string | null;
+  quantity: number | null;
+  condition: string | null;
+  variant: string | null;
+  card_type: string | null;
+  needs_review: boolean;
+};
+
 export type RestickerItem = {
   id: number;
   sku: string;
@@ -228,7 +245,7 @@ const PLACEHOLDER_IMAGE =
   "https://placehold.co/100x140/1e293b/94a3b8?text=No+Image";
 
 /** Matches partner Mimir get_item_image_url() fallback chain. */
-export function getItemImageUrl(item: InventoryItem): string {
+export function getItemImageUrl(item: Pick<InventoryItem, "image_url">): string {
   if (item.image_url?.startsWith("http")) return item.image_url;
   if (item.image_url) {
     const url = item.image_url.replace(/\\/g, "/");
@@ -333,6 +350,12 @@ export const mimirApi = {
   // Read-only dashboard metrics (GET only).
   dashboardMetrics: (opts: RequestOptions) =>
     mimirFetch<DashboardMetrics>("/admin/dashboard", opts),
+
+  // Read-only staging queue: at most the 100 newest staged items. Commit,
+  // commit-all, refetch, delete, and apply-trades (the inventory receive
+  // path) are deliberately not wrapped here.
+  stagingQueue: (opts: RequestOptions) =>
+    mimirFetch<{ items: StagingQueueItem[] }>("/admin/staging", opts),
 
   // Read-only inventory-integrity checks. Both contracts are pure
   // SELECTs: they never write, repair, backfill, or change cutover state.

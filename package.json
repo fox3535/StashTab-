@@ -23,7 +23,8 @@
     "test:slice11": "node --test scripts/test_inventory_integrity.mjs",
     "test:slice12": "node --test scripts/test_paperweight_report.mjs",
     "test:slice13": "node --test scripts/test_resticker_queue.mjs",
-    "test:slice14": "node --test scripts/test_dashboard_metrics.mjs"
+    "test:slice14": "node --test scripts/test_dashboard_metrics.mjs",
+    "test:slice15": "node --test scripts/test_staging_queue.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.4.1",

@@ -6,7 +6,6 @@ import { FeatureNotReady } from "@/components/vendor/feature-not-ready";
 const LOCKED_EXACT = new Set(["/pos"]);
 const LOCKED_PREFIXES = [
   "/admin/intake",
-  "/admin/staging",
   "/admin/import",
   // Bare /admin/shopify renders its own honest FeatureNotReady page;
   // only the functional subroutes stay gate-locked.
@@ -18,6 +17,8 @@ const LOCKED_PREFIXES = [
   // History screen (slice-09); both stay out of the lock list.
   // /admin/paperweight ships the read-only Paperweight Report (slice-12)
   // and /admin/resticker the read-only Resticker Queue (slice-13).
+  // /admin/staging ships the read-only Staging Queue (slice-15); staging
+  // commit (the inventory receive path) stays unwired.
   "/pos/pulls",
   "/pos/stats",
 ];

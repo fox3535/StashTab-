@@ -306,6 +306,13 @@ def list_staging(
                 "quantity": i.quantity,
                 "set_name": i.set_name,
                 "sequence_number": i.sequence_number,
+                # Slice-15 (read-only, additive): staging merges rows by
+                # condition/variant/card type, so the queue needs them to
+                # tell otherwise identical rows apart. cost_basis stays out.
+                "condition": i.condition,
+                "variant": i.variant,
+                "card_type": i.card_type,
+                "needs_review": bool(i.needs_review),
             }
             for i in items
         ]

@@ -134,6 +134,7 @@ test("dashboard lists Price Updates as an honest fifth read-only tool", () => {
     "/admin/reports",
     "/admin/resticker",
     "/admin/sales",
+    "/admin/staging",
     "/pos/find",
   ]);
 });

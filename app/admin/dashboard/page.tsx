@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, BadgeDollarSign, Hourglass, Package, Receipt, Search, ShieldCheck, Sticker } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Hourglass, Layers, Package, Receipt, Search, ShieldCheck, Sticker } from "lucide-react";
 import { mimirApi, type DashboardMetrics } from "@/lib/mimir-api";
 import { classifyVendorError } from "@/lib/vendor-api-error";
 import { shouldApplyShopResult } from "@/lib/shop-session";
@@ -78,6 +78,12 @@ const readyCards: ReadyCard[] = [
     label: "Resticker Queue",
     detail: "Read-only list of in-stock items whose printed sticker has drifted from the current price. Marking restickered and printing labels are not ready.",
     icon: Sticker,
+  },
+  {
+    href: "/admin/staging",
+    label: "Staging Queue",
+    detail: "Read-only list of identified items waiting to enter inventory, newest first. Committing to inventory is not ready.",
+    icon: Layers,
   },
 ];
 
